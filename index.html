@@ -682,6 +682,47 @@ function clearSearch() {
   input.focus();
 }
 
+// 정형외과 약어 사전
+const ABBREV = {
+  'rc':'rotator cuff','rct':'rotator cuff tear','acl':'anterior cruciate ligament',
+  'pcl':'posterior cruciate ligament','mcl':'medial collateral ligament',
+  'lcl':'lateral collateral ligament','tka':'total knee arthroplasty',
+  'tha':'total hip arthroplasty','hto':'high tibial osteotomy',
+  'uka':'unicompartmental knee arthroplasty','orif':'open reduction internal fixation',
+  'ddh':'developmental dysplasia hip','avn':'avascular necrosis',
+  'onfh':'osteonecrosis femoral head','ocd':'osteochondritis dissecans',
+  'pvns':'pigmented villonodular synovitis','gct':'giant cell tumor',
+  'sbc':'simple bone cyst','abc':'aneurysmal bone cyst',
+  'fai':'femoroacetabular impingement','crps':'complex regional pain syndrome',
+  'cecs':'chronic exertional compartment syndrome','dco':'damage control orthopedics',
+  'mipo':'minimally invasive plate osteosynthesis','cts':'carpal tunnel syndrome',
+  'tfcc':'triangular fibrocartilage complex','slap':'superior labrum anterior posterior',
+  'druj':'distal radioulnar joint','mpfl':'medial patellofemoral ligament',
+  'atfl':'anterior talofibular ligament','cfl':'calcaneofibular ligament',
+  'oa':'osteoarthritis','doa':'degenerative osteoarthritis','dja':'degenerative joint',
+  'ra':'rheumatoid arthritis','jra':'juvenile rheumatoid arthritis',
+  'dvt':'deep vein thrombosis','pe':'pulmonary embolism',
+  'fes':'fat embolism syndrome','acs':'acute compartment syndrome',
+  'rom':'range of motion','bmd':'bone mineral density',
+  'nsaid':'non-steroidal anti-inflammatory','im':'intramedullary',
+  'sl':'scapholunate','lt':'lunotriquetral','ucl':'ulnar collateral ligament',
+  'dip':'distal interphalangeal','pip':'proximal interphalangeal',
+  'mcp':'metacarpophalangeal','cmc':'carpometacarpal',
+  'tsa':'total shoulder arthroplasty','rsa':'reverse shoulder arthroplasty',
+  'tb':'tuberculosis','plri':'posterolateral rotatory instability',
+};
+
+function expandQuery(query) {
+  const words = query.toLowerCase().split(/\s+/);
+  const expanded = new Set(words);
+  // 전체 쿼리로도 확인
+  const fullQ = query.toLowerCase().trim();
+  if (ABBREV[fullQ]) ABBREV[fullQ].split(/\s+/).forEach(w => expanded.add(w));
+  // 개별 단어 확장
+  words.forEach(w => { if (ABBREV[w]) ABBREV[w].split(/\s+/).forEach(ew => expanded.add(ew)); });
+  return Array.from(expanded);
+}
+
 function doSearch(query) {
   const nav = document.getElementById('navContainer');
   if (!query) {
@@ -689,30 +730,42 @@ function doSearch(query) {
     return;
   }
 
+  const terms = expandQuery(query);
   const q = query.toLowerCase();
   const results = searchIndex.filter(entry => {
-    return entry.title.toLowerCase().includes(q) ||
-           entry.fullText.toLowerCase().includes(q);
+    const t = entry.title.toLowerCase();
+    const f = entry.fullText.toLowerCase();
+    return terms.some(term => t.includes(term) || f.includes(term));
   });
 
+  const expandedLabel = terms.length > query.trim().split(/\s+/).length
+    ? ` <span style="color:#60a5fa;font-size:11px">(${terms.filter(t => !query.toLowerCase().includes(t)).join(', ')})</span>` : '';
+
   if (results.length === 0) {
-    nav.innerHTML = `<div class="search-count">검색 결과 없음</div>`;
+    nav.innerHTML = `<div class="search-count">검색 결과 없음${expandedLabel}</div>`;
     return;
   }
 
   nav.innerHTML = `
-    <div class="search-count">${results.length}개 결과</div>
+    <div class="search-count">${results.length}개 결과${expandedLabel}</div>
     <div class="search-results">
       ${results.map(r => {
         // Highlight in snippet
         let snippet = r.snippet;
-        const idx = r.fullText.toLowerCase().indexOf(q);
-        if (idx > 100) {
-          snippet = '...' + r.fullText.substring(idx - 60, idx + 200) + '...';
+        // Find first matching term position
+        const fLower = r.fullText.toLowerCase();
+        let firstIdx = -1;
+        for (const term of terms) {
+          const idx = fLower.indexOf(term);
+          if (idx >= 0 && (firstIdx < 0 || idx < firstIdx)) firstIdx = idx;
+        }
+        if (firstIdx > 100) {
+          snippet = '...' + r.fullText.substring(firstIdx - 60, firstIdx + 200) + '...';
         } else {
           snippet = r.fullText.substring(0, 260);
         }
-        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        const escapedTerms = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        const regex = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
         snippet = snippet.replace(regex, '<mark>$1</mark>');
         const titleHighlighted = r.title.replace(regex, '<mark>$1</mark>');
 
