@@ -511,7 +511,6 @@ async function loadDoc(volSlug, file) {
     document.getElementById('contentHeader').innerHTML = `
       <h2 id="contentTitle">${title}</h2>
       ${downloadPath ? `<a class="btn" href="${encodeURI(downloadPath)}" download title="원본 다운로드">&#11015; .docx</a>` : ''}
-      <button class="btn" onclick="window.print()" title="인쇄">&#128424; 인쇄</button>
     `;
 
     body.innerHTML = `<div class="doc-content">${html}</div>`;
