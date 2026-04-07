@@ -105,6 +105,13 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
   transform: translateY(-50%);
   font-size: 14px;
 }
+.search-clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: #64748b; font-size: 16px;
+  cursor: pointer; display: none; padding: 2px 4px; line-height: 1;
+}
+.search-clear:hover { color: #e2e8f0; }
+.search-clear.show { display: block; }
 
 /* Nav */
 .nav { flex: 1; overflow-y: auto; padding: 8px 0; }
@@ -375,6 +382,7 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
     <div class="search-box">
       <div class="search-wrap">
         <input type="text" id="searchInput" placeholder="단원명 또는 내용 검색..." autocomplete="off">
+        <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
       </div>
     </div>
     <div class="nav" id="navContainer"></div>
@@ -655,17 +663,23 @@ function setupUnitLinks() {
 // Search
 function setupSearch() {
   const input = document.getElementById('searchInput');
+  const clearBtn = document.getElementById('searchClear');
   let debounce;
   input.addEventListener('input', () => {
     clearTimeout(debounce);
+    clearBtn.classList.toggle('show', input.value.length > 0);
     debounce = setTimeout(() => doSearch(input.value.trim()), 200);
   });
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      input.value = '';
-      doSearch('');
-    }
+    if (e.key === 'Escape') { clearSearch(); }
   });
+}
+function clearSearch() {
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  document.getElementById('searchClear').classList.remove('show');
+  doSearch('');
+  input.focus();
 }
 
 function doSearch(query) {
