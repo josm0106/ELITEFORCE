@@ -306,17 +306,22 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
 }
 
 @media (max-width: 768px) {
+  .app { flex-direction: column; }
   .sidebar {
-    position: fixed;
-    left: 0; top: 0; bottom: 0;
-    z-index: 100;
-    transform: translateX(-100%);
+    width: 100%;
+    min-width: 100%;
+    max-height: 100vh;
+    transition: none;
   }
-  .sidebar.open { transform: translateX(0); }
-  .menu-toggle { display: block; }
-  .overlay.show { display: block; }
+  .sidebar.mobile-hidden { display: none; }
+  .content { display: none; }
+  .content.mobile-show { display: flex; width: 100%; }
+  .menu-toggle { display: block; z-index: 200; }
+  .menu-toggle.back-btn { border-radius: 8px; width: auto; padding: 0 16px; font-size: 14px; bottom: 20px; left: 50%; transform: translateX(-50%); }
   .doc-content { padding: 24px 16px; }
-  .content-body { padding: 16px; }
+  .content-body { padding: 12px; }
+  .content-header { padding: 12px 16px; }
+  .content-header h2 { font-size: 14px; }
 }
 
 /* Print */
@@ -436,6 +441,7 @@ async function init() {
   renderStats();
   setupSearch();
   setupMobile();
+  setupUnitLinks();
   handleHash();
   window.addEventListener('hashchange', handleHash);
 }
@@ -455,7 +461,8 @@ function renderNav() {
           const numStr = num ? num[1] : '';
           const displayTitle = u.title.replace(/^\d+단원_/, '');
           return `<a class="unit-link" data-vol="${vi}" data-unit="${ui}"
-            href="#${vol.slug}/${u.file}" title="${u.title}">
+            href="#${encodeURIComponent(vol.slug)}/${encodeURIComponent(u.file)}" title="${u.title}"
+            onclick="event.preventDefault(); loadDoc('${vol.slug.replace(/'/g,"\\'")}','${u.file.replace(/'/g,"\\'")}'); window.location.hash='${encodeURIComponent(vol.slug)}/${encodeURIComponent(u.file)}'; return false;">
             <span class="unit-num">${numStr}</span>${displayTitle}
           </a>`;
         }).join('')}
@@ -484,8 +491,9 @@ async function loadDoc(volSlug, file) {
   body.innerHTML = '<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
 
   try {
-    const res = await fetch(`docs/${volSlug}/${file}`);
-    if (!res.ok) throw new Error('File not found');
+    const fetchUrl = `docs/${encodeURIComponent(volSlug)}/${encodeURIComponent(file)}`;
+    const res = await fetch(fetchUrl);
+    if (!res.ok) throw new Error('File not found: ' + fetchUrl);
     const html = await res.text();
 
     // Find metadata
@@ -532,13 +540,24 @@ async function loadDoc(volSlug, file) {
 }
 
 function handleHash() {
-  const hash = decodeURIComponent(location.hash.slice(1));
-  if (!hash) return;
-  const slashIdx = hash.indexOf('/');
+  const rawHash = location.hash.slice(1);
+  if (!rawHash) return;
+  const decoded = decodeURIComponent(rawHash);
+  const slashIdx = decoded.indexOf('/');
   if (slashIdx === -1) return;
-  const volSlug = hash.substring(0, slashIdx);
-  const file = hash.substring(slashIdx + 1);
+  const volSlug = decoded.substring(0, slashIdx);
+  const file = decoded.substring(slashIdx + 1);
   loadDoc(volSlug, file);
+}
+
+// Also handle touch events for mobile
+function setupUnitLinks() {
+  document.querySelectorAll('.unit-link').forEach(link => {
+    link.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      this.click();
+    }, { passive: false });
+  });
 }
 
 // Search
@@ -602,17 +621,34 @@ function doSearch(query) {
 }
 
 // Mobile
+function isMobile() { return window.innerWidth <= 768; }
+
 function setupMobile() {
   document.getElementById('menuToggle').addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('open');
-    document.getElementById('overlay').classList.toggle('show');
+    if (isMobile()) {
+      // Back to sidebar
+      document.getElementById('sidebar').classList.remove('mobile-hidden');
+      document.querySelector('.content').classList.remove('mobile-show');
+      document.getElementById('menuToggle').innerHTML = '&#9776;';
+      document.getElementById('menuToggle').classList.remove('back-btn');
+    } else {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('show');
+    }
   });
   document.getElementById('overlay').addEventListener('click', closeMobileSidebar);
 }
 
 function closeMobileSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('overlay').classList.remove('show');
+  if (isMobile()) {
+    document.getElementById('sidebar').classList.add('mobile-hidden');
+    document.querySelector('.content').classList.add('mobile-show');
+    document.getElementById('menuToggle').innerHTML = '&#9664; 목록';
+    document.getElementById('menuToggle').classList.add('back-btn');
+  } else {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('show');
+  }
 }
 
 // Keyboard shortcut: Ctrl+K to focus search
