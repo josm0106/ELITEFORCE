@@ -19,6 +19,39 @@
 }
 html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--bg); }
 
+/* Lock screen */
+.lock-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.lock-screen.hidden { display: none; }
+.lock-box {
+  background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px; padding: 48px 40px; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5); max-width: 380px; width: 90%;
+}
+.lock-box h1 { color: #fff; font-size: 22px; margin-bottom: 8px; }
+.lock-box p { color: #64748b; font-size: 14px; margin-bottom: 28px; }
+.lock-box input {
+  width: 100%; padding: 12px 16px; border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px; background: rgba(255,255,255,0.06); color: #fff;
+  font-size: 16px; outline: none; text-align: center; letter-spacing: 2px;
+  transition: border-color 0.2s;
+}
+.lock-box input:focus { border-color: var(--primary); }
+.lock-box input::placeholder { color: #475569; letter-spacing: 0; }
+.lock-box button {
+  width: 100%; margin-top: 16px; padding: 12px; border: none;
+  border-radius: 8px; background: var(--primary); color: #fff;
+  font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+}
+.lock-box button:hover { background: var(--primary-dark); }
+.lock-error { color: #f87171; font-size: 13px; margin-top: 12px; display: none; }
+.lock-auto { color: #64748b; font-size: 12px; margin-top: 16px; }
+.lock-auto label { cursor: pointer; }
+.lock-auto input { margin-right: 4px; accent-color: var(--primary); }
+
 /* Layout */
 .app { display: flex; height: 100vh; }
 
@@ -295,7 +328,20 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
 </style>
 </head>
 <body>
-<div class="app">
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-box">
+    <h1>엘리트 정형외과</h1>
+    <p>열람을 위해 비밀번호를 입력하세요</p>
+    <input type="password" id="lockPass" placeholder="비밀번호" autocomplete="current-password">
+    <button onclick="tryUnlock()">입장</button>
+    <div class="lock-error" id="lockError">비밀번호가 틀렸습니다</div>
+    <div class="lock-auto">
+      <label><input type="checkbox" id="lockRemember" checked> 자동 로그인</label>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="mainApp" style="display:none;">
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <h1>엘리트 정형외과</h1>
@@ -328,6 +374,46 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
 <button class="menu-toggle" id="menuToggle">&#9776;</button>
 
 <script>
+const PASS_HASH = '9466c70d025598f4dee0e4876b22886a72191a1e6521a7315c8abc3ad6c4ad11';
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function tryUnlock() {
+  const pass = document.getElementById('lockPass').value;
+  const hash = await sha256(pass);
+  if (hash === PASS_HASH) {
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('mainApp').style.display = '';
+    if (document.getElementById('lockRemember').checked) {
+      localStorage.setItem('elite_auth', hash);
+    }
+    init();
+  } else {
+    document.getElementById('lockError').style.display = 'block';
+    document.getElementById('lockPass').value = '';
+    document.getElementById('lockPass').focus();
+  }
+}
+
+document.getElementById('lockPass').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') tryUnlock();
+});
+
+// Auto login check
+(async () => {
+  const saved = localStorage.getItem('elite_auth');
+  if (saved === PASS_HASH) {
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('mainApp').style.display = '';
+    init();
+  } else {
+    document.getElementById('lockPass').focus();
+  }
+})();
+
 let structure = [];
 let searchIndex = [];
 let currentDoc = null;
