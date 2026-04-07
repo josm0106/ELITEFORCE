@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>엘리트 정형외과 - 단원별 열람</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --sidebar-w: 340px;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --bg: #f8fafc;
+  --sidebar-bg: #1e293b;
+  --sidebar-text: #e2e8f0;
+  --sidebar-hover: #334155;
+  --sidebar-active: #3b82f6;
+  --border: #e2e8f0;
+}
+html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--bg); }
+
+/* Layout */
+.app { display: flex; height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform 0.3s;
+}
+.sidebar-header {
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.sidebar-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.sidebar-header p { font-size: 12px; color: #94a3b8; }
+
+/* Search */
+.search-box {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.search-box input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-box input:focus { border-color: var(--sidebar-active); }
+.search-box input::placeholder { color: #64748b; }
+.search-wrap { position: relative; }
+.search-wrap::before {
+  content: '\1F50D';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+}
+
+/* Nav */
+.nav { flex: 1; overflow-y: auto; padding: 8px 0; }
+.nav::-webkit-scrollbar { width: 6px; }
+.nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+.vol-group { margin-bottom: 4px; }
+.vol-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #cbd5e1;
+  user-select: none;
+  transition: background 0.15s;
+}
+.vol-header:hover { background: var(--sidebar-hover); }
+.vol-header .arrow {
+  margin-right: 8px;
+  font-size: 10px;
+  transition: transform 0.2s;
+  width: 16px;
+  text-align: center;
+}
+.vol-header.open .arrow { transform: rotate(90deg); }
+.vol-header .count {
+  margin-left: auto;
+  font-size: 11px;
+  color: #64748b;
+  background: rgba(255,255,255,0.08);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.vol-units { display: none; }
+.vol-units.open { display: block; }
+
+.unit-link {
+  display: block;
+  padding: 7px 16px 7px 40px;
+  font-size: 13px;
+  color: #94a3b8;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.unit-link:hover { background: var(--sidebar-hover); color: #e2e8f0; }
+.unit-link.active {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+  border-left-color: var(--sidebar-active);
+}
+.unit-link .unit-num {
+  display: inline-block;
+  width: 28px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* Search results in sidebar */
+.search-results { padding: 8px 0; }
+.search-result-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.search-result-item:hover { background: var(--sidebar-hover); }
+.search-result-item .sr-vol { font-size: 11px; color: #64748b; }
+.search-result-item .sr-title { font-size: 13px; color: #e2e8f0; margin: 2px 0; }
+.search-result-item .sr-snippet { font-size: 11px; color: #64748b; line-height: 1.4; }
+.search-result-item mark { background: rgba(250,204,21,0.3); color: #fde68a; border-radius: 2px; }
+.search-count { padding: 8px 16px; font-size: 12px; color: #64748b; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+/* Content */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.content-header {
+  padding: 16px 24px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+}
+.content-header h2 { font-size: 16px; font-weight: 600; color: #1e293b; flex: 1; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-dark); }
+
+.content-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* Document content styling */
+.doc-content {
+  max-width: 900px;
+  margin: 0 auto;
+  background: #fff;
+  padding: 40px 48px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  line-height: 1.8;
+  color: #1e293b;
+  font-size: 15px;
+}
+.doc-content h1 { font-size: 24px; margin: 32px 0 16px; color: #0f172a; border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
+.doc-content h2 { font-size: 20px; margin: 28px 0 12px; color: #1e293b; }
+.doc-content h3 { font-size: 17px; margin: 20px 0 8px; color: #334155; }
+.doc-content p { margin: 8px 0; }
+.doc-content table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+.doc-content th, .doc-content td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+.doc-content th { background: #f1f5f9; font-weight: 600; }
+.doc-content img { max-width: 100%; height: auto; margin: 12px 0; border-radius: 4px; }
+.doc-content ul, .doc-content ol { margin: 8px 0 8px 24px; }
+.doc-content li { margin: 4px 0; }
+.doc-content strong { color: #0f172a; }
+
+/* Welcome */
+.welcome {
+  text-align: center;
+  padding: 80px 40px;
+  color: #64748b;
+}
+.welcome h2 { font-size: 24px; color: #1e293b; margin-bottom: 12px; }
+.welcome p { font-size: 15px; line-height: 1.6; }
+.welcome .stats {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+.welcome .stat { text-align: center; }
+.welcome .stat-num { font-size: 32px; font-weight: 700; color: var(--primary); }
+.welcome .stat-label { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+
+/* Loading */
+.loading { text-align: center; padding: 60px; color: #94a3b8; }
+.loading .spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #e2e8f0;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Mobile */
+.menu-toggle {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+}
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .menu-toggle { display: block; }
+  .overlay.show { display: block; }
+  .doc-content { padding: 24px 16px; }
+  .content-body { padding: 16px; }
+}
+
+/* Print */
+@media print {
+  .sidebar, .content-header, .menu-toggle { display: none !important; }
+  .content-body { padding: 0; }
+  .doc-content { box-shadow: none; padding: 0; max-width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h1>엘리트 정형외과</h1>
+      <p>단원별 열람 시스템</p>
+    </div>
+    <div class="search-box">
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="단원명 또는 내용 검색..." autocomplete="off">
+      </div>
+    </div>
+    <div class="nav" id="navContainer"></div>
+  </nav>
+
+  <div class="overlay" id="overlay"></div>
+
+  <main class="content">
+    <div class="content-header" id="contentHeader">
+      <h2 id="contentTitle">엘리트 정형외과 단원별 열람</h2>
+    </div>
+    <div class="content-body" id="contentBody">
+      <div class="welcome" id="welcome">
+        <h2>단원을 선택하세요</h2>
+        <p>왼쪽 목차에서 볼륨을 펼치고 단원을 클릭하면 내용을 열람할 수 있습니다.</p>
+        <div class="stats" id="statsContainer"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<button class="menu-toggle" id="menuToggle">&#9776;</button>
+
+<script>
+let structure = [];
+let searchIndex = [];
+let currentDoc = null;
+
+async function init() {
+  try {
+    const [structRes, searchRes] = await Promise.all([
+      fetch('structure.json'),
+      fetch('search-index.json')
+    ]);
+    structure = await structRes.json();
+    searchIndex = await searchRes.json();
+  } catch (e) {
+    document.getElementById('navContainer').innerHTML =
+      '<div style="padding:16px;color:#f87171;font-size:13px;">데이터를 불러올 수 없습니다.<br>build.js를 먼저 실행해주세요.<br><br>로컬 서버가 필요합니다:<br><code style="color:#fde68a">npx serve .</code></div>';
+    return;
+  }
+
+  renderNav();
+  renderStats();
+  setupSearch();
+  setupMobile();
+  handleHash();
+  window.addEventListener('hashchange', handleHash);
+}
+
+function renderNav() {
+  const nav = document.getElementById('navContainer');
+  nav.innerHTML = structure.map((vol, vi) => `
+    <div class="vol-group" data-vol="${vi}">
+      <div class="vol-header" onclick="toggleVol(${vi})">
+        <span class="arrow">&#9654;</span>
+        <span>${vol.name}</span>
+        <span class="count">${vol.units.length}</span>
+      </div>
+      <div class="vol-units" id="volUnits${vi}">
+        ${vol.units.map((u, ui) => {
+          const num = u.title.match(/^(\d+)단원/);
+          const numStr = num ? num[1] : '';
+          const displayTitle = u.title.replace(/^\d+단원_/, '');
+          return `<a class="unit-link" data-vol="${vi}" data-unit="${ui}"
+            href="#${vol.slug}/${u.file}" title="${u.title}">
+            <span class="unit-num">${numStr}</span>${displayTitle}
+          </a>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderStats() {
+  const total = structure.reduce((s, v) => s + v.units.length, 0);
+  document.getElementById('statsContainer').innerHTML = `
+    <div class="stat"><div class="stat-num">${structure.length}</div><div class="stat-label">볼륨</div></div>
+    <div class="stat"><div class="stat-num">${total}</div><div class="stat-label">단원</div></div>
+  `;
+}
+
+function toggleVol(vi) {
+  const header = document.querySelector(`.vol-group[data-vol="${vi}"] .vol-header`);
+  const units = document.getElementById(`volUnits${vi}`);
+  header.classList.toggle('open');
+  units.classList.toggle('open');
+}
+
+async function loadDoc(volSlug, file) {
+  const body = document.getElementById('contentBody');
+  body.innerHTML = '<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
+
+  try {
+    const res = await fetch(`docs/${volSlug}/${file}`);
+    if (!res.ok) throw new Error('File not found');
+    const html = await res.text();
+
+    // Find metadata
+    const entry = searchIndex.find(e => e.volSlug === volSlug && e.file === file);
+    const vol = structure.find(v => v.slug === volSlug);
+    const unit = vol?.units.find(u => u.file === file);
+
+    const title = entry?.title || file;
+    document.getElementById('contentTitle').textContent = title;
+
+    // Download link
+    const originalFile = unit?.originalFile || '';
+    const downloadPath = vol ? `${vol.name}/${originalFile}` : '';
+
+    document.getElementById('contentHeader').innerHTML = `
+      <h2 id="contentTitle">${title}</h2>
+      ${downloadPath ? `<a class="btn" href="${encodeURI(downloadPath)}" download title="원본 다운로드">&#11015; .docx</a>` : ''}
+      <button class="btn" onclick="window.print()" title="인쇄">&#128424; 인쇄</button>
+    `;
+
+    body.innerHTML = `<div class="doc-content">${html}</div>`;
+
+    // Update active state
+    document.querySelectorAll('.unit-link.active').forEach(el => el.classList.remove('active'));
+    const activeLink = document.querySelector(`a[href="#${volSlug}/${file}"]`);
+    if (activeLink) {
+      activeLink.classList.add('active');
+      // Open parent vol
+      const vi = activeLink.dataset.vol;
+      const header = document.querySelector(`.vol-group[data-vol="${vi}"] .vol-header`);
+      const units = document.getElementById(`volUnits${vi}`);
+      if (!header.classList.contains('open')) {
+        header.classList.add('open');
+        units.classList.add('open');
+      }
+      activeLink.scrollIntoView({ block: 'nearest' });
+    }
+
+    // Close mobile sidebar
+    closeMobileSidebar();
+  } catch (e) {
+    body.innerHTML = `<div class="welcome"><h2>파일을 불러올 수 없습니다</h2><p>${e.message}</p></div>`;
+  }
+}
+
+function handleHash() {
+  const hash = decodeURIComponent(location.hash.slice(1));
+  if (!hash) return;
+  const slashIdx = hash.indexOf('/');
+  if (slashIdx === -1) return;
+  const volSlug = hash.substring(0, slashIdx);
+  const file = hash.substring(slashIdx + 1);
+  loadDoc(volSlug, file);
+}
+
+// Search
+function setupSearch() {
+  const input = document.getElementById('searchInput');
+  let debounce;
+  input.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => doSearch(input.value.trim()), 200);
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      input.value = '';
+      doSearch('');
+    }
+  });
+}
+
+function doSearch(query) {
+  const nav = document.getElementById('navContainer');
+  if (!query) {
+    renderNav();
+    return;
+  }
+
+  const q = query.toLowerCase();
+  const results = searchIndex.filter(entry => {
+    return entry.title.toLowerCase().includes(q) ||
+           entry.fullText.toLowerCase().includes(q);
+  });
+
+  if (results.length === 0) {
+    nav.innerHTML = `<div class="search-count">검색 결과 없음</div>`;
+    return;
+  }
+
+  nav.innerHTML = `
+    <div class="search-count">${results.length}개 결과</div>
+    <div class="search-results">
+      ${results.map(r => {
+        // Highlight in snippet
+        let snippet = r.snippet;
+        const idx = r.fullText.toLowerCase().indexOf(q);
+        if (idx > 100) {
+          snippet = '...' + r.fullText.substring(idx - 60, idx + 200) + '...';
+        } else {
+          snippet = r.fullText.substring(0, 260);
+        }
+        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        snippet = snippet.replace(regex, '<mark>$1</mark>');
+        const titleHighlighted = r.title.replace(regex, '<mark>$1</mark>');
+
+        return `<div class="search-result-item" onclick="location.hash='${r.volSlug}/${r.file}'">
+          <div class="sr-vol">${r.vol}</div>
+          <div class="sr-title">${titleHighlighted}</div>
+          <div class="sr-snippet">${snippet}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+// Mobile
+function setupMobile() {
+  document.getElementById('menuToggle').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('show');
+  });
+  document.getElementById('overlay').addEventListener('click', closeMobileSidebar);
+}
+
+function closeMobileSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// Keyboard shortcut: Ctrl+K to focus search
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+});
+
+init();
+</script>
+</body>
+</html>
