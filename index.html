@@ -153,9 +153,7 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
   text-decoration: none;
   transition: all 0.15s;
   border-left: 3px solid transparent;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .unit-link:hover { background: var(--sidebar-hover); color: #e2e8f0; }
 .unit-link.active {
@@ -169,6 +167,20 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
   font-weight: 600;
   color: #64748b;
 }
+.unit-link .unit-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.unit-link .unit-meta {
+  font-size: 10px;
+  color: #475569;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.unit-link .unit-meta .meta-count { color: #60a5fa; }
 
 /* Search results in sidebar */
 .search-results { padding: 8px 0; }
@@ -423,6 +435,45 @@ let structure = [];
 let searchIndex = [];
 let currentDoc = null;
 
+// View history
+function getViewData() {
+  try { return JSON.parse(localStorage.getItem('elite_views') || '{}'); } catch { return {}; }
+}
+function recordView(key) {
+  const data = getViewData();
+  if (!data[key]) data[key] = { count: 0, last: 0 };
+  data[key].count++;
+  data[key].last = Date.now();
+  localStorage.setItem('elite_views', JSON.stringify(data));
+  updateUnitMeta(key);
+}
+function getViewHistory(key) {
+  const data = getViewData();
+  const d = data[key];
+  if (!d || !d.count) return null;
+  return { count: d.count, lastLabel: formatDate(d.last) };
+}
+function formatDate(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const diff = now - d;
+  if (diff < 60000) return '방금';
+  if (diff < 3600000) return Math.floor(diff/60000) + '분 전';
+  if (diff < 86400000) return Math.floor(diff/3600000) + '시간 전';
+  if (diff < 604800000) return Math.floor(diff/86400000) + '일 전';
+  return (d.getMonth()+1) + '/' + d.getDate();
+}
+function updateUnitMeta(key) {
+  const link = document.querySelector(`.unit-link[data-key="${key}"]`);
+  if (!link) return;
+  const hist = getViewHistory(key);
+  let meta = link.querySelector('.unit-meta');
+  if (hist) {
+    if (!meta) { meta = document.createElement('div'); meta.className = 'unit-meta'; link.appendChild(meta); }
+    meta.innerHTML = `<span class="meta-count">${hist.count}회</span> · ${hist.lastLabel}`;
+  }
+}
+
 async function init() {
   try {
     const [structRes, searchRes] = await Promise.all([
@@ -460,10 +511,13 @@ function renderNav() {
           const num = u.title.match(/^(\d+)단원/);
           const numStr = num ? num[1] : '';
           const displayTitle = u.title.replace(/^\d+단원_/, '');
-          return `<a class="unit-link" data-vol="${vi}" data-unit="${ui}"
+          const key = vol.slug + '/' + u.file;
+          const hist = getViewHistory(key);
+          const metaHtml = hist ? `<div class="unit-meta"><span class="meta-count">${hist.count}회</span> · ${hist.lastLabel}</div>` : '';
+          return `<a class="unit-link" data-vol="${vi}" data-unit="${ui}" data-key="${key}"
             href="#${encodeURIComponent(vol.slug)}/${encodeURIComponent(u.file)}" title="${u.title}"
             onclick="event.preventDefault(); loadDoc('${vol.slug.replace(/'/g,"\\'")}','${u.file.replace(/'/g,"\\'")}'); window.location.hash='${encodeURIComponent(vol.slug)}/${encodeURIComponent(u.file)}'; return false;">
-            <span class="unit-num">${numStr}</span>${displayTitle}
+            <div class="unit-title"><span class="unit-num">${numStr}</span>${displayTitle}</div>${metaHtml}
           </a>`;
         }).join('')}
       </div>
@@ -489,6 +543,8 @@ function toggleVol(vi) {
 async function loadDoc(volSlug, file) {
   const body = document.getElementById('contentBody');
   body.innerHTML = '<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
+  const viewKey = volSlug + '/' + file;
+  recordView(viewKey);
 
   try {
     const fetchUrl = `docs/${encodeURIComponent(volSlug)}/${encodeURIComponent(file)}`;
