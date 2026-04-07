@@ -197,6 +197,84 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
 .sidebar-header { cursor: pointer; }
 .sidebar-header:hover { opacity: 0.85; }
 
+/* Memo popup */
+.memo-popup {
+  position: fixed; z-index: 9000;
+  background: var(--primary); color: #fff;
+  padding: 6px 14px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  display: none;
+}
+.memo-popup:hover { background: var(--primary-dark); }
+.memo-popup.show { display: block; }
+
+/* Memo panel */
+.memo-toggle {
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; color: #94a3b8; font-size: 13px;
+  transition: background 0.15s;
+}
+.memo-toggle:hover { background: var(--sidebar-hover); }
+.memo-toggle .memo-badge {
+  background: var(--primary); color: #fff;
+  font-size: 11px; padding: 1px 7px; border-radius: 10px; font-weight: 600;
+}
+.memo-panel {
+  position: fixed; top: 0; right: -400px; width: 380px; max-width: 90vw;
+  height: 100vh; background: #fff; z-index: 9500;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+  transition: right 0.3s; display: flex; flex-direction: column;
+}
+.memo-panel.open { right: 0; }
+.memo-panel-header {
+  padding: 16px 20px; background: var(--sidebar-bg); color: #fff;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.memo-panel-header h3 { font-size: 16px; }
+.memo-panel-close {
+  background: none; border: none; color: #94a3b8;
+  font-size: 20px; cursor: pointer;
+}
+.memo-panel-close:hover { color: #fff; }
+.memo-panel-body {
+  flex: 1; overflow-y: auto; padding: 12px;
+}
+.memo-card {
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  border-radius: 8px; padding: 12px; margin-bottom: 10px;
+  position: relative;
+}
+.memo-card-source {
+  font-size: 11px; color: var(--primary); font-weight: 600;
+  margin-bottom: 6px;
+}
+.memo-card-text {
+  font-size: 13px; color: #1e293b; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word;
+}
+.memo-card-time {
+  font-size: 10px; color: #94a3b8; margin-top: 6px;
+}
+.memo-card-del {
+  position: absolute; top: 8px; right: 8px;
+  background: none; border: none; color: #cbd5e1;
+  font-size: 14px; cursor: pointer;
+}
+.memo-card-del:hover { color: #f87171; }
+.memo-empty {
+  text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px;
+}
+.memo-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.3); z-index: 9400;
+}
+.memo-overlay.show { display: block; }
+
 /* Search results in sidebar */
 .search-results { padding: 8px 0; }
 .search-result-item {
@@ -386,6 +464,10 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
       </div>
     </div>
     <div class="nav" id="navContainer"></div>
+    <div class="memo-toggle" onclick="toggleMemoPanel()">
+      <span>📝 암기노트</span>
+      <span class="memo-badge" id="memoBadge">0</span>
+    </div>
   </nav>
 
   <div class="overlay" id="overlay"></div>
@@ -405,6 +487,16 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
 </div>
 
 <button class="menu-toggle" id="menuToggle">&#9776;</button>
+
+<div class="memo-popup" id="memoPopup" onclick="addMemo()">📝 암기노트에 추가</div>
+<div class="memo-overlay" id="memoOverlay" onclick="toggleMemoPanel()"></div>
+<div class="memo-panel" id="memoPanel">
+  <div class="memo-panel-header">
+    <h3>📝 암기노트</h3>
+    <button class="memo-panel-close" onclick="toggleMemoPanel()">✕</button>
+  </div>
+  <div class="memo-panel-body" id="memoPanelBody"></div>
+</div>
 
 <script>
 const PASS_HASH = '9466c70d025598f4dee0e4876b22886a72191a1e6521a7315c8abc3ad6c4ad11';
@@ -817,6 +909,101 @@ document.addEventListener('keydown', (e) => {
     document.getElementById('searchInput').focus();
   }
 });
+
+// === 암기노트 ===
+let selectedText = '';
+let selectedSource = '';
+
+function getMemos() {
+  try { return JSON.parse(localStorage.getItem('elite_memos') || '[]'); } catch { return []; }
+}
+function saveMemos(memos) {
+  localStorage.setItem('elite_memos', JSON.stringify(memos));
+  updateMemoBadge();
+}
+function updateMemoBadge() {
+  const count = getMemos().length;
+  document.getElementById('memoBadge').textContent = count;
+}
+
+// 텍스트 선택 감지
+document.addEventListener('mouseup', handleSelection);
+document.addEventListener('touchend', handleSelection);
+
+function handleSelection(e) {
+  const popup = document.getElementById('memoPopup');
+  const sel = window.getSelection();
+  const text = sel?.toString().trim();
+  if (!text || text.length < 2 || !document.querySelector('.doc-content')?.contains(sel.anchorNode)) {
+    setTimeout(() => { if (!window.getSelection()?.toString().trim()) popup.classList.remove('show'); }, 200);
+    return;
+  }
+  selectedText = text;
+  selectedSource = document.getElementById('contentTitle')?.textContent || '';
+
+  // 위치 계산
+  const range = sel.getRangeAt(0);
+  const rect = range.getBoundingClientRect();
+  popup.style.left = (rect.left + rect.width / 2) + 'px';
+  popup.style.top = (rect.top - 40) + 'px';
+  popup.classList.add('show');
+}
+
+function addMemo() {
+  if (!selectedText) return;
+  const memos = getMemos();
+  memos.unshift({
+    text: selectedText.substring(0, 1000),
+    source: selectedSource,
+    time: Date.now(),
+    id: Date.now().toString(36)
+  });
+  saveMemos(memos);
+  document.getElementById('memoPopup').classList.remove('show');
+  window.getSelection()?.removeAllRanges();
+  selectedText = '';
+
+  // 피드백
+  const popup = document.getElementById('memoPopup');
+  popup.textContent = '추가됨!';
+  popup.classList.add('show');
+  setTimeout(() => { popup.classList.remove('show'); popup.textContent = '📝 암기노트에 추가'; }, 800);
+}
+
+function deleteMemo(id) {
+  const memos = getMemos().filter(m => m.id !== id);
+  saveMemos(memos);
+  renderMemoPanel();
+}
+
+function toggleMemoPanel() {
+  const panel = document.getElementById('memoPanel');
+  const overlay = document.getElementById('memoOverlay');
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open');
+  overlay.classList.toggle('show');
+  if (!isOpen) renderMemoPanel();
+}
+
+function renderMemoPanel() {
+  const memos = getMemos();
+  const body = document.getElementById('memoPanelBody');
+  if (memos.length === 0) {
+    body.innerHTML = '<div class="memo-empty">저장된 노트가 없습니다.<br><br>문서에서 텍스트를 선택하면<br>암기노트에 추가할 수 있습니다.</div>';
+    return;
+  }
+  body.innerHTML = memos.map(m => `
+    <div class="memo-card">
+      <button class="memo-card-del" onclick="deleteMemo('${m.id}')" title="삭제">✕</button>
+      <div class="memo-card-source">${m.source}</div>
+      <div class="memo-card-text">${m.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      <div class="memo-card-time">${formatDate(m.time)}</div>
+    </div>
+  `).join('');
+}
+
+// 초기화
+updateMemoBadge();
 
 init();
 </script>
