@@ -181,17 +181,14 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
   text-overflow: ellipsis;
 }
 .unit-link .unit-meta .meta-count { color: #60a5fa; }
+.unit-link .unit-meta .meta-reset {
+  color: #64748b; cursor: pointer; margin-left: 4px;
+  opacity: 0; transition: opacity 0.15s;
+}
+.unit-link:hover .unit-meta .meta-reset { opacity: 1; }
 
-.sidebar-footer {
-  padding: 10px 16px;
-  border-top: 1px solid rgba(255,255,255,0.1);
-}
-.sidebar-footer button {
-  width: 100%; padding: 6px; border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 6px; background: transparent; color: #64748b;
-  font-size: 12px; cursor: pointer; transition: all 0.15s;
-}
-.sidebar-footer button:hover { background: rgba(255,255,255,0.05); color: #94a3b8; }
+.sidebar-header { cursor: pointer; }
+.sidebar-header:hover { opacity: 0.85; }
 
 /* Search results in sidebar */
 .search-results { padding: 8px 0; }
@@ -371,7 +368,7 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
 
 <div class="app" id="mainApp" style="display:none;">
   <nav class="sidebar" id="sidebar">
-    <div class="sidebar-header">
+    <div class="sidebar-header" onclick="goHome()">
       <h1>엘리트 정형외과</h1>
       <p>단원별 열람 시스템</p>
     </div>
@@ -381,9 +378,6 @@ html, body { height: 100%; font-family: 'Segoe UI', -apple-system, sans-serif; b
       </div>
     </div>
     <div class="nav" id="navContainer"></div>
-    <div class="sidebar-footer">
-      <button onclick="resetViews()" title="열람 기록 초기화">열람 기록 리셋</button>
-    </div>
   </nav>
 
   <div class="overlay" id="overlay"></div>
@@ -477,11 +471,31 @@ function formatDate(ts) {
   if (diff < 604800000) return Math.floor(diff/86400000) + '일 전';
   return (d.getMonth()+1) + '/' + d.getDate();
 }
-function resetViews() {
-  if (!confirm('열람 기록을 모두 초기화할까요?')) return;
-  localStorage.removeItem('elite_views');
-  document.querySelectorAll('.unit-meta').forEach(el => el.remove());
+function resetViewForKey(key, e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const data = getViewData();
+  delete data[key];
+  localStorage.setItem('elite_views', JSON.stringify(data));
+  const link = document.querySelector(`.unit-link[data-key="${key}"]`);
+  const meta = link?.querySelector('.unit-meta');
+  if (meta) meta.remove();
+}
+function goHome() {
   lastLoadedKey = '';
+  history.pushState(null, '', location.pathname + location.search);
+  document.getElementById('contentTitle').textContent = '엘리트 정형외과 단원별 열람';
+  document.getElementById('contentHeader').innerHTML = '<h2 id="contentTitle">엘리트 정형외과 단원별 열람</h2>';
+  document.getElementById('contentBody').innerHTML = `
+    <div class="welcome"><h2>단원을 선택하세요</h2>
+    <p>왼쪽 목차에서 볼륨을 펼치고 단원을 클릭하면 내용을 열람할 수 있습니다.</p>
+    <div class="stats" id="statsContainer"></div></div>`;
+  renderStats();
+  document.querySelectorAll('.unit-link.active').forEach(el => el.classList.remove('active'));
+  if (isMobile()) {
+    document.getElementById('sidebar').classList.remove('mobile-hidden');
+    document.querySelector('.content').classList.remove('mobile-show');
+  }
 }
 function updateUnitMeta(key) {
   const link = document.querySelector(`.unit-link[data-key="${key}"]`);
@@ -490,7 +504,7 @@ function updateUnitMeta(key) {
   let meta = link.querySelector('.unit-meta');
   if (hist) {
     if (!meta) { meta = document.createElement('div'); meta.className = 'unit-meta'; link.appendChild(meta); }
-    meta.innerHTML = `<span class="meta-count">${hist.count}회</span> · ${hist.lastLabel}`;
+    meta.innerHTML = `<span class="meta-count">${hist.count}회</span> · ${hist.lastLabel} <span class="meta-reset" onclick="resetViewForKey('${key.replace(/'/g,"\\'")}',event)" title="리셋">✕</span>`;
   }
 }
 
@@ -533,7 +547,7 @@ function renderNav() {
           const displayTitle = u.title.replace(/^\d+단원_/, '');
           const key = vol.slug + '/' + u.file;
           const hist = getViewHistory(key);
-          const metaHtml = hist ? `<div class="unit-meta"><span class="meta-count">${hist.count}회</span> · ${hist.lastLabel}</div>` : '';
+          const metaHtml = hist ? `<div class="unit-meta"><span class="meta-count">${hist.count}회</span> · ${hist.lastLabel} <span class="meta-reset" onclick="resetViewForKey('${key.replace(/'/g,"\\\\'")}',event)" title="리셋">✕</span></div>` : '';
           return `<a class="unit-link" data-vol="${vi}" data-unit="${ui}" data-key="${key}"
             href="#${encodeURIComponent(vol.slug)}/${encodeURIComponent(u.file)}" title="${u.title}"
             onclick="event.preventDefault(); loadDoc('${vol.slug.replace(/'/g,"\\'")}','${u.file.replace(/'/g,"\\'")}'); window.location.hash='${encodeURIComponent(vol.slug)}/${encodeURIComponent(u.file)}'; return false;">
