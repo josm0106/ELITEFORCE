@@ -4,3 +4,10 @@ package-lock.json
 build.js
 .commit_message.txt
 *.log
+
+# Source files - not needed for site
+*.docx
+*.pdf
+Vol.*/
+.claude/
+PROJECT_SPEC.md
