@@ -330,23 +330,30 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;bac
 .mobile-memo-fab:active{transform:scale(.9)}
 
 /* ====== INTERACTIVE QUIZ (클릭형 문제) ====== */
-.quiz-opts{list-style:none!important;margin:12px 0 8px!important;padding:0!important;display:flex;flex-direction:column;gap:8px}
-.quiz-opts>li{margin:0!important;padding:12px 44px 12px 15px;border:1.5px solid #e4e8ef;border-radius:11px;background:#fff;cursor:pointer;transition:border-color .16s,background .16s,transform .12s,box-shadow .16s;position:relative;line-height:1.6;list-style:none;font-size:14.5px}
+.quiz-opts{list-style:none!important;margin:14px 0 8px!important;padding:0!important;display:flex;flex-direction:column;gap:9px}
 .quiz-opts>li::marker{content:''}
-.quiz-opts>li:hover{border-color:var(--accent2);background:#f6f9ff;transform:translateY(-1px);box-shadow:0 4px 14px rgba(37,99,235,.09)}
-.q-inline{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 8px!important}
-.q-inline .q-opt{display:inline-block;padding:9px 15px 9px 13px;border:1.5px solid #e4e8ef;border-radius:10px;background:#fff;cursor:pointer;transition:border-color .16s,background .16s,transform .12s,box-shadow .16s;line-height:1.5;font-size:14px;position:relative}
-.q-inline .q-opt:hover{border-color:var(--accent2);background:#f6f9ff;transform:translateY(-1px);box-shadow:0 4px 14px rgba(37,99,235,.09)}
+.q-sep{display:flex;flex-direction:column;gap:9px;margin:14px 0 8px}
+.q-inline{display:flex;flex-wrap:wrap;gap:9px;margin:14px 0 8px!important}
+/* generic clickable option card — applies to <li> (list) and <p> (separate-p) options */
+.q-opt{margin:0!important;padding:12px 46px 12px 16px;border:1.5px solid #e4e8ef;border-radius:12px;background:#fff;cursor:pointer;transition:border-color .16s,background .16s,transform .12s,box-shadow .16s;position:relative;line-height:1.65;list-style:none;font-size:14.5px;display:block}
+.q-inline .q-opt{display:inline-block;padding:9px 16px;font-size:14px}
+.q-opt:hover{border-color:var(--accent2);background:#f6f9ff;transform:translateY(-1px);box-shadow:0 5px 16px rgba(48,86,211,.10)}
 .q-opt.q-correct{border-color:#16a34a!important;background:linear-gradient(135deg,#f0fdf4,#dcfce7)!important;color:#14532d;font-weight:600}
-.quiz-opts>li.q-correct{padding-right:44px}
-.q-opt.q-correct::after{content:'✓';position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#16a34a;font-weight:800;font-size:15px}
-.q-inline .q-opt.q-correct::after{position:static;transform:none;margin-left:6px}
+.q-opt.q-correct::after{content:'✓';position:absolute;right:15px;top:50%;transform:translateY(-50%);color:#16a34a;font-weight:800;font-size:15px}
 .q-opt.q-wrong{border-color:#dc2626!important;background:linear-gradient(135deg,#fef2f2,#fee2e2)!important;color:#991b1b}
-.q-opt.q-wrong::after{content:'✕';position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#dc2626;font-weight:800;font-size:15px}
-.q-inline .q-opt.q-wrong::after{position:static;transform:none;margin-left:6px}
-.quiz-opts.answered>li,.q-inline.answered .q-opt{cursor:default}
-.quiz-opts.answered>li:hover,.q-inline.answered .q-opt:hover{transform:none;box-shadow:none}
-.quiz-opts.answered>li:not(.q-correct):not(.q-wrong),.q-inline.answered .q-opt:not(.q-correct):not(.q-wrong){opacity:.62}
+.q-opt.q-wrong::after{content:'✕';position:absolute;right:15px;top:50%;transform:translateY(-50%);color:#dc2626;font-weight:800;font-size:15px}
+.q-inline .q-opt.q-correct::after,.q-inline .q-opt.q-wrong::after{position:static;transform:none;margin-left:6px}
+/* table-based options — each option is a table row */
+.q-table-opt{cursor:pointer;transition:background .15s}
+.q-table-opt:hover td{background:#f0f5ff!important}
+.q-table-opt.q-correct td{background:linear-gradient(135deg,#f0fdf4,#dcfce7)!important;color:#14532d;font-weight:700}
+.q-table-opt.q-wrong td{background:linear-gradient(135deg,#fef2f2,#fee2e2)!important;color:#991b1b}
+/* answered state — freeze interaction, dim non-selected options */
+.q-cont.answered .q-opt,.q-cont.answered .q-table-opt{cursor:default}
+.q-cont.answered .q-opt:hover{transform:none;box-shadow:none}
+.q-cont.answered .q-opt:not(.q-correct):not(.q-wrong){opacity:.55}
+.q-cont.answered .q-opt:not(.q-correct):not(.q-wrong):hover{background:#fff;border-color:#e4e8ef}
+.q-cont.answered .q-table-opt:not(.q-correct):not(.q-wrong){opacity:.6}
 /* reveal pill (pseudo-element label = zero text node) */
 .quiz-reveal{display:inline-flex;align-items:center;margin:6px 0 4px;padding:6px 15px;border:1.5px solid var(--accent);border-radius:20px;background:var(--accent-glow);color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;user-select:none;transition:background .15s,color .15s;letter-spacing:-.2px}
 .quiz-reveal::before{content:'정답 확인 ▾'}
@@ -3938,8 +3945,8 @@ function loadChapter(num) {
     </div>
   `;
   area.scrollTop = 0;
+  processQuizzes();   // wire quizzes FIRST so heading-detection can't swallow 정답/보기 lines
   processHeadings();
-  processQuizzes();
   restoreHighlightsForChapter(num);
   history.replaceState(null, '', `#ch${num}`);
 }
@@ -4720,22 +4727,64 @@ function quizSymIndex(s){
   return -1;
 }
 const QUIZ_SYM=/[①-⑳㉠-㉿]/;
+// leading decoration that may precede 정답:/답: or an option symbol (incl. NBSP / zero-width space)
+const QUIZ_LEAD=/^[\s ​▶▷►▸➤➔✔✅✓☑★☆◆◇■□●○•·∙*※‣⁃\-–—]+/;
+function quizStrip(s){return (s||'').replace(/[ ​]/g,' ').replace(QUIZ_LEAD,'').replace(/\s+/g,' ').trim();}
+
+// Locate the option container preceding an answer paragraph. Supports the 4 real formats:
+//  list  = <ul>/<ol> with symbol <li>;   sepP = consecutive <p>, one symbol each;
+//  table = <table> rows with a symbol-only cell;   inline = single <p> holding many symbols
+function quizFindOptions(ansP){
+  // sepP: contiguous <p> siblings immediately before, each starting with an option symbol
+  let seq=[], p=ansP.previousElementSibling;
+  while(p && p.tagName==='P'){
+    const txt=quizStrip(p.textContent);
+    const idx=quizSymIndex(txt[0]);
+    if(idx>0 && txt.length<320){ seq.unshift({el:p, idx}); p=p.previousElementSibling; }
+    else break;
+  }
+  if(seq.length>=2) return {type:'sepP', els:seq};
+  // list / table / inline within a few element hops
+  let prev=ansP.previousElementSibling, hops=0;
+  while(prev && hops<6){
+    const tag=prev.tagName;
+    if(tag==='UL'||tag==='OL'){
+      const opt=Array.from(prev.children).filter(n=>n.tagName==='LI')
+        .map(li=>({el:li, idx:quizSymIndex(quizStrip(li.textContent)[0])})).filter(o=>o.idx>0);
+      if(opt.length>=2) return {type:'list', els:opt, container:prev};
+    }
+    if(tag==='TABLE'){
+      const opt=[];
+      Array.from(prev.querySelectorAll('tr')).forEach(r=>{
+        const symCell=Array.from(r.children).find(c=>{const ct=quizStrip(c.textContent); return ct.length<=3 && quizSymIndex(ct[0])>0;});
+        if(symCell) opt.push({el:r, idx:quizSymIndex(quizStrip(symCell.textContent)[0])});
+      });
+      if(opt.length>=2) return {type:'table', els:opt, container:prev};
+    }
+    if(tag==='P'){
+      const syms=prev.textContent.match(/[①-⑳㉠-㉿]/g);
+      if(syms && syms.length>=2 && prev.children.length===0) return {type:'inline', container:prev};
+    }
+    prev=prev.previousElementSibling; hops++;
+  }
+  return null;
+}
 
 function processQuizzes(){
   const root=document.getElementById('chapterContent');
   if(!root) return;
-  // collect answer paragraphs (start with 답: or 정답:)
+  // collect answer paragraphs (after stripping leading decoration, begin with 정답:/답:)
   const ansEls=[];
   root.querySelectorAll('p').forEach(p=>{
-    const t=p.textContent.replace(/ /g,' ').trim();
+    if(p.classList.contains('quiz-answer')) return;
+    const t=quizStrip(p.textContent);
     if(/^(정답|답)\s*[:：]/.test(t) && t.length<600) ansEls.push(p);
   });
   let qid=0;
   ansEls.forEach(ansP=>{
-    // skip if already processed
     if(ansP.classList.contains('quiz-answer')) return;
-    const at=ansP.textContent.replace(/ /g,' ');
-    const mm=at.match(/^(?:정답|답)\s*[:：]\s*(.{0,14})/);
+    const at=quizStrip(ansP.textContent);
+    const mm=at.match(/^(?:정답|답)\s*[:：]\s*(.{0,16})/);
     const headRaw=mm?mm[1]:'';
     // extract leading answer symbol token(s)
     const tokMatch=headRaw.match(/^([①-⑳㉠-㉿](?:[\s,、+/·]*[①-⑳㉠-㉿])*|[A-Ea-e](?:[\s,、+/·]*[A-Ea-e])*|[1-5](?:[\s,、+/·]*[1-5])*|[가-힣])/);
@@ -4744,73 +4793,82 @@ function processQuizzes(){
       const syms=tokMatch[1].match(/[①-⑳㉠-㉿]|[A-Ea-e]|[1-5]|[가-힣]/g)||[];
       correct=syms.map(s=>quizSymIndex(s)).filter(n=>n>0);
     }
-    // find options element backward
-    let opts=null, fmt=null, prev=ansP.previousElementSibling, hops=0;
-    while(prev && hops<5){
-      if(prev.tagName==='UL'||prev.tagName==='OL'){
-        const lis=Array.from(prev.children).filter(n=>n.tagName==='LI');
-        if(lis.length>=2 && lis.filter(li=>quizSymIndex(li.textContent.trim()[0])>0).length>=2){ opts={lis}; fmt='list'; opts.el=prev; break; }
-      }
-      if(prev.tagName==='P'){
-        const syms=prev.textContent.match(/[①-⑳㉠-㉿]/g);
-        if(syms && syms.length>=2 && prev.children.length===0){ opts={el:prev}; fmt='inline'; break; }
-      }
-      prev=prev.previousElementSibling; hops++;
-    }
+    const found=quizFindOptions(ansP);
     const id='q'+(qid++);
-    // build answer hide-group: ansP + following 오답/해설/풀이 lines
+    // ---- wire options + remember container ----
+    let container=null;
+    if(found){
+      if(found.type==='sepP'){
+        const wrap=document.createElement('div'); wrap.className='q-sep';
+        found.els[0].el.parentNode.insertBefore(wrap, found.els[0].el);
+        found.els.forEach(o=>{ wrap.appendChild(o.el); o.el.classList.add('q-opt'); o.el.dataset.q=id; o.el.dataset.i=o.idx; });
+        container=wrap;
+      } else if(found.type==='list'){
+        found.container.classList.add('quiz-opts');
+        found.els.forEach(o=>{ o.el.classList.add('q-opt'); o.el.dataset.q=id; o.el.dataset.i=o.idx; });
+        container=found.container;
+      } else if(found.type==='table'){
+        found.els.forEach(o=>{ o.el.classList.add('q-table-opt'); o.el.dataset.q=id; o.el.dataset.i=o.idx; });
+        container=found.container;
+      } else if(found.type==='inline'){
+        try{
+          const pEl=found.container, txt=pEl.textContent;
+          const idxs=[]; const re=/[①-⑳㉠-㉿]/g; let r;
+          while((r=re.exec(txt))) idxs.push(r.index);
+          if(idxs.length>=2){
+            const pre=txt.slice(0,idxs[0]);
+            pEl.classList.add('q-inline'); pEl.textContent='';
+            if(pre.trim()){ const tn=document.createElement('span'); tn.style.cssText='align-self:center;color:var(--text2);font-size:13px'; tn.textContent=pre; pEl.appendChild(tn); }
+            for(let i=0;i<idxs.length;i++){
+              const seg=txt.slice(idxs[i], i+1<idxs.length?idxs[i+1]:txt.length);
+              const sp=document.createElement('span'); sp.className='q-opt'; sp.dataset.q=id; sp.dataset.i=quizSymIndex(quizStrip(seg)[0]); sp.textContent=seg.trim();
+              pEl.appendChild(sp);
+            }
+            container=pEl;
+          }
+        }catch(e){ container=null; }
+      }
+    }
+    if(container){ container.classList.add('q-cont'); container.dataset.qc=id; }
+    // ---- build answer hide-group: ansP + following 해설/오답/풀이 lines (<p> or <ul>/<ol>) ----
+    const EXPL=/^(오답|해설|풀이|Kim|키워드|cf\b|참고|보충|Tip|팁|note|→|\*|＊|※)/i;
     const group=[ansP];
     let nx=ansP.nextElementSibling;
-    while(nx && nx.tagName==='P'){
-      const nt=nx.textContent.trim();
-      if(/^(오답|해설|풀이|Kim|키워드|cf\b|참고|Tip|팁|→|\*|＊|※)/i.test(nt) && !QUIZ_SYM.test(nt.slice(0,2)) && nt.length<600){ group.push(nx); nx=nx.nextElementSibling; }
-      else break;
+    while(nx){
+      if(nx.tagName==='P'){
+        const nt=quizStrip(nx.textContent);
+        if(EXPL.test(nt) && !QUIZ_SYM.test(nt.slice(0,2)) && nt.length<900){ group.push(nx); nx=nx.nextElementSibling; continue; }
+        break;
+      }
+      if(nx.tagName==='UL'||nx.tagName==='OL'){
+        const firstLi=nx.querySelector('li');
+        if(firstLi && EXPL.test(quizStrip(firstLi.textContent))){ group.push(nx); nx=nx.nextElementSibling; continue; }
+        break;
+      }
+      break;
     }
     group.forEach(el=>{ el.classList.add('quiz-answer'); el.dataset.q=id; });
-    // reveal pill (zero text node — label via CSS ::before)
+    // ---- reveal pill (label via CSS ::before) ----
     const pill=document.createElement('span');
     pill.className='quiz-reveal'; pill.dataset.q=id; pill.setAttribute('role','button');
-    ansP.parentNode.insertBefore(pill, ansP);
-    // wire options
-    let optEls=[];
-    if(fmt==='list'){
-      opts.el.classList.add('quiz-opts'); opts.el.dataset.q=id;
-      opts.lis.forEach(li=>{ li.classList.add('q-opt'); li.dataset.q=id; li.dataset.i=quizSymIndex(li.textContent.trim()[0]); });
-      optEls=opts.lis;
-    } else if(fmt==='inline'){
-      try{
-        const p=opts.el, txt=p.textContent;
-        const idxs=[]; const re=/[①-⑳㉠-㉿]/g; let r;
-        while((r=re.exec(txt))) idxs.push(r.index);
-        if(idxs.length>=2){
-          const pre=txt.slice(0,idxs[0]);
-          p.classList.add('q-inline'); p.dataset.q=id; p.textContent='';
-          if(pre.trim()) { const tn=document.createElement('span'); tn.style.cssText='align-self:center;color:var(--text2);font-size:13px'; tn.textContent=pre; p.appendChild(tn); }
-          for(let i=0;i<idxs.length;i++){
-            const seg=txt.slice(idxs[i], i+1<idxs.length?idxs[i+1]:txt.length);
-            const sp=document.createElement('span');
-            sp.className='q-opt'; sp.dataset.q=id; sp.dataset.i=quizSymIndex(seg.trim()[0]); sp.textContent=seg;
-            p.appendChild(sp); optEls.push(sp);
-          }
-        }
-      }catch(e){ optEls=[]; }
-    }
     pill.dataset.correct=correct.join(',');
+    ansP.parentNode.insertBefore(pill, ansP);
   });
-  // delegated click handler (fresh element each load → no leak)
+  // delegated click handler (stable fn ref → safe to re-bind without leaking)
+  root.removeEventListener('click', onQuizClick);
   root.addEventListener('click', onQuizClick);
 }
 
 function quizRevealGroup(id, fromGuess){
-  const correct=document.querySelector('.quiz-reveal[data-q="'+id+'"]');
+  const pill=document.querySelector('.quiz-reveal[data-q="'+id+'"]');
   document.querySelectorAll('.quiz-answer[data-q="'+id+'"]').forEach(el=>el.classList.add('shown'));
-  if(correct) correct.classList.add('shown');
-  // mark correct options green
-  const cset=(correct&&correct.dataset.correct?correct.dataset.correct.split(',').filter(Boolean).map(Number):[]);
-  document.querySelectorAll('.q-opt[data-q="'+id+'"]').forEach(o=>{
+  if(pill) pill.classList.add('shown');
+  // mark correct options
+  const cset=(pill&&pill.dataset.correct?pill.dataset.correct.split(',').filter(Boolean).map(Number):[]);
+  document.querySelectorAll('.q-opt[data-q="'+id+'"],.q-table-opt[data-q="'+id+'"]').forEach(o=>{
     if(cset.includes(+o.dataset.i)) o.classList.add('q-correct');
   });
-  const cont=document.querySelector('.quiz-opts[data-q="'+id+'"],.q-inline[data-q="'+id+'"]');
+  const cont=document.querySelector('.q-cont[data-qc="'+id+'"]');
   if(cont) cont.classList.add('answered');
 }
 
@@ -4819,18 +4877,17 @@ function onQuizClick(e){
   const pill=e.target.closest('.quiz-reveal');
   if(pill){
     const id=pill.dataset.q;
-    const shown=pill.classList.contains('shown');
-    if(shown){ document.querySelectorAll('.quiz-answer[data-q="'+id+'"]').forEach(el=>el.classList.remove('shown')); pill.classList.remove('shown'); }
+    if(pill.classList.contains('shown')){ document.querySelectorAll('.quiz-answer[data-q="'+id+'"]').forEach(el=>el.classList.remove('shown')); pill.classList.remove('shown'); }
     else quizRevealGroup(id);
     return;
   }
-  const opt=e.target.closest('.q-opt');
+  const opt=e.target.closest('.q-opt,.q-table-opt');
   if(opt){
     const id=opt.dataset.q;
-    const cont=document.querySelector('.quiz-opts[data-q="'+id+'"],.q-inline[data-q="'+id+'"]');
+    const cont=document.querySelector('.q-cont[data-qc="'+id+'"]');
     if(cont && cont.classList.contains('answered')) return; // already answered
-    const correct=document.querySelector('.quiz-reveal[data-q="'+id+'"]');
-    const cset=(correct&&correct.dataset.correct?correct.dataset.correct.split(',').filter(Boolean).map(Number):[]);
+    const pill=document.querySelector('.quiz-reveal[data-q="'+id+'"]');
+    const cset=(pill&&pill.dataset.correct?pill.dataset.correct.split(',').filter(Boolean).map(Number):[]);
     const mine=+opt.dataset.i;
     if(cset.length && !cset.includes(mine)) opt.classList.add('q-wrong');
     quizRevealGroup(id, true);
@@ -4852,10 +4909,12 @@ function processHeadings() {
   ];
   
   ps.forEach(p => {
+    // never turn a wired quiz line (answer / option / reveal) into a heading
+    if (p.classList.contains('quiz-answer') || p.classList.contains('q-opt') || p.closest('.q-cont')) return;
     const text = p.textContent.trim();
     const len = text.length;
     if (len === 0 || len > 120) return;
-    
+
     // Skip meta lines (author, citation, Dr.)
     if (/^(Dr\.|정리:|Instr Course|Instructional Course|\d{4} ELITE)/.test(text)) return;
     if (/^(CHAPTER \d|Chapter \d+ —)/.test(text)) return;
@@ -4934,7 +4993,7 @@ function processHeadings() {
       { re: /(?:^|(?<=\.\s)|(?<=\.\n)|(?<=다\.\s)|(?<=다\.))(\s*)([A-Z][a-z]+(?:\s+[A-Za-z]+){0,5})\s*(?:\n|$)/gm, level: 2 },
     ];
 
-    const longPs = Array.from(content.querySelectorAll('p')).filter(p => p.textContent.length > 300);
+    const longPs = Array.from(content.querySelectorAll('p')).filter(p => p.textContent.length > 300 && !p.classList.contains('quiz-answer') && !p.closest('.q-cont'));
     longPs.forEach(p => {
       const html = p.innerHTML;
       // Detect English section titles: sentence ends (다. or .) followed by capitalized phrase
