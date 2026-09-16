@@ -421,6 +421,10 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;bac
 .quiz-reveal::before{content:'정답 확인 ▾'}
 .quiz-reveal:hover{background:var(--accent);color:#fff}
 .quiz-reveal.shown::before{content:'정답 가리기 ▴'}
+.quiz-retry{margin:6px 0 4px 8px;padding:9px 13px;border:1px solid #b0c2a6;border-radius:6px;background:#fffdf7;color:#426a4d;font-size:13px;cursor:pointer}
+.quiz-retry::before{content:'↻ 다시 풀기'}
+.quiz-retry:hover{background:#edf3e8}
+.quiz-retry[hidden]{display:none}
 /* answer reveal box */
 .quiz-answer{display:none!important}
 .quiz-answer.shown{display:block!important;margin:8px 0 6px!important;padding:13px 17px;border-radius:11px;background:linear-gradient(135deg,#eef4ff,#e9f0ff);border-left:4px solid var(--accent);line-height:1.7;animation:qReveal .26s cubic-bezier(.4,0,.2,1)}
@@ -6041,8 +6045,15 @@ function processQuizzes(){
     // ---- reveal pill (label via CSS ::before) ----
     const pill=document.createElement('span');
     pill.className='quiz-reveal'; pill.dataset.q=id; pill.setAttribute('role','button');
+    pill.tabIndex=0;
+    pill.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pill.click(); } });
     pill.dataset.correct=correct.join(',');
     ansP.parentNode.insertBefore(pill, ansP);
+    // Keep labels in CSS to preserve stored memo/highlight character offsets.
+    const retry=document.createElement('button');
+    retry.type='button'; retry.className='quiz-retry'; retry.dataset.q=id; retry.hidden=true;
+    retry.setAttribute('aria-label','이 문제 다시 풀기');
+    pill.after(retry);
   });
   // delegated click handler (stable fn ref → safe to re-bind without leaking)
   root.removeEventListener('click', onQuizClick);
@@ -6060,10 +6071,29 @@ function quizRevealGroup(id, fromGuess){
   });
   const cont=document.querySelector('.q-cont[data-qc="'+id+'"]');
   if(cont) cont.classList.add('answered');
+  const retry=document.querySelector('.quiz-retry[data-q="'+id+'"]');
+  if(retry) retry.hidden=false;
+}
+
+function resetQuiz(id){
+  const root=document.getElementById('chapterContent');
+  if(!root) return;
+  root.querySelectorAll('.quiz-answer[data-q="'+id+'"]').forEach(el=>el.classList.remove('shown'));
+  root.querySelectorAll('.q-opt[data-q="'+id+'"],.q-table-opt[data-q="'+id+'"]').forEach(el=>el.classList.remove('q-correct','q-wrong'));
+  const cont=root.querySelector('.q-cont[data-qc="'+id+'"]');
+  if(cont) cont.classList.remove('answered');
+  const pill=root.querySelector('.quiz-reveal[data-q="'+id+'"]');
+  if(pill){ pill.classList.remove('shown'); pill.focus({preventScroll:true}); }
+  const retry=root.querySelector('.quiz-retry[data-q="'+id+'"]');
+  if(retry) retry.hidden=true;
+  removeMemoMarkerPop();
+  updateReadingProgress();
 }
 
 function onQuizClick(e){
   if(e.target.closest('mark')) return; // don't hijack highlight clicks
+  const retry=e.target.closest('.quiz-retry');
+  if(retry){ resetQuiz(retry.dataset.q); return; }
   const pill=e.target.closest('.quiz-reveal');
   if(pill){
     const id=pill.dataset.q;
