@@ -236,6 +236,68 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;bac
 .memo-resize-handle:hover,.memo-resize-handle.active{background:var(--accent)}
 .memo-panel{position:relative}
 
+/* ====== MEMO IMAGE (스크린샷 첨부) + 위치 이동 ====== */
+.memo-item .memo-text{white-space:pre-wrap;word-break:break-word}
+.memo-item.can-go{cursor:pointer}
+.memo-item .memo-goto-hint{display:inline-block;margin-left:6px;font-size:9.5px;color:var(--text3);background:var(--dark3);padding:1px 6px;border-radius:8px;font-weight:600;vertical-align:middle}
+.memo-item.can-go:hover .memo-goto-hint{color:var(--accent);background:rgba(37,99,235,.18)}
+.memo-item .memo-photo-btn{position:absolute;top:8px;right:32px;cursor:pointer;color:var(--text3);font-size:12px;transition:color .15s,transform .15s}
+.memo-item .memo-photo-btn:hover{color:var(--accent);transform:scale(1.15)}
+.memo-item .memo-img-wrap{margin-top:8px}
+.memo-item .memo-img{display:block;max-width:100%;max-height:150px;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;background:#fff}
+.memo-item .memo-img-missing{margin-top:8px;padding:10px;border:1px dashed var(--border);border-radius:6px;color:var(--text3);font-size:10.5px;text-align:center}
+.memo-item.flash{background:rgba(37,99,235,.3)!important}
+/* Composer attach */
+.free-memo-attach-btn{padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--dark2);color:var(--text2);font-size:14px;cursor:pointer;transition:all .15s;flex-shrink:0;font-family:inherit}
+.free-memo-attach-btn:hover{border-color:var(--accent);color:var(--accent)}
+.pending-img-bar{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--dark2)}
+.pending-img-bar img{height:52px;max-width:120px;object-fit:cover;border-radius:5px;cursor:pointer;background:#fff}
+.pending-img-actions{display:flex;flex-direction:column;gap:4px}
+.pending-img-actions button{padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:none;color:var(--text2);font-size:10.5px;cursor:pointer;font-family:inherit}
+.pending-img-actions button:hover{border-color:var(--accent);color:var(--accent)}
+/* 본문 메모 마커 */
+.memo-anchor-marker{display:inline-block;cursor:pointer;user-select:none;margin:0 2px;line-height:1;vertical-align:baseline}
+.memo-anchor-marker::after{content:"📝";font-size:13px;display:inline-block;transition:transform .15s}
+.memo-anchor-marker:hover::after{transform:scale(1.3)}
+.memo-anchor-marker.flash::after{animation:memoMarkerPulse .7s ease 3}
+@keyframes memoMarkerPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.8)}}
+/* 위치 이동 플래시 */
+.memo-goto-flash{position:fixed;z-index:2147483000;pointer-events:none;border:2.5px solid var(--accent);border-radius:8px;box-shadow:0 0 0 6px rgba(37,99,235,.18);animation:memoGotoFlash 1.5s ease forwards}
+@keyframes memoGotoFlash{0%{opacity:1}70%{opacity:1}100%{opacity:0}}
+/* 마커 팝오버 */
+.memo-marker-pop{position:fixed;z-index:2147483646;width:280px;max-width:calc(100vw - 24px);background:var(--dark);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.4);padding:12px;animation:floatIn .15s ease;color:var(--text)}
+.memo-marker-pop .mmp-label{font-size:10px;color:var(--accent2);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.memo-marker-pop .mmp-close{cursor:pointer;color:var(--text3);font-size:15px;line-height:1}
+.memo-marker-pop .mmp-close:hover{color:#fff}
+.memo-marker-pop .mmp-text{font-size:12px;line-height:1.55;max-height:120px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+.memo-marker-pop img{margin-top:8px;max-width:100%;max-height:140px;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;background:#fff;display:block}
+.memo-marker-pop .mmp-open-btn{margin-top:10px;width:100%;padding:7px;border:none;border-radius:7px;background:var(--accent);color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.memo-marker-pop .mmp-open-btn:hover{background:#1d4ed8}
+/* 이미지 편집 모달 (회전 + 자르기) */
+.img-editor-overlay{position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:14px}
+.img-editor{background:var(--dark);border:1px solid var(--border);border-radius:14px;max-width:900px;width:100%;max-height:94vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.img-ed-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text);font-size:12.5px;font-weight:700;gap:8px}
+.img-ed-close{cursor:pointer;color:var(--text2);font-size:20px;line-height:1;flex-shrink:0}
+.img-ed-close:hover{color:#fff}
+.img-ed-canvas-box{flex:1;display:flex;align-items:center;justify-content:center;padding:14px;overflow:hidden;background:#0d1117;min-height:240px}
+#imgEdCanvas{max-width:100%;max-height:100%;touch-action:none;cursor:crosshair;border-radius:4px}
+.img-ed-controls{padding:12px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px}
+.img-ed-rot-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.img-ed-rot-row input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
+.img-ed-angle{font-size:12px;color:var(--accent2);font-weight:700;min-width:52px;text-align:center}
+.img-ed-action-row{display:flex;align-items:center;gap:8px}
+.img-ed-btn{padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--dark2);color:var(--text);font-size:11.5px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .15s;white-space:nowrap}
+.img-ed-btn:hover{border-color:var(--accent);color:var(--accent)}
+.img-ed-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.img-ed-btn.primary:hover{background:#1d4ed8;color:#fff}
+/* 이미지 확대 (라이트박스) */
+.img-lightbox{position:fixed;inset:0;z-index:2147483645;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px}
+.img-lb-inner{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:95vw;max-height:94vh}
+.img-lb-inner img{max-width:95vw;max-height:calc(94vh - 60px);border-radius:8px;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+.img-lb-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.img-lb-actions button{padding:8px 14px;border:1px solid rgba(255,255,255,.25);border-radius:8px;background:rgba(255,255,255,.08);color:#fff;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600}
+.img-lb-actions button:hover{background:rgba(255,255,255,.18)}
+
 .ch-views .view-reset{opacity:0;cursor:pointer;font-size:11px;color:var(--text3);margin-left:2px;transition:opacity .2s,color .2s}
 .chapter-item:hover .view-reset{opacity:1}
 .view-reset:hover{color:#f44!important}
@@ -508,6 +570,10 @@ button{transition:transform .15s,box-shadow .15s,background .15s,color .15s}
     <span id="headerTitle">엘리트 정형외과 단원별 열람</span>
     <a href="#" class="docx-link" id="docxLink" style="display:none">📄 .docx</a>
   </div>
+  <div id="readingProgress" hidden style="flex-shrink:0;padding:8px 20px;background:#f1f5ff;color:#334155;font-size:12px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span id="readingProgressLabel">현재 스크롤 위치</span><span id="readingProgressPercent">0%</span></div>
+    <progress id="readingProgressBar" max="100" value="0" aria-label="현재 단원 스크롤 진행도" style="width:100%;height:7px;display:block;accent-color:#6366f1"></progress>
+  </div>
   <div class="content-area" id="contentArea">
     <div class="welcome">
       <h2>단원을 선택하세요</h2>
@@ -553,8 +619,16 @@ button{transition:transform .15s,box-shadow .15s,background .15s,color .15s}
         <select id="freeMemoTarget">
           <option value="global">📚 전체 메모</option>
         </select>
+        <div class="pending-img-bar" id="pendingImgBar" style="display:none">
+          <img id="pendingImgThumb" alt="첨부 이미지" onclick="editPendingImg()" title="클릭하여 회전/자르기 편집">
+          <div class="pending-img-actions">
+            <button type="button" onclick="editPendingImg()">✂️ 회전/자르기</button>
+            <button type="button" onclick="clearPendingImg()">✕ 제거</button>
+          </div>
+        </div>
         <div class="free-memo-input-row">
-          <textarea class="free-memo-input" id="freeMemoInput" placeholder="자유롭게 메모를 작성하세요..." rows="1" oninput="autoResizeTextarea(this)"></textarea>
+          <button class="free-memo-attach-btn" onclick="pickMemoImage('composer')" title="스크린샷/이미지 첨부 (입력창에 Ctrl+V 붙여넣기도 가능)">📷</button>
+          <textarea class="free-memo-input" id="freeMemoInput" placeholder="메모 작성... (스크린샷 Ctrl+V 붙여넣기 가능)" rows="1" oninput="autoResizeTextarea(this)"></textarea>
           <button class="free-memo-add" id="freeMemoAddBtn" onclick="addFreeMemo()" disabled>추가</button>
         </div>
       </div>
@@ -571,6 +645,49 @@ button{transition:transform .15s,box-shadow .15s,background .15s,color .15s}
     <button class="btn-secondary" onclick="clearAllMemos()">🗑 현재 탭 노트 삭제</button>
   </div>
 </div>
+
+<!-- 이미지 편집 모달 (회전 + 자르기) -->
+<div class="img-editor-overlay" id="imgEditorOverlay" style="display:none">
+  <div class="img-editor">
+    <div class="img-ed-header">
+      <span>🖼 이미지 편집 — 드래그로 자르기 · 슬라이더로 미세 회전</span>
+      <span class="img-ed-close" onclick="closeImgEditor()">&times;</span>
+    </div>
+    <div class="img-ed-canvas-box" id="imgEdCanvasBox">
+      <canvas id="imgEdCanvas"></canvas>
+    </div>
+    <div class="img-ed-controls">
+      <div class="img-ed-rot-row">
+        <button class="img-ed-btn" onclick="imgEdQuarter(-1)" title="왼쪽으로 90° 회전">⟲ 90°</button>
+        <button class="img-ed-btn" onclick="imgEdQuarter(1)" title="오른쪽으로 90° 회전">⟳ 90°</button>
+        <button class="img-ed-btn" onclick="imgEdFineStep(-0.1)" title="0.1도 왼쪽">−0.1°</button>
+        <input type="range" id="imgEdSlider" min="-45" max="45" step="0.1" value="0" oninput="imgEdFineSet(parseFloat(this.value))">
+        <button class="img-ed-btn" onclick="imgEdFineStep(0.1)" title="0.1도 오른쪽">+0.1°</button>
+        <span class="img-ed-angle" id="imgEdAngleLabel">0.0°</span>
+        <button class="img-ed-btn" onclick="imgEdResetAngle()" title="회전 초기화">↺ 0°</button>
+      </div>
+      <div class="img-ed-action-row">
+        <button class="img-ed-btn" onclick="imgEdResetCrop()">⬚ 전체 선택</button>
+        <div style="flex:1"></div>
+        <button class="img-ed-btn" onclick="closeImgEditor()">취소</button>
+        <button class="img-ed-btn primary" onclick="applyImgEditor()">✓ 적용</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 이미지 확대 보기 (라이트박스) -->
+<div class="img-lightbox" id="imgLightbox" style="display:none" onclick="if(event.target===this)closeImgLightbox()">
+  <div class="img-lb-inner">
+    <img id="imgLightboxImg" alt="메모 이미지">
+    <div class="img-lb-actions">
+      <button onclick="lightboxEdit()">✂️ 회전/자르기</button>
+      <button onclick="lightboxRemoveImg()">🗑 이미지 삭제</button>
+      <button onclick="closeImgLightbox()">닫기</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="memoImgFileInput" accept="image/*" style="display:none">
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -860,15 +977,15 @@ function initApp() {
   renderFreeMemos();
   initMemoResize();
   document.getElementById('memoCount').textContent = memos.length + freeMemos.length;
-  // Enable/disable free memo add button on input
+  // Enable/disable free memo add button on input (텍스트 또는 첨부 이미지가 있으면 활성화)
   document.getElementById('freeMemoInput').addEventListener('input', function() {
-    document.getElementById('freeMemoAddBtn').disabled = !this.value.trim();
+    updateFreeMemoAddState();
   });
   // Enter key to add free memo
   document.getElementById('freeMemoInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (this.value.trim()) addFreeMemo();
+      addFreeMemo();
     }
   });
   if (location.hash) {
@@ -3969,6 +4086,7 @@ function buildNav() {
 
   document.getElementById('statSections').textContent = totalSections;
   document.getElementById('statChapters').textContent = totalChapters;
+  document.querySelectorAll('.chapter-item[data-ch]').forEach(item => paintChapterProgress(Number(item.dataset.ch)));
   renderSidebarMemoPreviews();
 }
 
@@ -3976,6 +4094,9 @@ function buildNav() {
 function loadChapter(num) {
   const ch = CHAPTERS_DATA[num];
   if (!ch) return;
+
+  if (currentChapter) updateReadingProgress();
+  const savedProgress = Number(viewData[num]?.scrollProgress) || 0;
 
   currentChapter = ch;
   recordView(num);
@@ -4021,6 +4142,10 @@ function loadChapter(num) {
   processQuizzes();   // wire quizzes FIRST so heading-detection can't swallow 정답/보기 lines
   processHeadings();
   restoreHighlightsForChapter(num);
+  renderMemoAnchors(num);
+  document.getElementById('readingProgress').hidden = false;
+  area.scrollTop = savedProgress * Math.max(0, area.scrollHeight - area.clientHeight);
+  updateReadingProgress();
   history.replaceState(null, '', `#ch${num}`);
 }
 
@@ -4084,7 +4209,9 @@ function switchMemoTab(tab) {
 // --- Filter chips ---
 function renderFilterChips() {
   const bar = document.getElementById('memoFilterBar');
-  const data = currentMemoTab === 'highlight' ? memos : freeMemos;
+  const data = currentMemoTab === 'highlight'
+    ? memos.concat(Object.entries(highlights).flatMap(([num, items]) => items.map(h => ({ chapterNum: Number(num) }))))
+    : freeMemos;
   bar.innerHTML = '';
   // "전체" chip
   const allChip = document.createElement('button');
@@ -4121,14 +4248,18 @@ function renderFilterChips() {
 }
 
 // --- Highlight memos ---
-function addMemo(text, chapterNum, chapterTitle) {
-  memos.push({ text, chapterNum, chapterTitle, id: Date.now() });
+function addMemo(text, chapterNum, chapterTitle, anchorOffset) {
+  memos.push({ text, chapterNum, chapterTitle, id: Date.now(), anchorOffset: anchorOffset ?? null, imgId: null });
   saveMemos(); renderFilterChips(); renderMemos();
+  if (currentChapter && currentChapter.num === chapterNum) renderMemoAnchors(chapterNum);
 }
 
 function deleteMemo(id) {
+  const m = memos.find(x => x.id === id);
+  if (m && m.imgId) deleteMemoImage(m.imgId);
   memos = memos.filter(m => m.id !== id);
   saveMemos(); renderFilterChips(); renderMemos();
+  if (currentChapter) renderMemoAnchors(currentChapter.num);
 }
 
 function saveMemos() {
@@ -4146,8 +4277,9 @@ function renderMemos() {
   }
   document.getElementById('memoCount').textContent = memos.length + freeMemos.length;
   list.querySelectorAll('.memo-item').forEach(el => el.remove());
+  renderMarkedPassages(list);
   if (filtered.length === 0) {
-    empty.style.display = '';
+    empty.style.display = list.querySelector('.marked-passage') ? 'none' : '';
     if (currentMemoFilter !== 'all') {
       empty.innerHTML = `이 섹션에 저장된 하이라이트가 없습니다<br><br>본문에서 텍스트를 선택하면<br>암기노트에 추가할 수 있습니다`;
     } else {
@@ -4158,15 +4290,31 @@ function renderMemos() {
   empty.style.display = 'none';
   filtered.forEach(m => {
     const div = document.createElement('div');
-    div.className = 'memo-item';
+    const canGo = m.chapterNum != null;
+    div.className = 'memo-item' + (canGo ? ' can-go' : '');
+    div.setAttribute('data-id', m.id);
     const secIdx = getSectionForChapter(m.chapterNum);
     const secLabel = secIdx >= 0 ? getSectionShortName(secIdx) + ' · ' : '';
     div.innerHTML = `
-      <div class="memo-chapter">${secLabel}Ch${m.chapterNum}. ${m.chapterTitle}</div>
-      <div class="memo-text">${m.text}</div>
-      <span class="memo-del" onclick="deleteMemo(${m.id})">&times;</span>
+      <div class="memo-chapter">${secLabel}Ch${m.chapterNum}. ${escapeHtml(m.chapterTitle)}${canGo ? '<span class="memo-goto-hint">📍 위치로 이동</span>' : ''}</div>
+      <div class="memo-text">${escapeHtml(m.text)}</div>
+      ${memoImgHtml(m, 'hl')}
+      <span class="memo-photo-btn" title="스크린샷/이미지 첨부" onclick="event.stopPropagation();pickMemoImage('memo',${m.id},'hl')">📷</span>
+      <span class="memo-del" onclick="event.stopPropagation();deleteMemo(${m.id})">&times;</span>
     `;
+    if (canGo) {
+      div.tabIndex = 0;
+      div.setAttribute('role', 'button');
+      div.onkeydown = e => {
+        if (e.target === div && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); div.click(); }
+      };
+    }
+    if (canGo) div.onclick = (e) => {
+      if (e.target.closest('.memo-del,.memo-photo-btn,.memo-img')) return;
+      gotoMemo(m.id, 'hl');
+    };
     list.appendChild(div);
+    hydrateMemoImg(div, m);
   });
 }
 
@@ -4182,29 +4330,40 @@ function initFreeMemoTargets() {
 function autoResizeTextarea(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 100) + 'px';
-  document.getElementById('freeMemoAddBtn').disabled = !el.value.trim();
+  updateFreeMemoAddState();
 }
 
 function addFreeMemo() {
   const input = document.getElementById('freeMemoInput');
   const sel = document.getElementById('freeMemoTarget');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text && !pendingImg) return;
   const val = sel.value;
   const sectionIdx = val === 'global' ? -1 : parseInt(val);
   const sectionName = val === 'global' ? '전체 메모' : SECTIONS[sectionIdx].name;
-  freeMemos.push({ text, sectionIdx, sectionName, id: Date.now() });
+  // 저장 시점의 본문 위치(챕터 + 문자 오프셋)를 앵커로 기록
+  const anchor = captureViewportAnchor();
+  const memo = { text, sectionIdx, sectionName, id: Date.now(), chapterNum: anchor.chapterNum, anchorOffset: anchor.anchorOffset, imgId: null };
+  if (pendingImg) {
+    memo.imgId = 'img_' + memo.id;
+    saveMemoImage(memo.imgId, pendingImg);
+  }
+  freeMemos.push(memo);
   saveFreeMemos();
   input.value = '';
   input.style.height = 'auto';
-  document.getElementById('freeMemoAddBtn').disabled = true;
+  clearPendingImg();
   renderFilterChips();
   renderFreeMemos();
+  if (currentChapter && memo.chapterNum === currentChapter.num) renderMemoAnchors(currentChapter.num);
 }
 
 function deleteFreeMemo(id) {
+  const m = freeMemos.find(x => x.id === id);
+  if (m && m.imgId) deleteMemoImage(m.imgId);
   freeMemos = freeMemos.filter(m => m.id !== id);
   saveFreeMemos(); renderFilterChips(); renderFreeMemos();
+  if (currentChapter) renderMemoAnchors(currentChapter.num);
 }
 
 function saveFreeMemos() {
@@ -4234,15 +4393,31 @@ function renderFreeMemos() {
   empty.style.display = 'none';
   filtered.forEach(m => {
     const div = document.createElement('div');
-    div.className = 'memo-item free-memo';
+    const canGo = m.chapterNum != null;
+    div.className = 'memo-item free-memo' + (canGo ? ' can-go' : '');
+    div.setAttribute('data-id', m.id);
     const label = m.sectionIdx === -1 ? '📚 전체 메모' : getSectionShortName(m.sectionIdx);
     const timeStr = timeAgo(m.id);
     div.innerHTML = `
-      <div class="memo-chapter">${label} · ${timeStr}</div>
-      <div class="memo-text">${m.text}</div>
-      <span class="memo-del" onclick="deleteFreeMemo(${m.id})">&times;</span>
+      <div class="memo-chapter">${label} · ${timeStr}${canGo ? `<span class="memo-goto-hint">📍 Ch${m.chapterNum} 이동</span>` : ''}</div>
+      <div class="memo-text">${escapeHtml(m.text)}</div>
+      ${memoImgHtml(m, 'free')}
+      <span class="memo-photo-btn" title="스크린샷/이미지 첨부" onclick="event.stopPropagation();pickMemoImage('memo',${m.id},'free')">📷</span>
+      <span class="memo-del" onclick="event.stopPropagation();deleteFreeMemo(${m.id})">&times;</span>
     `;
+    if (canGo) {
+      div.tabIndex = 0;
+      div.setAttribute('role', 'button');
+      div.onkeydown = e => {
+        if (e.target === div && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); div.click(); }
+      };
+    }
+    if (canGo) div.onclick = (e) => {
+      if (e.target.closest('.memo-del,.memo-photo-btn,.memo-img')) return;
+      gotoMemo(m.id, 'free');
+    };
     list.appendChild(div);
+    hydrateMemoImg(div, m);
   });
 }
 
@@ -4253,9 +4428,11 @@ function clearAllMemos() {
     if (target.length === 0) { alert('삭제할 노트가 없습니다.'); return; }
     const label = currentMemoFilter === 'all' ? '모든 하이라이트' : getSectionShortName(currentMemoFilter) + ' 섹션 하이라이트';
     if (!confirm(`${label} ${target.length}개를 삭제하시겠습니까?`)) return;
+    target.forEach(m => { if (m.imgId) deleteMemoImage(m.imgId); });
     if (currentMemoFilter === 'all') memos = [];
     else memos = memos.filter(m => getSectionForChapter(m.chapterNum) !== currentMemoFilter);
     saveMemos(); renderFilterChips(); renderMemos();
+    if (currentChapter) renderMemoAnchors(currentChapter.num);
   } else {
     let target;
     if (currentMemoFilter === 'all') target = freeMemos;
@@ -4264,10 +4441,12 @@ function clearAllMemos() {
     if (target.length === 0) { alert('삭제할 메모가 없습니다.'); return; }
     const label = currentMemoFilter === 'all' ? '모든 자유 메모' : (currentMemoFilter === -1 ? '전체 메모' : getSectionShortName(currentMemoFilter) + ' 섹션 자유 메모');
     if (!confirm(`${label} ${target.length}개를 삭제하시겠습니까?`)) return;
+    target.forEach(m => { if (m.imgId) deleteMemoImage(m.imgId); });
     if (currentMemoFilter === 'all') freeMemos = [];
     else if (currentMemoFilter === -1) freeMemos = freeMemos.filter(m => m.sectionIdx !== -1);
     else freeMemos = freeMemos.filter(m => m.sectionIdx !== currentMemoFilter);
     saveFreeMemos(); renderFilterChips(); renderFreeMemos();
+    if (currentChapter) renderMemoAnchors(currentChapter.num);
   }
 }
 
@@ -4282,7 +4461,7 @@ function exportMemos() {
     allHighlights.forEach((m, i) => {
       const secLabel = getSectionShortName(getSectionForChapter(m.chapterNum));
       text += `[${i+1}] ${secLabel} · Ch${m.chapterNum}. ${m.chapterTitle}\n`;
-      text += `${m.text}\n\n`;
+      text += `${m.text}\n${m.imgId ? '[📷 스크린샷 첨부됨]\n' : ''}\n`;
     });
   }
   if (allFree.length > 0) {
@@ -4290,7 +4469,7 @@ function exportMemos() {
     allFree.forEach((m, i) => {
       const label = m.sectionIdx === -1 ? '전체 메모' : getSectionShortName(m.sectionIdx);
       text += `[${i+1}] ${label} · ${new Date(m.id).toLocaleString('ko-KR')}\n`;
-      text += `${m.text}\n\n`;
+      text += `${m.text}\n${m.imgId ? '[📷 스크린샷 첨부됨]\n' : ''}\n`;
     });
   }
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
@@ -4301,6 +4480,724 @@ function exportMemos() {
 }
 
 function applyHighlights() {}
+
+// ============================================================
+// ===== MEMO IMAGES (스크린샷 첨부 + 회전/자르기) & 위치 앵커 =====
+// ============================================================
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// --- IndexedDB: 이미지 로컬 저장소 (Firestore 1MB 문서 제한 회피) ---
+let _memoImgDbPromise = null;
+function memoImgDB() {
+  if (_memoImgDbPromise) return _memoImgDbPromise;
+  _memoImgDbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open('elite_ortho_imgs', 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore('imgs'); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return _memoImgDbPromise;
+}
+function idbPutImg(id, dataURL) {
+  return memoImgDB().then(d => new Promise((res, rej) => {
+    const tx = d.transaction('imgs', 'readwrite');
+    tx.objectStore('imgs').put(dataURL, id);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  }));
+}
+function idbGetImg(id) {
+  return memoImgDB().then(d => new Promise((res, rej) => {
+    const rq = d.transaction('imgs').objectStore('imgs').get(id);
+    rq.onsuccess = () => res(rq.result || null);
+    rq.onerror = () => rej(rq.error);
+  }));
+}
+function idbDelImg(id) {
+  return memoImgDB().then(d => new Promise((res, rej) => {
+    const tx = d.transaction('imgs', 'readwrite');
+    tx.objectStore('imgs').delete(id);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  }));
+}
+
+const memoImgCache = new Map();
+function saveMemoImage(imgId, dataURL) {
+  memoImgCache.set(imgId, dataURL);
+  const p = idbPutImg(imgId, dataURL).catch(e => console.warn('이미지 로컬 저장 실패:', e));
+  if (currentUser && db) {
+    db.collection('users').doc(currentUser.uid).collection('memoImages').doc(imgId)
+      .set({ data: dataURL, ts: Date.now() })
+      .catch(e => console.warn('이미지 클라우드 동기화 실패(로컬에는 저장됨):', e.message));
+  }
+  return p;
+}
+async function loadMemoImage(imgId) {
+  if (!imgId) return null;
+  if (memoImgCache.has(imgId)) return memoImgCache.get(imgId);
+  let data = null;
+  try { data = await idbGetImg(imgId); } catch (e) {}
+  if (!data && currentUser && db) {
+    try {
+      const doc = await db.collection('users').doc(currentUser.uid).collection('memoImages').doc(imgId).get();
+      if (doc.exists) {
+        data = doc.data().data || null;
+        if (data) idbPutImg(imgId, data).catch(() => {});
+      }
+    } catch (e) {}
+  }
+  if (data) memoImgCache.set(imgId, data);
+  return data;
+}
+function deleteMemoImage(imgId) {
+  if (!imgId) return;
+  memoImgCache.delete(imgId);
+  idbDelImg(imgId).catch(() => {});
+  if (currentUser && db) {
+    db.collection('users').doc(currentUser.uid).collection('memoImages').doc(imgId).delete().catch(() => {});
+  }
+}
+
+// --- 메모 리스트의 이미지 썸네일 ---
+function memoImgHtml(m, type) {
+  if (!m.imgId) return '';
+  return `<div class="memo-img-wrap"><img class="memo-img" data-img-id="${m.imgId}" alt="메모 이미지" style="display:none" onclick="event.stopPropagation();openImgLightbox('${m.imgId}',${m.id},'${type}')"></div>`;
+}
+function hydrateMemoImg(div, m) {
+  if (!m.imgId) return;
+  const img = div.querySelector('.memo-img');
+  if (!img) return;
+  loadMemoImage(m.imgId).then(d => {
+    if (d) { img.src = d; img.style.display = 'block'; }
+    else {
+      const wrap = img.closest('.memo-img-wrap');
+      if (wrap) wrap.innerHTML = '<div class="memo-img-missing">📷 이미지를 이 기기에서 불러올 수 없습니다</div>';
+    }
+  });
+}
+
+// --- 작성 중 첨부 이미지 (composer) ---
+let pendingImg = null;
+function updateFreeMemoAddState() {
+  const input = document.getElementById('freeMemoInput');
+  const btn = document.getElementById('freeMemoAddBtn');
+  if (input && btn) btn.disabled = !(input.value.trim() || pendingImg);
+}
+function setPendingImg(dataURL) {
+  pendingImg = dataURL;
+  document.getElementById('pendingImgThumb').src = dataURL;
+  document.getElementById('pendingImgBar').style.display = 'flex';
+  updateFreeMemoAddState();
+}
+function clearPendingImg() {
+  pendingImg = null;
+  document.getElementById('pendingImgBar').style.display = 'none';
+  document.getElementById('pendingImgThumb').removeAttribute('src');
+  updateFreeMemoAddState();
+}
+function editPendingImg() {
+  if (!pendingImg) return;
+  imgPickTarget = { mode: 'composer' };
+  openImgEditor(pendingImg, attachEditedImage);
+}
+
+// --- 이미지 선택 (파일/붙여넣기) ---
+let imgPickTarget = null; // {mode:'composer'} | {mode:'memo', id, type:'hl'|'free'}
+function pickMemoImage(mode, id, type) {
+  imgPickTarget = { mode, id, type };
+  const inp = document.getElementById('memoImgFileInput');
+  inp.value = '';
+  inp.click();
+}
+document.getElementById('memoImgFileInput').addEventListener('change', function () {
+  const f = this.files && this.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => openImgEditor(rd.result, attachEditedImage);
+  rd.readAsDataURL(f);
+});
+// 스크린샷 Ctrl+V 붙여넣기
+document.getElementById('freeMemoInput').addEventListener('paste', (e) => {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (it.type && it.type.indexOf('image/') === 0) {
+      e.preventDefault();
+      const f = it.getAsFile();
+      if (!f) return;
+      imgPickTarget = { mode: 'composer' };
+      const rd = new FileReader();
+      rd.onload = () => openImgEditor(rd.result, attachEditedImage);
+      rd.readAsDataURL(f);
+      return;
+    }
+  }
+});
+function attachEditedImage(finalURL) {
+  const t = imgPickTarget || { mode: 'composer' };
+  if (t.mode === 'composer') {
+    setPendingImg(finalURL);
+  } else {
+    const arr = t.type === 'free' ? freeMemos : memos;
+    const m = arr.find(x => x.id === t.id);
+    if (!m) return;
+    const oldId = m.imgId;
+    m.imgId = 'img_' + Date.now();
+    saveMemoImage(m.imgId, finalURL);
+    if (oldId) deleteMemoImage(oldId);
+    if (t.type === 'free') { saveFreeMemos(); renderFreeMemos(); }
+    else { saveMemos(); renderMemos(); }
+  }
+}
+
+// ===== 이미지 편집기 (미세 회전 + 자르기) =====
+const imgEd = { img: null, quarter: 0, fine: 0, scale: 1, W: 0, H: 0, crop: { x: 0, y: 0, w: 0, h: 0 }, cb: null, drag: null };
+
+function openImgEditor(dataURL, cb) {
+  const im = new Image();
+  im.onload = () => {
+    imgEd.img = im; imgEd.quarter = 0; imgEd.fine = 0; imgEd.cb = cb; imgEd.drag = null;
+    document.getElementById('imgEdSlider').value = 0;
+    document.getElementById('imgEditorOverlay').style.display = 'flex';
+    updateImgEdAngleLabel();
+    imgEdLayout(true);
+  };
+  im.onerror = () => alert('이미지를 불러올 수 없습니다.');
+  im.src = dataURL;
+}
+function closeImgEditor() {
+  document.getElementById('imgEditorOverlay').style.display = 'none';
+  imgEd.img = null; imgEd.cb = null; imgEd.drag = null;
+}
+function imgEdAngleRad() { return (imgEd.quarter * 90 + imgEd.fine) * Math.PI / 180; }
+function updateImgEdAngleLabel() {
+  document.getElementById('imgEdAngleLabel').textContent = (imgEd.quarter * 90 + imgEd.fine).toFixed(1) + '°';
+}
+function imgEdQuarter(dir) {
+  if (!imgEd.img) return;
+  imgEd.quarter = (imgEd.quarter + dir + 4) % 4;
+  updateImgEdAngleLabel();
+  imgEdLayout(false);
+}
+function imgEdFineSet(v) {
+  if (!imgEd.img) return;
+  imgEd.fine = Math.max(-45, Math.min(45, v || 0));
+  updateImgEdAngleLabel();
+  imgEdLayout(false);
+}
+function imgEdFineStep(d) {
+  const v = Math.max(-45, Math.min(45, Math.round((imgEd.fine + d) * 10) / 10));
+  document.getElementById('imgEdSlider').value = v;
+  imgEdFineSet(v);
+}
+function imgEdResetAngle() {
+  imgEd.quarter = 0;
+  document.getElementById('imgEdSlider').value = 0;
+  imgEdFineSet(0);
+}
+function imgEdResetCrop() {
+  const cv = document.getElementById('imgEdCanvas');
+  imgEd.crop = { x: 0, y: 0, w: cv.width, h: cv.height };
+  imgEdDraw();
+}
+function imgEdLayout(resetCrop) {
+  if (!imgEd.img) return;
+  const cv = document.getElementById('imgEdCanvas');
+  const box = document.getElementById('imgEdCanvasBox');
+  const a = imgEdAngleRad(), iw = imgEd.img.width, ih = imgEd.img.height;
+  const W = Math.abs(iw * Math.cos(a)) + Math.abs(ih * Math.sin(a));
+  const H = Math.abs(iw * Math.sin(a)) + Math.abs(ih * Math.cos(a));
+  const maxW = Math.max(200, Math.min(box.clientWidth - 8, 860));
+  const maxH = Math.max(200, window.innerHeight * 0.58);
+  const s = Math.min(maxW / W, maxH / H);
+  const prevW = cv.width, prevH = cv.height, prevCrop = { ...imgEd.crop };
+  imgEd.W = W; imgEd.H = H; imgEd.scale = s;
+  cv.width = Math.max(10, Math.round(W * s));
+  cv.height = Math.max(10, Math.round(H * s));
+  if (resetCrop || !prevW || !prevCrop.w) {
+    imgEd.crop = { x: 0, y: 0, w: cv.width, h: cv.height };
+  } else {
+    // 회전/창 크기 변경 시 기존 자르기 영역을 비율에 맞춰 유지
+    const rx = cv.width / prevW, ry = cv.height / prevH;
+    let w = Math.max(24, Math.min(cv.width, prevCrop.w * rx));
+    let h = Math.max(24, Math.min(cv.height, prevCrop.h * ry));
+    let x = Math.max(0, Math.min(cv.width - w, prevCrop.x * rx));
+    let y = Math.max(0, Math.min(cv.height - h, prevCrop.y * ry));
+    imgEd.crop = { x, y, w, h };
+  }
+  imgEdDraw();
+}
+function imgEdDraw() {
+  if (!imgEd.img) return;
+  const cv = document.getElementById('imgEdCanvas');
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.save();
+  ctx.translate(cv.width / 2, cv.height / 2);
+  ctx.rotate(imgEdAngleRad());
+  ctx.scale(imgEd.scale, imgEd.scale);
+  ctx.drawImage(imgEd.img, -imgEd.img.width / 2, -imgEd.img.height / 2);
+  ctx.restore();
+  const c = imgEd.crop;
+  ctx.fillStyle = 'rgba(0,0,0,.55)';
+  ctx.fillRect(0, 0, cv.width, c.y);
+  ctx.fillRect(0, c.y, c.x, c.h);
+  ctx.fillRect(c.x + c.w, c.y, cv.width - c.x - c.w, c.h);
+  ctx.fillRect(0, c.y + c.h, cv.width, cv.height - c.y - c.h);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(c.x + .75, c.y + .75, c.w - 1.5, c.h - 1.5);
+  ctx.strokeStyle = 'rgba(255,255,255,.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 1; i <= 2; i++) {
+    ctx.moveTo(c.x + c.w * i / 3, c.y); ctx.lineTo(c.x + c.w * i / 3, c.y + c.h);
+    ctx.moveTo(c.x, c.y + c.h * i / 3); ctx.lineTo(c.x + c.w, c.y + c.h * i / 3);
+  }
+  ctx.stroke();
+  ctx.fillStyle = '#fff';
+  const hs = 7;
+  [[c.x, c.y], [c.x + c.w / 2, c.y], [c.x + c.w, c.y],
+   [c.x, c.y + c.h / 2], [c.x + c.w, c.y + c.h / 2],
+   [c.x, c.y + c.h], [c.x + c.w / 2, c.y + c.h], [c.x + c.w, c.y + c.h]].forEach(([hx, hy]) => {
+    ctx.fillRect(hx - hs / 2, hy - hs / 2, hs, hs);
+  });
+}
+// 자르기 박스 드래그 (마우스 + 터치)
+(function initImgEdPointer() {
+  const cv = document.getElementById('imgEdCanvas');
+  const CURSORS = { nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize', n: 'ns-resize', s: 'ns-resize', w: 'ew-resize', e: 'ew-resize', move: 'move', new: 'crosshair' };
+  function evPos(e) {
+    const r = cv.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * (cv.width / r.width), y: (e.clientY - r.top) * (cv.height / r.height) };
+  }
+  function hit(p) {
+    const c = imgEd.crop, t = 14;
+    const near = (a, b) => Math.abs(a - b) <= t;
+    const inX = p.x >= c.x - t && p.x <= c.x + c.w + t;
+    const inY = p.y >= c.y - t && p.y <= c.y + c.h + t;
+    if (near(p.x, c.x) && near(p.y, c.y)) return 'nw';
+    if (near(p.x, c.x + c.w) && near(p.y, c.y)) return 'ne';
+    if (near(p.x, c.x) && near(p.y, c.y + c.h)) return 'sw';
+    if (near(p.x, c.x + c.w) && near(p.y, c.y + c.h)) return 'se';
+    if (near(p.y, c.y) && inX) return 'n';
+    if (near(p.y, c.y + c.h) && inX) return 's';
+    if (near(p.x, c.x) && inY) return 'w';
+    if (near(p.x, c.x + c.w) && inY) return 'e';
+    if (p.x > c.x && p.x < c.x + c.w && p.y > c.y && p.y < c.y + c.h) return 'move';
+    return 'new';
+  }
+  cv.addEventListener('pointerdown', (e) => {
+    if (!imgEd.img) return;
+    e.preventDefault();
+    const p = evPos(e);
+    let mode = hit(p);
+    if (mode === 'new') {
+      imgEd.crop = { x: Math.max(0, Math.min(cv.width - 24, p.x)), y: Math.max(0, Math.min(cv.height - 24, p.y)), w: 24, h: 24 };
+      mode = 'se';
+    }
+    imgEd.drag = { mode, px: p.x, py: p.y, orig: { ...imgEd.crop } };
+    cv.setPointerCapture(e.pointerId);
+    imgEdDraw();
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (!imgEd.img) return;
+    const p = evPos(e);
+    if (!imgEd.drag) { cv.style.cursor = CURSORS[hit(p)] || 'crosshair'; return; }
+    const d = imgEd.drag, o = d.orig, MIN = 24;
+    const dx = p.x - d.px, dy = p.y - d.py;
+    const cw = cv.width, ch = cv.height;
+    if (d.mode === 'move') {
+      imgEd.crop.x = Math.max(0, Math.min(cw - o.w, o.x + dx));
+      imgEd.crop.y = Math.max(0, Math.min(ch - o.h, o.y + dy));
+    } else {
+      let x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h;
+      if (d.mode.indexOf('w') >= 0) x1 = Math.max(0, Math.min(x2 - MIN, o.x + dx));
+      if (d.mode.indexOf('e') >= 0) x2 = Math.min(cw, Math.max(x1 + MIN, o.x + o.w + dx));
+      if (d.mode.indexOf('n') >= 0) y1 = Math.max(0, Math.min(y2 - MIN, o.y + dy));
+      if (d.mode.indexOf('s') >= 0) y2 = Math.min(ch, Math.max(y1 + MIN, o.y + o.h + dy));
+      imgEd.crop = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+    }
+    imgEdDraw();
+  });
+  const end = () => { imgEd.drag = null; };
+  cv.addEventListener('pointerup', end);
+  cv.addEventListener('pointercancel', end);
+})();
+window.addEventListener('resize', () => {
+  if (imgEd.img && document.getElementById('imgEditorOverlay').style.display !== 'none') imgEdLayout(false);
+});
+// 결과 추출: 원본 해상도로 회전 + 자르기 후 JPEG 압축
+function canvasToCompressedDataURL(cv) {
+  let cur = cv;
+  const MAXD = 1600;
+  if (Math.max(cv.width, cv.height) > MAXD) {
+    const r = MAXD / Math.max(cv.width, cv.height);
+    cur = document.createElement('canvas');
+    cur.width = Math.max(1, Math.round(cv.width * r));
+    cur.height = Math.max(1, Math.round(cv.height * r));
+    const cx = cur.getContext('2d');
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, cur.width, cur.height);
+    cx.drawImage(cv, 0, 0, cur.width, cur.height);
+  }
+  let q = 0.85;
+  let out = cur.toDataURL('image/jpeg', q);
+  let guard = 0;
+  while (out.length > 850000 && guard++ < 8) {
+    if (q > 0.5) q -= 0.1;
+    else {
+      const nc = document.createElement('canvas');
+      nc.width = Math.max(1, Math.round(cur.width * 0.8));
+      nc.height = Math.max(1, Math.round(cur.height * 0.8));
+      const cx = nc.getContext('2d');
+      cx.fillStyle = '#fff'; cx.fillRect(0, 0, nc.width, nc.height);
+      cx.drawImage(cur, 0, 0, nc.width, nc.height);
+      cur = nc;
+    }
+    out = cur.toDataURL('image/jpeg', q);
+  }
+  return out;
+}
+function applyImgEditor() {
+  if (!imgEd.img) return;
+  const a = imgEdAngleRad(), img = imgEd.img;
+  const W = imgEd.W, H = imgEd.H, s = imgEd.scale, c = imgEd.crop;
+  const out = document.createElement('canvas');
+  out.width = Math.max(1, Math.round(c.w / s));
+  out.height = Math.max(1, Math.round(c.h / s));
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.translate(-c.x / s, -c.y / s);
+  ctx.translate(W / 2, H / 2);
+  ctx.rotate(a);
+  ctx.drawImage(img, -img.width / 2, -img.height / 2);
+  const dataURL = canvasToCompressedDataURL(out);
+  const cb = imgEd.cb;
+  closeImgEditor();
+  if (cb) cb(dataURL);
+}
+
+// ===== 이미지 확대 보기 (라이트박스) =====
+let lightboxCtx = null;
+function openImgLightbox(imgId, memoId, type) {
+  removeMemoMarkerPop();
+  lightboxCtx = { imgId, memoId, type };
+  const lb = document.getElementById('imgLightbox');
+  const im = document.getElementById('imgLightboxImg');
+  im.removeAttribute('src');
+  lb.style.display = 'flex';
+  loadMemoImage(imgId).then(d => { if (d) im.src = d; });
+}
+function closeImgLightbox() {
+  document.getElementById('imgLightbox').style.display = 'none';
+  lightboxCtx = null;
+}
+function lightboxEdit() {
+  if (!lightboxCtx) return;
+  const ctx = lightboxCtx;
+  loadMemoImage(ctx.imgId).then(d => {
+    if (!d) return;
+    closeImgLightbox();
+    openImgEditor(d, (url) => {
+      const arr = ctx.type === 'free' ? freeMemos : memos;
+      const m = arr.find(x => x.id === ctx.memoId);
+      if (!m) return;
+      const oldId = m.imgId;
+      m.imgId = 'img_' + Date.now();
+      saveMemoImage(m.imgId, url);
+      if (oldId) deleteMemoImage(oldId);
+      if (ctx.type === 'free') { saveFreeMemos(); renderFreeMemos(); }
+      else { saveMemos(); renderMemos(); }
+    });
+  });
+}
+function lightboxRemoveImg() {
+  if (!lightboxCtx) return;
+  if (!confirm('이 메모의 이미지를 삭제하시겠습니까?')) return;
+  const ctx = lightboxCtx;
+  const arr = ctx.type === 'free' ? freeMemos : memos;
+  const m = arr.find(x => x.id === ctx.memoId);
+  closeImgLightbox();
+  if (!m) return;
+  if (m.imgId) deleteMemoImage(m.imgId);
+  m.imgId = null;
+  if (ctx.type === 'free') { saveFreeMemos(); renderFreeMemos(); }
+  else { saveMemos(); renderMemos(); }
+}
+
+// ===== 위치 앵커 (저장 시점 본문 위치 기록/이동) =====
+// 현재 화면 상단에 보이는 본문 텍스트의 문자 오프셋을 앵커로 기록
+function captureViewportAnchor() {
+  if (!currentChapter) return { chapterNum: null, anchorOffset: null };
+  const contentEl = document.getElementById('chapterContent');
+  const area = document.getElementById('contentArea');
+  if (!contentEl || !area) return { chapterNum: currentChapter.num, anchorOffset: null };
+  const rect = area.getBoundingClientRect();
+  const x = rect.left + Math.min(100, rect.width / 4);
+  const y = rect.top + 70;
+  let off = null;
+  let range = null;
+  if (document.caretRangeFromPoint) {
+    range = document.caretRangeFromPoint(x, y);
+  } else if (document.caretPositionFromPoint) {
+    const p = document.caretPositionFromPoint(x, y);
+    if (p && p.offsetNode) {
+      range = document.createRange();
+      try { range.setStart(p.offsetNode, p.offset); range.collapse(true); } catch (e) { range = null; }
+    }
+  }
+  if (range && range.startContainer && range.startContainer.nodeType === 3 && contentEl.contains(range.startContainer)) {
+    const s = serializeRange(range, contentEl);
+    if (s.startOffset >= 0) off = s.startOffset;
+  }
+  if (off == null) off = firstVisibleTextOffset(contentEl, y);
+  return { chapterNum: currentChapter.num, anchorOffset: off };
+}
+function firstVisibleTextOffset(contentEl, y) {
+  const walker = document.createTreeWalker(contentEl, NodeFilter.SHOW_TEXT);
+  let charCount = 0;
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const len = node.textContent.length;
+    if (len && node.textContent.trim()) {
+      const r = document.createRange();
+      r.selectNodeContents(node);
+      const rc = r.getBoundingClientRect();
+      if (rc.height && rc.bottom > y) return charCount;
+    }
+    charCount += len;
+  }
+  return null;
+}
+function offsetToRange(contentEl, off) {
+  if (off == null || off < 0) return null;
+  const walker = document.createTreeWalker(contentEl, NodeFilter.SHOW_TEXT);
+  let charCount = 0;
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const len = node.textContent.length;
+    if (charCount + len >= off) {
+      const r = document.createRange();
+      const o = Math.max(0, Math.min(len, off - charCount));
+      try { r.setStart(node, o); r.collapse(true); } catch (e) { return null; }
+      return r;
+    }
+    charCount += len;
+  }
+  return null;
+}
+
+// ===== 본문 메모 마커 (📝) =====
+// 마커는 텍스트 노드를 추가하지 않으므로(아이콘은 CSS ::after) 하이라이트 오프셋을 깨뜨리지 않음
+function renderMemoAnchors(chNum) {
+  const contentEl = document.getElementById('chapterContent');
+  if (!contentEl) return;
+  contentEl.querySelectorAll('.memo-anchor-marker').forEach(el => el.remove());
+  const anchored = [];
+  memos.forEach(m => { if (m.chapterNum === chNum && m.anchorOffset != null) anchored.push({ m, type: 'hl' }); });
+  freeMemos.forEach(m => { if (m.chapterNum === chNum && m.anchorOffset != null) anchored.push({ m, type: 'free' }); });
+  // 뒤쪽 오프셋부터 삽입해야 앞쪽 삽입이 뒤 오프셋 위치를 흐트러뜨리지 않음
+  anchored.sort((a, b) => b.m.anchorOffset - a.m.anchorOffset);
+  anchored.forEach(({ m, type }) => {
+    const r = offsetToRange(contentEl, m.anchorOffset);
+    if (!r) return;
+    const span = document.createElement('span');
+    span.className = 'memo-anchor-marker';
+    span.setAttribute('data-memo-id', m.id);
+    span.setAttribute('data-memo-type', type);
+    span.title = '메모 보기';
+    span.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showMemoMarkerPop(span);
+    });
+    try { r.insertNode(span); } catch (e) {}
+  });
+}
+function removeMemoMarkerPop() {
+  const p = document.getElementById('memoMarkerPop');
+  if (p) p.remove();
+}
+function showMemoMarkerPop(mk) {
+  removeMemoMarkerPop();
+  const id = Number(mk.getAttribute('data-memo-id'));
+  const type = mk.getAttribute('data-memo-type');
+  const m = (type === 'free' ? freeMemos : memos).find(x => x.id === id);
+  if (!m) return;
+  const pop = document.createElement('div');
+  pop.id = 'memoMarkerPop';
+  pop.className = 'memo-marker-pop';
+  const label = type === 'free' ? '✏️ 자유 메모' : '📌 하이라이트 메모';
+  pop.innerHTML = `
+    <div class="mmp-label"><span>${label} · ${timeAgo(m.id)}</span><span class="mmp-close" onclick="removeMemoMarkerPop()">&times;</span></div>
+    <div class="mmp-text">${escapeHtml(m.text) || '<i style="color:var(--text3)">(텍스트 없음)</i>'}</div>
+    ${m.imgId ? `<img data-img-id="${m.imgId}" alt="메모 이미지" onclick="openImgLightbox('${m.imgId}',${m.id},'${type}')">` : ''}
+    <button class="mmp-open-btn" onclick="removeMemoMarkerPop();focusMemoInPanel(${m.id},'${type}')">📋 메모장에서 보기</button>
+  `;
+  document.body.appendChild(pop);
+  const r = mk.getBoundingClientRect();
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  const left = Math.max(8, Math.min(window.innerWidth - pw - 8, r.left - 20));
+  let top = r.bottom + 8;
+  if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 8);
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+  if (m.imgId) {
+    const imEl = pop.querySelector('img[data-img-id]');
+    loadMemoImage(m.imgId).then(d => { if (d && imEl) imEl.src = d; });
+  }
+}
+document.addEventListener('pointerdown', (e) => {
+  const pop = document.getElementById('memoMarkerPop');
+  if (pop && !pop.contains(e.target) && !e.target.closest('.memo-anchor-marker')) pop.remove();
+});
+function focusMemoInPanel(id, type) {
+  document.getElementById('memoPanel').classList.add('open');
+  currentMemoFilter = 'all';
+  switchMemoTab(type === 'free' ? 'free' : 'highlight');
+  requestAnimationFrame(() => {
+    const listId = type === 'free' ? 'freeMemoList' : 'memoList';
+    const el = document.querySelector(`#${listId} .memo-item[data-id="${id}"]`);
+    if (el) {
+      el.scrollIntoView({ block: 'center' });
+      el.classList.add('flash');
+      setTimeout(() => el.classList.remove('flash'), 1500);
+    }
+  });
+}
+
+// Scroll position is independent of visit count and saved with existing user data.
+let readingSaveTimer;
+function paintChapterProgress(num) {
+  const item = document.querySelector(`.chapter-item[data-ch="${num}"]`);
+  if (!item) return;
+  let badge = item.querySelector('.chapter-progress');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.className = 'chapter-progress';
+    badge.style.cssText = 'font-size:10px;color:#a5b4fc;margin:5px 0 0 28px';
+    item.appendChild(badge);
+  }
+  const ratio = viewData[num]?.scrollProgress;
+  const percent = Math.round(Math.max(0, Math.min(1, Number(ratio) || 0)) * 100);
+  badge.textContent = ratio == null ? '스크롤 위치 · 미시작' : `스크롤 위치 · ${percent}%`;
+  badge.style.borderBottom = '3px solid transparent';
+  badge.style.borderImage = `linear-gradient(to right,#818cf8 ${percent}%,#30364b ${percent}%) 1`;
+}
+function updateReadingProgress() {
+  const area = document.getElementById('contentArea');
+  if (!currentChapter || !area.clientHeight) return;
+  const max = area.scrollHeight - area.clientHeight;
+  const ratio = max > 0 ? Math.max(0, Math.min(1, area.scrollTop / max)) : 1;
+  const num = currentChapter.num;
+  const record = viewData[num] || (viewData[num] = { count: 0, lastViewed: 0 });
+  const changed = record.scrollProgress !== ratio;
+  record.scrollProgress = ratio;
+  const percent = Math.round(ratio * 100);
+  document.getElementById('readingProgressLabel').textContent = `Ch${num} · 현재 스크롤 위치`;
+  document.getElementById('readingProgressPercent').textContent = `${percent}%`;
+  document.getElementById('readingProgressBar').value = percent;
+  paintChapterProgress(num);
+  if (changed) {
+    clearTimeout(readingSaveTimer);
+    readingSaveTimer = setTimeout(syncToCloud, 600);
+  }
+}
+document.getElementById('contentArea').addEventListener('scroll', updateReadingProgress, { passive: true });
+window.addEventListener('pagehide', () => {
+  if (currentChapter) {
+    updateReadingProgress();
+    try { localStorage.setItem('elite_ortho_views', JSON.stringify(viewData)); } catch (e) { console.warn('진행 위치 저장 실패', e); }
+  }
+});
+new ResizeObserver(updateReadingProgress).observe(document.getElementById('contentArea'));
+document.getElementById('contentArea').addEventListener('load', updateReadingProgress, true);
+
+// Marked passages are navigable even when no memo was created for them.
+function renderMarkedPassages(list) {
+  Object.entries(highlights).forEach(([chapterNum, passages]) => {
+    const num = Number(chapterNum);
+    if (!CHAPTERS_DATA[num] || (currentMemoFilter !== 'all' && getSectionForChapter(num) !== currentMemoFilter)) return;
+    passages.forEach(h => {
+      const item = document.createElement('div');
+      item.className = 'memo-item can-go marked-passage';
+      item.tabIndex = 0;
+      item.setAttribute('role', 'button');
+      item.innerHTML = `<div class="memo-chapter">밑줄·형광펜 · Ch${num}<span class="memo-goto-hint">📍 위치로 이동</span></div><div class="memo-text">${escapeHtml(h.text || '표시한 구절')}</div>`;
+      item.style.borderLeft = '3px solid ' + ({ yellow: '#eab308', green: '#22c55e', blue: '#3b82f6', pink: '#ec4899', purple: '#a855f7' }[h.color] || '#6366f1');
+      item.onclick = () => gotoContentPosition(num, h.startOffset, h.text, null, h.id);
+      item.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); } };
+      list.appendChild(item);
+    });
+  });
+}
+
+let contentNavigationToken = 0;
+function gotoContentPosition(chapterNum, offset, text, memoId, highlightId) {
+  const num = Number(chapterNum);
+  if (!CHAPTERS_DATA[num]) return;
+  const token = ++contentNavigationToken;
+  if (!currentChapter || currentChapter.num !== num) loadChapter(num);
+  if (window.innerWidth <= 768) closeMemo();
+  const navigate = () => {
+    if (token !== contentNavigationToken || currentChapter?.num !== num) return;
+    const content = document.getElementById('chapterContent');
+    let target = memoId == null ? null : content.querySelector(`.memo-anchor-marker[data-memo-id="${CSS.escape(String(memoId))}"]`);
+    if (!target && highlightId != null) target = content.querySelector(`mark[data-hl-id="${CSS.escape(String(highlightId))}"]`);
+    let off = offset;
+    if ((off == null || off < 0) && text) {
+      const found = content.textContent.indexOf(text.slice(0, 80).trim());
+      if (found >= 0) off = found;
+    }
+    const range = !target && off != null ? offsetToRange(content, off) : null;
+    target = target || range?.startContainer.parentElement || content;
+    // A saved passage can be inside a hidden quiz answer.
+    for (let el = target; el && el !== content; el = el.parentElement) {
+      if (el.tagName === 'DETAILS') el.open = true;
+      if (el.classList.contains('quiz-answer')) el.style.display = 'block';
+    }
+    const area = document.getElementById('contentArea');
+    const rect = range ? range.getBoundingClientRect() : target.getBoundingClientRect();
+    area.scrollTop += rect.top - area.getBoundingClientRect().top - area.clientHeight / 3;
+    flashGotoTarget(target.closest('p,li,h2,h3,h4,blockquote,td') || target);
+    updateReadingProgress();
+  };
+  // Wait for the memo panel width transition before measuring the target.
+  setTimeout(navigate, 330);
+}
+
+// ===== 메모 클릭 → 저장 위치로 이동 =====
+function gotoMemo(id, type) {
+  const m = (type === 'free' ? freeMemos : memos).find(x => x.id === id);
+  if (!m || m.chapterNum == null) return;
+  gotoContentPosition(m.chapterNum, m.anchorOffset, m.text, m.id, null);
+}
+function flashGotoTarget(el) {
+  const r = el.getBoundingClientRect();
+  if (!r.width && !r.height) return;
+  const f = document.createElement('div');
+  f.className = 'memo-goto-flash';
+  const pad = 6;
+  f.style.left = (r.left - pad) + 'px';
+  f.style.top = (r.top - pad) + 'px';
+  f.style.width = (r.width + pad * 2) + 'px';
+  f.style.height = (r.height + pad * 2) + 'px';
+  document.body.appendChild(f);
+  setTimeout(() => f.remove(), 1600);
+}
+// ESC로 편집기/라이트박스/팝오버 닫기
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('imgEditorOverlay').style.display !== 'none') closeImgEditor();
+  else if (document.getElementById('imgLightbox').style.display !== 'none') closeImgLightbox();
+  else removeMemoMarkerPop();
+});
 
 // ===== SIDEBAR MEMO PREVIEWS =====
 function toggleSectionMemoPreview(el) {
@@ -4339,6 +5236,8 @@ function renderSidebarMemoPreviews() {
         currentMemoFilter = secIdx;
         if (item.type === 'free') switchMemoTab('free');
         else switchMemoTab('highlight');
+        // 앵커가 있으면 저장 위치로 바로 이동
+        gotoMemo(item.id, item.type === 'free' ? 'free' : 'hl');
       };
       listEl.appendChild(div);
     });
@@ -4397,6 +5296,8 @@ const HL_COLORS = ['yellow','green','blue','pink','purple'];
 
 function saveHighlights() {
   syncToCloud();
+  renderFilterChips();
+  renderMemos();
 }
 
 // Serialize a range to a storable object using text offsets within chapterContent
@@ -4625,7 +5526,8 @@ function showHighlightRemovePopup(hlMark) {
   memoBtn.addEventListener('pointerdown', (ev) => {
     ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation();
     if (currentChapter) {
-      addMemo(hlText, currentChapter.num, currentChapter.title);
+      const rec = (highlights[currentChapter.num] || []).find(h => h.id === hlId);
+      addMemo(hlText, currentChapter.num, currentChapter.title, rec ? rec.startOffset : null);
       document.getElementById('memoPanel').classList.add('open');
     }
     removeHlPopup();
@@ -4710,7 +5612,7 @@ function showHighlightPopup() {
   memoBtn.textContent = '📋 메모';
   memoBtn.addEventListener('pointerdown', (ev) => {
     ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation();
-    addMemo(text, currentChapter.num, currentChapter.title);
+    addMemo(text, currentChapter.num, currentChapter.title, serialized.startOffset);
     removeFloatPopup();
     window.getSelection().removeAllRanges();
     document.getElementById('memoPanel').classList.add('open');
