@@ -428,91 +428,105 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;bac
 @keyframes qReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 .q-inline.answered{pointer-events:none}
 
-/* ====== REFINED POLISH v2 (세련된 디자인) ====== */
-html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
-:root{--accent:#3056d3;--accent2:#5b82f5;--accent-glow:rgba(48,86,211,.10)}
-.chapter-content{max-width:860px}
-.chapter-meta{background:linear-gradient(135deg,#eef3fc 0%,#e7edfa 100%);border-radius:14px;border-left:5px solid var(--accent);box-shadow:0 4px 18px rgba(48,86,211,.07),0 1px 2px rgba(0,0,0,.03)}
-.chapter-content h2,.chapter-content h2.auto-heading{background:linear-gradient(90deg,rgba(48,86,211,.07) 0%,transparent 78%);border-left-width:4px;border-radius:0 8px 8px 0}
-.chapter-content h3,.chapter-content h3.auto-heading{border-bottom:2px solid #e8ebf1}
-.chapter-content table,.chapter-content .content-table{border-radius:10px;box-shadow:0 2px 10px rgba(20,30,60,.05);border-color:#e6e9f0}
-.chapter-content table th,.chapter-content .content-table th{background:linear-gradient(135deg,#3056d3,#2440b0)}
-.main-header{backdrop-filter:saturate(1.1);box-shadow:0 1px 0 rgba(20,30,60,.04)}
-.sidebar-header h1{background:linear-gradient(90deg,#fff,#cdd9ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.chapter-item.active{box-shadow:inset 0 0 0 1px rgba(48,86,211,.12)}
-.welcome .stat-num{background:linear-gradient(135deg,#3056d3,#5b82f5);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+/* Editorial study interface: restrained ink, warm paper, clear typography. */
+:root{--sidebar-w:304px;--dark:#142826;--dark2:#1b3330;--dark3:#25403c;--dark4:#34534d;--accent:#21675b;--accent2:#a6d1bf;--accent3:#b99b68;--accent-glow:rgba(33,103,91,.10);--text:#e8efeb;--text2:#b7c6bf;--text3:#92aaa0;--border:rgba(220,235,225,.12);--content-bg:#f6f5f0;--body-text:#303c36;--heading1:#192f29;--heading2:#24453b;--heading3:#3e554c;--grad:linear-gradient(110deg,#21675b,#347b68);--grad-soft:#edf3ee;--shadow-card:0 6px 24px rgba(22,46,36,.04);--shadow-pop:0 4px 12px rgba(22,46,36,.08)}
+body,input,textarea,select,button{font-family:'Times New Roman','Malgun Gothic','Apple SD Gothic Neo',serif}
+body{height:100dvh}
+.sidebar{height:100dvh;background:var(--dark)}
+#sidebarGlow{display:none}
+.sidebar-header{padding:30px 23px 23px;background:none}
+.sidebar-header h1{background:none;-webkit-text-fill-color:initial;color:#f0f4ed;font-size:20px;letter-spacing:-.5px}
+.sidebar-header .sub{margin-top:8px;font-size:11px;letter-spacing:.4px;color:var(--text3)}
+.search-box{margin:18px 18px 12px}
+.search-box input{background:rgba(255,255,255,.045);border-color:var(--border);border-radius:7px;padding-top:12px;padding-bottom:12px;font-size:13px}
+.search-box input:focus{border-color:#8cbba6;box-shadow:0 0 0 2px rgba(140,187,166,.12)}
+.search-box::before{top:11px}
+.section-header{padding:15px 19px;font-size:12px;color:#a8c4b5;letter-spacing:.1px;gap:8px;word-break:keep-all}
+.section-header .badge{background:rgba(255,255,255,.06);color:var(--text3)}
+.chapter-item{padding:13px 12px;margin:3px 10px;border:1px solid transparent;border-radius:7px;line-height:1.6;font-size:13px;position:relative}
+.chapter-item:hover{transform:none;background:#203b34;color:#f4f7f3;border-color:transparent;box-shadow:none}
+.chapter-item.active{background:#294a40;border-color:#496e5c;box-shadow:none;color:#eef5eb}
+.chapter-item .ch-title-row{gap:11px;min-width:0}
+.chapter-item .ch-num{min-width:22px;font-size:12px;padding-top:1px;color:#8fa699;font-variant-numeric:tabular-nums}
+.chapter-item .ch-name{min-width:0;flex:1;word-break:keep-all;overflow-wrap:normal;line-height:1.55;font-weight:400}
+.chapter-item.active .ch-num,.chapter-item.active .ch-name{color:#f1f6ed}
+.ch-name .title-en{display:block;color:inherit;font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+.ch-name .title-ko{display:block;color:#aabfb2;font-size:12px;margin-top:3px;word-break:keep-all;overflow-wrap:anywhere}
+.chapter-item.active .title-ko{color:#d2e1d3}
+.chapter-item .ch-views{padding-left:33px;flex-wrap:wrap;row-gap:3px;margin-top:7px;font-size:10px}
+.chapter-item .ch-views .view-badge{color:#bacdbd}
+.chapter-progress{margin:7px 0 0 33px;display:flex;align-items:center;gap:8px;font-size:10px;color:#b5cabc;font-variant-numeric:tabular-nums}
+.chapter-progress-track{height:2px;flex:1;background:#3a5146;border-radius:2px;overflow:hidden}
+.chapter-progress-fill{height:100%;background:#a6c6a7;border-radius:2px}
+.memo-toggle{background:#12241f;padding:16px 20px;font-size:13px}
+.memo-toggle .count{background:#335b46;color:#d8e9d7}
+.main{min-width:0}
+.main-header{background:#fbfcf8;border-bottom:1px solid #e0e5dc;box-shadow:none;padding:17px 30px;gap:18px;color:#59685e;font-size:13px;min-height:58px;backdrop-filter:none}
+#headerTitle{min-width:0;word-break:keep-all;overflow-wrap:anywhere;line-height:1.55}
+.main-header .docx-link{flex-shrink:0;border:1px solid #d6e0d7;color:#456b57;border-radius:5px;padding:5px 9px;white-space:nowrap}
+.main-header .docx-link:hover{background:#edf3ed;box-shadow:none;transform:none;color:#21675b}
+#readingProgress{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:8px 30px;background:#fbfcf8;border-bottom:1px solid #e0e5dc}
+#readingProgress[hidden]{display:none}
+#readingProgressPercent{order:2;color:#54715e;font-size:12px;min-width:32px;text-align:right;font-variant-numeric:tabular-nums}
+#readingProgressBar{appearance:none;-webkit-appearance:none;flex:1;min-width:0;height:3px;border:0;border-radius:2px;overflow:hidden;background:#e6ebe2;accent-color:#537d61}
+#readingProgressBar::-webkit-progress-bar{background:#e6ebe2}
+#readingProgressBar::-webkit-progress-value{background:#537d61;border-radius:2px;transition:width .1s}
+#readingProgressBar::-moz-progress-bar{background:#537d61}
+.content-area{padding:44px clamp(24px,4vw,64px) 100px;scrollbar-gutter:stable;min-height:0}
+.chapter-content{max-width:900px;font-size:16px;line-height:1.95;color:var(--body-text)}
+.chapter-meta{padding:28px 30px;margin-bottom:38px;background:#fffefa;border:1px solid #e1e4da;border-radius:9px;box-shadow:0 4px 18px rgba(37,62,44,.035)}
+.chapter-meta::before,.chapter-meta::after{display:none}
+.chapter-meta .meta-title{font-size:25px;font-weight:700;line-height:1.55;letter-spacing:-.5px;word-break:keep-all;overflow-wrap:anywhere}
+.chapter-meta .meta-info{margin-top:10px;font-size:12px;color:#708074}
+.chapter-meta .meta-views{margin-top:12px;border-radius:4px;background:#eef3eb;color:#59745d;font-weight:400;font-size:11px}
+.chapter-meta .meta-minus-btn,.chapter-meta .meta-reset-btn{border-color:#d3dfd0!important;color:#5c795f!important}
+.chapter-content p{text-align:left;word-break:keep-all;overflow-wrap:break-word;margin-bottom:16px}
+.chapter-content li{word-break:keep-all;overflow-wrap:break-word;line-height:1.9}
+.chapter-content h2,.chapter-content h2.auto-heading{margin:44px 0 18px;padding:0 0 13px;border-left:0;border-bottom:2px solid #315e4b;background:none;border-radius:0;font-size:23px;line-height:1.55;word-break:keep-all;overflow-wrap:anywhere}
+.chapter-content h3,.chapter-content h3.auto-heading{font-size:20px;line-height:1.6;margin:32px 0 16px;border-bottom:1px solid #dbe2d6;word-break:keep-all;overflow-wrap:anywhere}
+.chapter-content h4,.chapter-content h5{line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
+.chapter-content li::marker{color:#648268}
+.chapter-content table,.chapter-content .content-table{box-shadow:none;border:1px solid #dce3d6;border-radius:6px;display:block;max-width:100%;overflow-x:auto;width:100%;background:#fffefa}
+.chapter-content table th,.chapter-content .content-table th{background:#315548;font-size:13px;padding:13px 16px;word-break:keep-all}
+.chapter-content table td,.chapter-content .content-table td{font-size:14px;line-height:1.8;padding:12px 16px;word-break:keep-all;min-width:70px}
+.chapter-content table tr:nth-child(even) td{background:#f0f3eb}
+.chapter-content table tr:hover td{background:#eaf0e5}
+.chapter-content img{max-width:100%;height:auto}
+.chapter-content blockquote{background:#edf2e8;border-color:#8da284;border-radius:0 6px 6px 0;font-style:normal;padding:18px 22px}
+.q-opt{background:#fffefa;border:1px solid #dce3d6;border-radius:7px;padding:14px 18px;box-shadow:none;word-break:keep-all;overflow-wrap:break-word}
+.q-opt:hover{border-color:#6c9279;background:#f0f5ed;transform:none;box-shadow:none}
+.q-opt.q-correct{animation:none}
+.quiz-reveal{font-size:13px;background:#eef3e8;border-color:#b0c2a6;color:#426a4d;border-radius:6px;margin-top:12px;padding:9px 15px}
+.quiz-reveal:hover{transform:none;box-shadow:none;background:#315e4b}
+.quiz-answer.shown{background:#edf3e8;border-left:3px solid #6c9065;border-radius:0 7px 7px 0;padding:18px 20px;line-height:1.95}
+.memo-panel{background:#fdfdf8;color:#34483b;border-color:#dce3d6;height:100dvh;--text:#34483b;--text2:#65786b;--text3:#768478;--border:#dce3d6;--dark:#fdfdf8;--dark2:#f2f5ed;--dark3:#e7ede1;--dark4:#dce5d3;--accent:#21675b}
+.memo-panel-header{padding:20px}.memo-close:hover{color:#21675b}
+.memo-tabs{background:#f2f5ed}.memo-tab-btn{padding:13px 6px;font-size:12px}
+.memo-item{background:#fff;border:1px solid #dde5d6;border-radius:7px;padding:15px;margin-bottom:12px;box-shadow:none}
+.memo-item:hover{border-color:#9cb595;box-shadow:none}.memo-item .memo-text{font-size:14px;line-height:1.85;word-break:keep-all;overflow-wrap:anywhere}
+.memo-chapter{line-height:1.8}.memo-goto-hint{display:block;margin:4px 0 0}
+.free-memo-input{background:#fff;color:#34483b}
+.welcome{max-width:740px;margin:6vh auto 0;padding:42px 24px;text-align:left;border-top:2px solid #315e4b}
+.welcome h2{font-size:32px;letter-spacing:-1px;font-weight:700;margin-bottom:18px}
+.welcome p{font-size:15px;color:#718073;line-height:1.9;word-break:keep-all}
+.welcome .stats{justify-content:flex-start;gap:54px;margin-top:38px;padding-top:25px;border-top:1px solid #d9e0d2}
+.welcome .stat-num{background:none;-webkit-text-fill-color:initial;color:#315e4b;font-size:42px;font-weight:400}
+.welcome .stat-label{color:#718073}.welcome .reset-views{text-align:left}
+.login-overlay{background:#142826}.login-box{box-shadow:0 24px 80px #07130e55;border-radius:12px}
+:focus-visible{outline:2px solid #b79a58;outline-offset:3px}
+#confettiLayer{position:fixed;inset:0;pointer-events:none;z-index:99990;overflow:hidden}.confetti-piece{position:absolute;width:9px;height:14px;border-radius:2px;will-change:transform,opacity}
+@media(max-width:1100px) and (min-width:769px){:root{--sidebar-w:272px}.content-area{padding:30px 24px 80px}.chapter-meta{padding:22px}.chapter-meta .meta-title{font-size:22px}}
+@media(max-width:768px){:root{--sidebar-w:290px}.sidebar{width:290px;min-width:290px;left:-310px}.sidebar.open{left:0}.memo-toggle{width:290px}.main-header{padding:13px 14px 13px 54px;font-size:11px;gap:8px}.main-header .docx-link{font-size:11px;padding:4px 6px}#readingProgress{padding:7px 17px}.content-area{padding:24px 18px 85px}.chapter-content{font-size:15px}.chapter-meta{padding:20px 18px;margin-bottom:30px}.chapter-meta .meta-title{font-size:21px}.chapter-content h2,.chapter-content h2.auto-heading{font-size:20px}.chapter-content h3,.chapter-content h3.auto-heading{font-size:18px}.chapter-content table td{font-size:13px;padding:10px}.welcome{margin:4vh auto 0;padding:28px 8px}.welcome h2{font-size:27px}.memo-panel.open{max-width:100vw}.chapter-item .ch-name{font-size:13px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
-/* ===================== PREMIUM REDESIGN v3 (indigo→violet, light premium) ===================== */
-:root{
-  --accent:#6366f1; --accent2:#a78bfa; --accent3:#8b5cf6;
-  --accent-glow:rgba(99,102,241,.13);
-  --grad:linear-gradient(135deg,#6366f1 0%,#8b5cf6 55%,#a855f7 100%);
-  --grad-soft:linear-gradient(135deg,rgba(99,102,241,.10),rgba(168,85,247,.08));
-  --dark:#13151e; --dark2:#1b1e2b; --dark3:#242838; --dark4:#333a4f;
-  --content-bg:#f4f5fb; --card-bg:#ffffff;
-  --heading1:#161b2e; --heading2:#222a44; --heading3:#33405c; --body-text:#3a4560;
-  --text:#e2e5ef; --text2:#9aa1b6; --text3:#646c83;
-  --border:rgba(255,255,255,.07);
-  --shadow-card:0 1px 2px rgba(16,24,40,.04),0 8px 28px rgba(34,42,80,.07);
-  --shadow-pop:0 10px 30px rgba(99,102,241,.16),0 2px 8px rgba(16,24,40,.06);
-}
-/* ambient page background */
-body{background:
-  radial-gradient(1100px 560px at 82% -10%, rgba(139,92,246,.08), transparent 60%),
-  radial-gradient(900px 500px at -8% 14%, rgba(99,102,241,.06), transparent 55%),
-  var(--content-bg);}
-/* ---- sidebar: richer gradient + cursor spotlight ---- */
-.sidebar{position:relative;background:linear-gradient(180deg,#191c2b 0%,#111219 100%);border-right:1px solid rgba(255,255,255,.05)}
-.sidebar > *:not(#sidebarGlow):not(.memo-toggle){position:relative;z-index:1}
-.memo-toggle{z-index:10}
-#sidebarGlow{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .35s ease;mix-blend-mode:screen;
-  background:radial-gradient(240px circle at var(--mx,50%) var(--my,24%), rgba(167,139,250,.30), rgba(99,102,241,.10) 42%, transparent 72%);}
-.sidebar-header{background:linear-gradient(180deg,rgba(99,102,241,.16),transparent 92%)}
-.sidebar-header h1{background:linear-gradient(90deg,#fff,#c7c9ff 65%,#e2c7ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.4px}
-.section-header{color:#b9bdff}
-.section-header .arrow,.section-header.open .arrow{color:var(--accent2)}
-.chapter-item{transition:background .16s,color .16s,transform .16s,border-color .16s,box-shadow .16s}
-.chapter-item:hover{transform:translateX(3px);background:rgba(99,102,241,.10);color:#eef0ff;border-left-color:var(--accent2)}
-.chapter-item.active{background:linear-gradient(90deg,rgba(99,102,241,.24),rgba(139,92,246,.05));border-left-color:var(--accent2);box-shadow:inset 0 0 0 1px rgba(139,92,246,.28),0 5px 18px rgba(99,102,241,.20)}
-.chapter-item.active .ch-num,.chapter-item.active .ch-name{color:#cdcfff}
-.search-box input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(99,102,241,.18)}
-.memo-toggle .count{background:var(--grad)}
-/* ---- main header (frosted) ---- */
-.main-header{background:rgba(255,255,255,.82);backdrop-filter:saturate(1.4) blur(8px);-webkit-backdrop-filter:saturate(1.4) blur(8px);box-shadow:0 1px 0 rgba(34,42,80,.05)}
-.main-header .docx-link{transition:transform .18s,box-shadow .18s,background .18s,color .18s}
-.main-header .docx-link:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(99,102,241,.28)}
-/* ---- content surfaces ---- */
-.chapter-content{max-width:880px}
-.chapter-meta{background:linear-gradient(135deg,#ffffff 0%,#f1efff 100%);border-radius:16px;border-left:none;position:relative;overflow:hidden;box-shadow:var(--shadow-card)}
-.chapter-meta::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--grad)}
-.chapter-meta::after{content:'';position:absolute;right:-46px;top:-64px;width:190px;height:190px;background:radial-gradient(circle,rgba(139,92,246,.16),transparent 70%);pointer-events:none}
-.chapter-meta .meta-title{position:relative}
-.chapter-content h2,.chapter-content h2.auto-heading{background:linear-gradient(90deg,rgba(99,102,241,.10) 0%,transparent 80%);border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
-.chapter-content h3,.chapter-content h3.auto-heading{border-bottom:2px solid #e7e8f3}
-.chapter-content li::marker{color:var(--accent3)}
-.chapter-content table th,.chapter-content .content-table th{background:var(--grad)}
-.chapter-content table,.chapter-content .content-table{border-radius:12px;box-shadow:0 2px 14px rgba(34,42,80,.06);border-color:#e7e8f3}
-.chapter-content blockquote{background:var(--grad-soft);border-left-color:var(--accent3)}
-/* ---- quiz: premium hover + correct pop ---- */
-.q-opt,.q-table-opt{transition:border-color .16s,background .16s,transform .14s,box-shadow .16s}
-.q-opt{box-shadow:0 1px 2px rgba(16,24,40,.04)}
-.q-opt:hover{border-color:var(--accent2);box-shadow:var(--shadow-pop)}
-.q-opt:active{transform:scale(.99)}
-.quiz-reveal{transition:transform .18s,box-shadow .18s,background .18s,color .18s}
-.quiz-reveal:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(99,102,241,.30)}
-.q-opt.q-correct{animation:qPop .5s cubic-bezier(.34,1.56,.64,1)}
-@keyframes qPop{0%{transform:scale(1)}45%{transform:scale(1.04)}100%{transform:scale(1)}}
-/* ---- welcome ---- */
-.welcome .stat-num{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-button{transition:transform .15s,box-shadow .15s,background .15s,color .15s}
-/* ---- confetti layer ---- */
-#confettiLayer{position:fixed;inset:0;pointer-events:none;z-index:99990;overflow:hidden}
-.confetti-piece{position:absolute;width:9px;height:14px;border-radius:2px;will-change:transform,opacity}
-@media (prefers-reduced-motion:reduce){
-  #sidebarGlow{display:none}
-  .q-opt.q-correct{animation:none}
-  .chapter-item:hover{transform:none}
-}
+
+.study-explanation-link{display:inline-block;margin:8px 0 8px 10px;padding:9px 13px;background:#fffdf7;border:1px solid #c8d5c0;border-radius:6px;color:#426a4d;cursor:pointer;font-size:13px}
+.study-explanation-link::before{content:'자세한 풀이 ↗'}.study-explanation-link.correction{border-color:#c9ac70;color:#795a22}.study-explanation-link.correction::before{content:'정정·보완 풀이 ↗'}
+.answer-needs-review::before{content:'원문 설명 · 정정·보완 풀이와 함께 확인';display:block;font-size:12px;color:#8c6829;margin-bottom:8px;font-weight:bold}
+.study-correction-notice{max-width:900px;margin:0 auto 18px;padding:12px 16px;border:1px solid #ddcdab;background:#fbf6e9;border-radius:6px}.study-correction-notice button{background:none;border:0;color:#765b2a;font-size:13px;line-height:1.8;text-align:left;cursor:pointer;word-break:keep-all}
+#studyExplanationDialog{margin:auto;width:min(640px,calc(100vw - 32px));max-height:85dvh;overflow:auto;padding:36px;border:1px solid #d7dfd0;border-radius:12px;background:#fffef9;color:#304337;box-shadow:0 25px 90px #10271c33;font-size:16px;line-height:1.95}
+#studyExplanationDialog::backdrop{background:#10231bc0;backdrop-filter:blur(3px)}.study-close{float:right;border:0;background:#edf2e7;padding:6px 12px;border-radius:5px;color:#45614b;cursor:pointer}.study-eyebrow{color:#82917d;font-size:11px;letter-spacing:1.4px;margin-top:25px}#studyExplanationDialog h2{font-size:25px;line-height:1.5;margin:12px 0 26px;word-break:keep-all}#studyExplanationDialog h3{font-size:13px;color:#6a846b;margin:24px 0 8px}#studyExplanationDialog p{word-break:keep-all;overflow-wrap:break-word}.study-takeaway{background:#edf3e6;padding:18px 20px;border-left:3px solid #7e996c;margin:26px 0;font-weight:bold}#studyExplanationDialog footer{font-size:12px;color:#7b8976;border-top:1px solid #e3e8dc;padding-top:16px}#studyExplanationDialog a{color:#31674a}
+@media(max-width:768px){#studyExplanationDialog{padding:23px;font-size:15px}#studyExplanationDialog h2{font-size:22px}}
 </style>
 </head>
 <body>
@@ -570,9 +584,9 @@ button{transition:transform .15s,box-shadow .15s,background .15s,color .15s}
     <span id="headerTitle">엘리트 정형외과 단원별 열람</span>
     <a href="#" class="docx-link" id="docxLink" style="display:none">📄 .docx</a>
   </div>
-  <div id="readingProgress" hidden style="flex-shrink:0;padding:8px 20px;background:#f1f5ff;color:#334155;font-size:12px">
-    <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span id="readingProgressLabel">현재 스크롤 위치</span><span id="readingProgressPercent">0%</span></div>
-    <progress id="readingProgressBar" max="100" value="0" aria-label="현재 단원 스크롤 진행도" style="width:100%;height:7px;display:block;accent-color:#6366f1"></progress>
+  <div id="readingProgress" hidden>
+    <span id="readingProgressPercent">0%</span>
+    <progress id="readingProgressBar" max="100" value="0" aria-label="현재 단원 스크롤 진행도"></progress>
   </div>
   <div class="content-area" id="contentArea">
     <div class="welcome">
@@ -758,17 +772,8 @@ function doLogin() {
   btn.disabled = true;
   btn.textContent = '로그인 중...';
 
-  // const NEW_PW = ''; // 비밀번호 자동 마이그레이션 필요 시 사용
   if (!auth || !firebaseAvailable) { errEl.textContent = 'Firebase 연결 실패. 관리자에게 문의하세요.'; btn.disabled = false; btn.textContent = '로그인'; return; }
   auth.signInWithEmailAndPassword(email, pw)
-    .then((result) => {
-      // Auto-migrate password if logged in with old one
-      if (pw !== NEW_PW && result.user) {
-        result.user.updatePassword(NEW_PW).then(() => {
-          console.log('Password auto-updated');
-        }).catch(e => console.log('PW update skip:', e.code));
-      }
-    })
     .catch(err => {
       console.log('Sign-in error:', err.code, err.message);
       // 계정 자동 생성 비활성화 — 허용된 사용자만 로그인 가능
@@ -4058,7 +4063,7 @@ function buildNav() {
       item.innerHTML = `
         <div class="ch-title-row">
           <span class="ch-num">${ch.num}</span>
-          <span class="ch-name">${ch.displayTitle || ch.title}</span>
+          <span class="ch-name">${formatNavTitle(ch)}</span>
         </div>
         <div class="ch-views">${viewHtml}</div>
       `;
@@ -4090,6 +4095,98 @@ function buildNav() {
   renderSidebarMemoPreviews();
 }
 
+function formatNavTitle(ch) {
+  let title = (ch.displayTitle || ch.title).replace(/^\d+단원\s*/, '').replace(/\s+new$/i, '');
+  title = title.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+  const match = title.match(/^([^가-힣]*)([가-힣][\s\S]*)$/);
+  if (!match) return escapeHtml(title);
+  const korean = ch.num === 6 ? '내연골종 · 골연골종' : match[2];
+  return '<span class="title-en" lang="en">' + escapeHtml(match[1].trim()) + '</span><span class="title-ko">' + escapeHtml(korean) + '</span>';
+}
+
+function formatContentTitle(title) {
+  return escapeHtml(title).replace(/([a-z])([A-Z])/g, '$1<wbr>$2').replace(/([A-Z])([A-Z][a-z])/g, '$1<wbr>$2');
+}
+
+// Curated explanations kept outside chapter text so saved character anchors remain stable.
+const STUDY_EXPLANATIONS = {
+  5: [
+    { q: 0, title: '피질골 병변을 고르는 순서', reason: '먼저 병변의 위치를 골단·골간단·골간부와 피질골·골수강으로 나눈다. 이 문제는 장관골의 피질골을 묻는다. 원자료에서 Osteofibrous dysplasia는 경골·비골의 피질골 병변, Osteoid osteoma는 주로 피질골에 생기는 작은 nidus로 설명하므로 4번과 8번을 고른다.', contrast: '연골성 종양이라는 이름만 보고 Enchondroma를 선택하지 않는다. 내연골종은 골수강 내 위치가 핵심이다. 정답 두 개를 묻는 문제에서는 한 질환만 고르면 불완전한 답이다.', takeaway: '진단명보다 먼저 병변이 생긴 뼈의 구획을 확인한다.', source: 'chapter' },
+    { q: 1, title: '야간통 → 약물 반응 → nidus', reason: '젊은 환자의 야간통이 aspirin으로 완화되는 조합은 Osteoid osteoma를 시사한다. Prostaglandin에 의한 통증이라는 점이 NSAIDs 반응과 연결된다. CT는 작은 nidus의 위치와 형태를 확인하는 데 도움이 된다.', contrast: 'MRI에서 부종이 두드러져도 부종 자체가 nidus는 아니다. 이 문항의 확진 소견은 CT에서 nidus를 확인하는 것이다. 영상만으로 애매하면 추가 평가가 필요하다.', takeaway: '증상으로 의심하고 CT의 nidus로 뒷받침한다.', source: 'osteoid' },
+    { q: 2, title: '틀린 설명과 치료의 예외', reason: '㉲의 아침에 악화되는 통증은 전형적인 야간통과 맞지 않는다. 원자료의 proximal tibia 최호발 주장도 제시된 설명과 불일치한다. 핵심 판단 단서는 통증의 시간대와 NSAIDs 반응이다.', contrast: '본문의 “관찰이 아니라 반드시 제거”라는 단정은 보완이 필요하다. AAOS는 약물로 통증이 조절되는 환자의 비수술 치료도 설명한다. 증상 지속·약물 불내성 등에서는 nidus 소작 또는 제거를 고려한다.', takeaway: '시험의 전형적 증상과 실제 치료 선택을 구분한다.', source: 'osteoid', correction: true },
+    { q: 3, title: '검사 소견을 서로 바꾸지 않기', reason: '㉰가 맞는 이유는 Osteoid osteoma가 주로 피질골에 생기며 해면골에도 생길 수 있기 때문이다. 다른 보기들은 성별, 검사, 크기·호발 부위, 진통 반응을 다른 질환 또는 검사와 바꾸어 제시했다.', contrast: '원자료에서 double density sign은 bone scan 소견이다. CT에서는 nidus를 찾는다. Osteoblastoma와의 비교에서는 더 큰 병변과 척추 후방 요소를 연결하고, aspirin 무반응을 Osteoid osteoma의 전형으로 외우지 않는다.', takeaway: 'CT = nidus, bone scan = double density sign으로 구분한다.', source: 'chapter' }
+  ],
+  6: [
+    { q: 0, title: '다발성 병변과 변형의 방향', reason: 'Ulnar shortening과 radial bowing이 함께 있고 여러 관절 주위에 종괴가 있으면 원자료의 다발성 골연골종 패턴을 생각한다. 문항은 진단 다음 단계로 동반 변형의 방향을 묻는다.', contrast: '원자료에서 슬관절·족관절은 valgus와 연결된다. 따라서 knee varus가 아니라 knee valgus를 고른다. 전완의 단축·만곡 소견을 단순한 국소 종괴로만 해석하면 동반 변형을 놓친다.', takeaway: '다발성 골연골종 → 성장 불균형 → 특징적인 변형을 연결한다.', source: 'chapter' },
+    { q: 1, title: '연골성 기질과 병변 위치의 조합', reason: '골수강 안의 석회화와 무증상·비파괴성 병변이라는 조합이 Enchondroma를 지지한다. 연골성 석회화는 진단 단서지만 단독으로 양성을 확정하는 소견은 아니다.', contrast: 'Osteochondroma는 골 표면에서 돌출한다. 지속적 통증, 피질 파괴, 연부조직 종괴가 있으면 단순 내연골종으로 결론 내리지 않는다.', takeaway: '위치 → 기질 → 공격성 순으로 해석한다.', source: 'enchondroma' },
+    { q: 2, title: '우연히 발견된 병변에서 관찰을 고르는 이유', reason: '주어진 병변은 골수강 내에 국한되고 피질 침범이 없으며 종양 자체의 증상이 제시되지 않는다. 이 조건에서는 주기적인 영상 관찰이 합리적이므로 정답은 단순 방사선 추시다.', contrast: '발견됐다는 이유만으로 소파술·시멘트 충전이나 광범위 절제술을 선택하지 않는다. 새로운 통증 또는 공격적인 영상 변화가 생기면 평가 계획을 바꾼다.', takeaway: '무증상·비공격성이라는 조건을 확인한 뒤 관찰을 선택한다.', source: 'enchondroma' },
+    { q: 3, title: '다발성이라는 이유만으로 생검하지 않기', reason: '이 환자는 통증, 신경 증상, 운동 제한, 변형이 없다. 병변이 여럿이라는 사실과 지금 처치가 필요하다는 판단은 구분해야 한다. 증상과 변화가 없는 경우 정기적인 관찰을 선택한다.', contrast: '통증·신경혈관 압박·성장 종료 후 크기 증가 등이 나타나면 추가 평가가 필요하다. “추시”는 다시 보지 않는다는 뜻이 아니다.', takeaway: '치료의 강도는 병변 수만이 아니라 증상과 변화로 결정한다.', source: 'osteochondroma' },
+    { q: 4, title: '병적 골절과 종양 치료의 우선순위', reason: '비전위 병적 골절이 제시되므로 우선 부목으로 안정시키는 것이 이 문항의 답이다. 내연골종 관련 골절은 보통 골절 치유를 먼저 기다린 뒤 종양 소파술과 필요 시 결손부 충전을 검토한다.', contrast: '종양 치료가 불필요하다는 뜻이 아니다. 지금 필요한 골절 안정화와 이후 재골절을 예방하기 위한 종양 치료를 나누어 판단한다.', takeaway: '현재 문제는 비전위 골절, 다음 문제는 남아 있는 병변이다.', source: 'enchondroma' },
+    { q: 5, title: '성장 종료 후 커지는 골연골종', reason: '골격 성숙 후 새롭게 커지는 종괴는 추가 평가가 필요한 단서다. 통증 또는 두꺼운 연골모도 함께 확인한다. 의심만으로 악성 확진이라고 단정하지는 않는다.', contrast: '골연골종은 모골과 피질·골수강의 연속성을 보인다는 원자료 설명을 기억한다. 다발성 형태의 유전은 열성이 아니라 우성이다. 증상 치료를 방사선 치료와 연결하지 않는다.', takeaway: '성장 종료 후 성장·새 통증 → 영상 재평가를 생각한다.', source: 'osteochondroma' },
+    { q: 6, title: '원문 ③의 악성화 수치 정정', reason: '원문은 ③을 정답으로 제시하지만, 다발성 골연골종의 악성화를 약 1%로 일반화한 수치는 그대로 암기하지 않는다. AAOS는 단발성의 평생 악성화 위험을 1% 미만, MHE의 연골육종 위험을 약 10%로 구분한다. 대상군·추적 기간·자료에 따라 수치가 달라질 수 있다.', contrast: '원문의 정답 번호는 과거 자료의 기록이다. 현재 근거와 불일치하는 이 수치를 근거로 현대적 단일 정답 문제처럼 확정 채점하지 않는다.', takeaway: '단발성과 유전성 다발성을 구분하고 수치의 출처를 함께 확인한다.', source: 'osteochondroma', correction: true }
+  ],
+  11: [
+    { q: 0, title: '진단이 골육종으로 바뀌면 치료 원칙도 달라진다', reason: '양성 GCT로 생각해 시행한 소파술·시멘트 충전만으로는 고등급 골육종 치료가 완료되지 않는다. 병기를 다시 평가하고 국소 종양을 적절한 절제연으로 제거하면서 전신 항암치료를 병행하는 방향이 핵심이다.', contrast: '전이가 보이지 않는다는 이유로 항암치료를 생략하지 않는다. 절제 가능한 고등급 골육종에서 방사선 치료를 모든 환자의 필수 구성으로 넣는 선택지도 구분한다.', takeaway: '국소 조절과 전신 치료를 함께 판단한다.', source: 'osteosarcoma' },
+    { q: 1, title: '영상보다 결정적인 병리 단서', reason: '청소년·장관골 골간단부·공격적인 골막 반응은 골육종을 의심하게 한다. 문제에서 가장 결정적인 단서는 악성 종양세포가 직접 만드는 malignant osteoid이다.', contrast: 'Sunburst appearance만으로 확진하지 않는다. 유골 형성 주체가 악성 세포라는 병리 소견을 다른 악성 골종양과의 감별에 사용한다.', takeaway: '의심은 임상·영상으로, 문항의 확정 단서는 malignant osteoid로 찾는다.', source: 'chapter' },
+    { q: 2, title: '진단 시점의 예후 질문', reason: '진단 당시에는 원격 전이 여부와 종양의 파급 범위를 먼저 확인한다. 아직 치료를 시작하지 않았다면 항암치료 후 괴사율은 측정된 정보가 아니다.', contrast: '종양 크기·부위 등의 예후 인자도 중요하지만, 이 문항의 선택지와 진단 시점이라는 조건에서는 종양의 파급 정도를 고른다.', takeaway: '진단 시점 → disease extent를 먼저 연결한다.', source: 'osteosarcoma' },
+    { q: 3, title: '항암치료 뒤의 예후 질문', reason: '수술 전 항암치료 뒤에는 절제 표본의 조직학적 반응을 평가할 수 있다. NCI는 종양 괴사율 90% 이상을 더 양호한 예후와 연결한다.', contrast: '괴사율이 낮다고 항암치료가 전혀 효과 없거나 중단해야 한다고 해석하지 않는다. 진단 당시 병기와 치료 후 반응은 서로 다른 시점의 정보다.', takeaway: '치료 후 → histologic response, 진단 당시 → extent.', source: 'osteosarcoma' }
+  ]
+};
+const STUDY_SOURCES = {
+  chapter: ['이 단원의 원문·기존 해설', null],
+  osteoid: ['AAOS · Osteoid Osteoma', 'https://www.orthoinfo.org/diseases--conditions/osteoid-osteoma/'],
+  enchondroma: ['AAOS · Enchondroma', 'https://www.orthoinfo.org/diseases--conditions/enchondroma/'],
+  osteochondroma: ['AAOS · Osteochondroma', 'https://www.orthoinfo.org/diseases--conditions/osteochondroma'],
+  osteosarcoma: ['NCI · Osteosarcoma PDQ', 'https://www.cancer.gov/types/bone/hp/osteosarcoma-treatment-pdq']
+};
+function addStudyExplanations(num) {
+  const items = STUDY_EXPLANATIONS[num] || [];
+  const root = document.getElementById('chapterContent');
+  items.forEach(item => {
+    const pill = root.querySelector(`.quiz-reveal[data-q="q${item.q}"]`);
+    if (!pill) return;
+    const button = document.createElement('button');
+    button.className = 'study-explanation-link' + (item.correction ? ' correction' : '');
+    button.setAttribute('aria-label', item.correction ? '정정 및 보완 풀이' : '자세한 풀이');
+    button.onclick = () => openStudyExplanation(num, item.q);
+    // CSS label adds no text nodes to the character-offset annotation system.
+    pill.after(button);
+    if (item.correction) {
+      root.querySelectorAll(`.quiz-answer[data-q="q${item.q}"]`).forEach(el => el.classList.add('answer-needs-review'));
+      if (num === 6) {
+        pill.dataset.correct = '';
+        const cont = root.querySelector(`.q-cont[data-qc="q${item.q}"]`);
+        if (cont) cont.dataset.review = 'true';
+      }
+    }
+  });
+  if (items.some(item => item.correction)) {
+    const notice = document.createElement('div');
+    notice.className = 'study-correction-notice';
+    const first = items.find(item => item.correction);
+    const button = document.createElement('button');
+    button.textContent = num === 6 ? '원문 보완 · 다발성 골연골종의 악성화 수치를 확인하세요 →' : '원문 보완 · 유골골종의 비수술 치료도 확인하세요 →';
+    button.onclick = () => openStudyExplanation(num, first.q);
+    notice.appendChild(button);
+    root.before(notice);
+  }
+}
+function openStudyExplanation(num, q) {
+  const item = STUDY_EXPLANATIONS[num]?.find(x => x.q === q);
+  if (!item) return;
+  let dialog = document.getElementById('studyExplanationDialog');
+  if (!dialog) {
+    dialog = document.createElement('dialog');
+    dialog.id = 'studyExplanationDialog';
+    dialog.setAttribute('aria-labelledby','studyExplanationTitle');
+    document.body.appendChild(dialog);
+    dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
+  }
+  const source = STUDY_SOURCES[item.source];
+  dialog.innerHTML = `<form method="dialog"><button class="study-close" aria-label="풀이 닫기">닫기 ×</button></form><div class="study-eyebrow">CHAPTER ${num} · ${item.correction ? '정정 및 보완' : 'DEEPER UNDERSTANDING'}</div><h2 id="studyExplanationTitle">${escapeHtml(item.title)}</h2><h3>판단 근거</h3><p>${escapeHtml(item.reason)}</p><h3>헷갈리기 쉬운 부분</h3><p>${escapeHtml(item.contrast)}</p><div class="study-takeaway">${escapeHtml(item.takeaway)}</div><footer>근거: ${source[1] ? `<a href="${source[1]}" target="_blank" rel="noopener noreferrer">${source[0]}</a>` : source[0]} · 2026-09-16 검토</footer>`;
+  dialog.showModal();
+}
+
 // ===== LOAD CHAPTER =====
 function loadChapter(num) {
   const ch = CHAPTERS_DATA[num];
@@ -4114,7 +4211,7 @@ function loadChapter(num) {
     }
   }
 
-  document.getElementById('headerTitle').textContent = `Ch${num}. ${ch.displayTitle || ch.title}`;
+  document.getElementById('headerTitle').innerHTML = `Ch${num}. ${formatContentTitle(ch.displayTitle || ch.title)}`;
   const docxLink = document.getElementById('docxLink');
   if (ch.filename) {
     docxLink.style.display = 'inline-flex';
@@ -4131,7 +4228,7 @@ function loadChapter(num) {
   area.innerHTML = `
     <div class="chapter-content" id="chapterContent">
       <div class="chapter-meta">
-        <div class="meta-title">${ch.displayTitle || ch.title}</div>
+        <div class="meta-title">${formatContentTitle(ch.displayTitle || ch.title)}</div>
         <div class="meta-info">${ch.volName}${viewInfo}</div>
         ${v.count > 0 ? `<div class="meta-views">👁 ${v.count}회 열람 · ${timeAgo(v.lastViewed)}<button class="meta-minus-btn" onclick="decrementChapterView(${num}, event)">−1</button><button class="meta-reset-btn" onclick="resetChapterView(${num}, event)">✕ 초기화</button></div>` : ''}
       </div>
@@ -4141,6 +4238,7 @@ function loadChapter(num) {
   area.scrollTop = 0;
   processQuizzes();   // wire quizzes FIRST so heading-detection can't swallow 정답/보기 lines
   processHeadings();
+  addStudyExplanations(num);
   restoreHighlightsForChapter(num);
   renderMemoAnchors(num);
   document.getElementById('readingProgress').hidden = false;
@@ -4157,7 +4255,7 @@ function filterChapters() {
     group.querySelectorAll('.chapter-item').forEach(item => {
       const title = item.getAttribute('data-title');
       const chNum = item.getAttribute('data-ch');
-      const match = !query || title.includes(query) || `ch${chNum}`.includes(query) || `chapter ${chNum}`.includes(query);
+      const match = !query || title.replace(/\s/g, '').includes(query.replace(/\s/g, '')) || `ch${chNum}`.includes(query) || `chapter ${chNum}`.includes(query);
       item.style.display = match ? '' : 'none';
       if (match) anyVisible = true;
     });
@@ -5081,14 +5179,12 @@ function paintChapterProgress(num) {
   if (!badge) {
     badge = document.createElement('div');
     badge.className = 'chapter-progress';
-    badge.style.cssText = 'font-size:10px;color:#a5b4fc;margin:5px 0 0 28px';
     item.appendChild(badge);
   }
   const ratio = viewData[num]?.scrollProgress;
   const percent = Math.round(Math.max(0, Math.min(1, Number(ratio) || 0)) * 100);
-  badge.textContent = ratio == null ? '스크롤 위치 · 미시작' : `스크롤 위치 · ${percent}%`;
-  badge.style.borderBottom = '3px solid transparent';
-  badge.style.borderImage = `linear-gradient(to right,#818cf8 ${percent}%,#30364b ${percent}%) 1`;
+  badge.innerHTML = '<span class="chapter-progress-track" aria-hidden="true"><span class="chapter-progress-fill" style="display:block;width:' + percent + '%"></span></span><span>' + percent + '%</span>';
+  badge.setAttribute('aria-label', '현재 스크롤 진행도 ' + percent + '%');
 }
 function updateReadingProgress() {
   const area = document.getElementById('contentArea');
@@ -5100,7 +5196,6 @@ function updateReadingProgress() {
   const changed = record.scrollProgress !== ratio;
   record.scrollProgress = ratio;
   const percent = Math.round(ratio * 100);
-  document.getElementById('readingProgressLabel').textContent = `Ch${num} · 현재 스크롤 위치`;
   document.getElementById('readingProgressPercent').textContent = `${percent}%`;
   document.getElementById('readingProgressBar').value = percent;
   paintChapterProgress(num);
@@ -5160,7 +5255,7 @@ function gotoContentPosition(chapterNum, offset, text, memoId, highlightId) {
     // A saved passage can be inside a hidden quiz answer.
     for (let el = target; el && el !== content; el = el.parentElement) {
       if (el.tagName === 'DETAILS') el.open = true;
-      if (el.classList.contains('quiz-answer')) el.style.display = 'block';
+      if (el.classList.contains('quiz-answer')) quizRevealGroup(el.dataset.q);
     }
     const area = document.getElementById('contentArea');
     const rect = range ? range.getBoundingClientRect() : target.getBoundingClientRect();
@@ -5860,6 +5955,7 @@ function onQuizClick(e){
   if(opt){
     const id=opt.dataset.q;
     const cont=document.querySelector('.q-cont[data-qc="'+id+'"]');
+    if(cont && cont.dataset.review === 'true') { openStudyExplanation(currentChapter.num, Number(id.slice(1))); return; }
     if(cont && cont.classList.contains('answered')) return; // already answered
     const pill=document.querySelector('.quiz-reveal[data-q="'+id+'"]');
     const cset=(pill&&pill.dataset.correct?pill.dataset.correct.split(',').filter(Boolean).map(Number):[]);
