@@ -1,0 +1,18 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),{JSDOM}=require('jsdom');
+const html=fs.readFileSync('index.html','utf8');
+const ctx={viewData:{1:{count:2,lastViewed:100,scrollProgress:.73}},currentChapter:null,confirm:()=>true,syncToCloud(){},updateViewBadge(){},refreshChapterMeta(){},document:{querySelectorAll:()=>[]}};
+vm.createContext(ctx);
+vm.runInContext(html.slice(html.indexOf('function resetViews'),html.indexOf('function refreshChapterMeta')),ctx);
+ctx.resetChapterView(1);assert.equal(ctx.viewData[1].scrollProgress,.73);assert.equal(ctx.viewData[1].count,0);
+ctx.viewData[1].count=1;ctx.decrementChapterView(1);assert.equal(ctx.viewData[1].scrollProgress,.73);
+ctx.resetViews();assert.equal(ctx.viewData[1].scrollProgress,.73);
+const dom=new JSDOM('<div id="chapterContent">추가된 문항 설명. 보존할 원문 문장. 다른 내용.</div>');
+const hctx={document:dom.window.document,highlights:{1:[{id:'keep',text:'보존할 원문 문장',startOffset:0,endOffset:9},{id:'changed',text:'삭제된 문장',startOffset:0,endOffset:6}]},mergeHighlights(){},applied:[]};
+hctx.deserializeAndHighlight=(start,end,color,id)=>hctx.applied.push({start,end,id});
+vm.createContext(hctx);
+vm.runInContext(html.slice(html.indexOf('function resolveMemoOffset'),html.indexOf('// --- Highlight memos ---'))+html.slice(html.indexOf('function restoreHighlightsForChapter'),html.indexOf('function removeHighlight(')),hctx);
+hctx.restoreHighlightsForChapter(1);
+assert.equal(hctx.applied.length,1);assert.equal(hctx.applied[0].id,'keep');
+assert.equal(dom.window.document.getElementById('chapterContent').textContent.slice(hctx.applied[0].start,hctx.applied[0].end),'보존할 원문 문장');
+assert.equal(hctx.highlights[1].length,2,'unmatched saved annotations are not deleted');
+console.log('PASS: count reset preserves reading progress; changed content relocates saved quotes safely');
