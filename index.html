@@ -473,6 +473,12 @@ body{height:100dvh}
 .main{min-width:0}
 .main-header{background:#fbfcf8;border-bottom:1px solid #e0e5dc;box-shadow:none;padding:17px 30px;gap:18px;color:#59685e;font-size:13px;min-height:58px;backdrop-filter:none}
 #headerTitle{min-width:0;word-break:keep-all;overflow-wrap:anywhere;line-height:1.55}
+.server-save-controls{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;flex-shrink:0;max-width:55%}
+#serverSaveBtn{border:1px solid #c8d5c8;border-radius:6px;background:#f2f6ed;color:#365c45;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
+#serverSaveBtn:disabled{opacity:.65;cursor:wait}
+.server-save-status{font-size:11px;color:#567160;line-height:1.4;text-align:right;overflow-wrap:anywhere}
+.server-save-status.error{color:#b43c35}.server-save-status.syncing{color:#8a692d}
+@media(max-width:768px){.server-save-controls{gap:4px;max-width:48%}.server-save-status{font-size:10px}#serverSaveBtn{font-size:11px;padding:5px 8px}}
 .main-header .docx-link{flex-shrink:0;border:1px solid #d6e0d7;color:#456b57;border-radius:5px;padding:5px 9px;white-space:nowrap}
 .main-header .docx-link:hover{background:#edf3ed;box-shadow:none;transform:none;color:#21675b}
 #readingProgress{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:8px 30px;background:#fbfcf8;border-bottom:1px solid #e0e5dc}
@@ -574,7 +580,6 @@ body{height:100dvh}
 </div>
 
 <!-- SYNC INDICATOR -->
-<div class="sync-indicator" id="syncIndicator"></div>
 
 <!-- MOBILE MEMO FAB -->
 <button class="mobile-memo-fab" onclick="toggleMemo()">📋</button>
@@ -608,6 +613,10 @@ body{height:100dvh}
 <div class="main">
   <div class="main-header" id="mainHeader">
     <span id="headerTitle">엘리트 정형외과 단원별 열람</span>
+    <div class="server-save-controls">
+      <span id="syncIndicator" role="status" aria-live="polite"></span>
+      <button id="serverSaveBtn" type="button" onclick="manualServerSave()">☁ 서버 저장</button>
+    </div>
     <a href="#" class="docx-link" id="docxLink" style="display:none">📄 .docx</a>
   </div>
   <div id="readingProgress" hidden>
@@ -778,13 +787,16 @@ if (!firebaseAvailable) {
 let currentUser = null;
 let firestoreReady = false;
 let syncDebounceTimer = null;
+let serverSavePromise = null;
+let serverSaveRequested = false;
+let serverRetryTimer = null;
+const confirmedMemoImages = new Set();
 
 // ===== SYNC INDICATOR =====
 function showSync(state, msg) {
   const el = document.getElementById('syncIndicator');
-  el.className = 'sync-indicator ' + state;
+  el.className = 'server-save-status ' + state;
   el.textContent = msg || '';
-  if (state === 'synced') setTimeout(() => { el.className = 'sync-indicator'; }, 1500);
 }
 
 // ===== ALLOWED EMAILS (본인만 사용 가능) =====
@@ -898,10 +910,13 @@ if (auth) auth.onAuthStateChanged(user => {
     loadFromFirestore().then(() => {
       firestoreReady = true;
       initApp();
+      if (localStorage.getItem(pendingSaveKey())) syncToCloud(true);
     });
   } else {
     currentUser = null;
     firestoreReady = false;
+    clearTimeout(serverRetryTimer);
+    clearTimeout(syncDebounceTimer);
     overlay.style.display = 'flex';
     userBar.style.display = 'none';
     document.getElementById('loginBtn').disabled = false;
@@ -936,8 +951,7 @@ async function loadFromFirestore() {
         freeMemos = localFreeMemos;
         viewData = localViews;
         highlights = localHighlights;
-        await saveToFirestore();
-        showSync('synced', '✅ 기존 데이터 이전 완료');
+        if (await saveToFirestore()) showSync('synced', '✓ 서버 저장 완료');
         return;
       } else {
         // Brand new user, empty data
@@ -947,7 +961,12 @@ async function loadFromFirestore() {
         highlights = {};
       }
     }
-    showSync('synced', '✅ 동기화 완료');
+    const pending = JSON.parse(localStorage.getItem(pendingSaveKey()) || 'null');
+    if (pending) {
+      memos = pending.memos; freeMemos = pending.freeMemos;
+      viewData = pending.viewData; highlights = pending.highlights;
+    }
+    showSync(pending ? 'syncing' : 'synced', pending ? '서버 미저장 자료 복원 중' : '동기화 완료');
   } catch(err) {
     console.error('Firestore load error:', err);
     showSync('error', '❌ 동기화 실패');
@@ -956,11 +975,20 @@ async function loadFromFirestore() {
     freeMemos = JSON.parse(localStorage.getItem('elite_ortho_freememos') || '[]');
     viewData = JSON.parse(localStorage.getItem('elite_ortho_views') || '{}');
     highlights = JSON.parse(localStorage.getItem('elite_ortho_highlights') || '{}');
+    const pending = JSON.parse(localStorage.getItem(pendingSaveKey()) || 'null');
+    if (pending) {
+      memos = pending.memos; freeMemos = pending.freeMemos;
+      viewData = pending.viewData; highlights = pending.highlights;
+    }
   }
 }
 
 // ===== FIRESTORE: SAVE ALL DATA (debounced) =====
-function syncToCloud() {
+function pendingSaveKey() { return 'elite_ortho_pending_' + currentUser.uid; }
+function saveSnapshot() {
+  return JSON.parse(JSON.stringify({ memos, freeMemos, viewData, highlights }));
+}
+function syncToCloud(immediate = false) {
   // Always save to localStorage as backup
   localStorage.setItem('elite_ortho_memos', JSON.stringify(memos));
   localStorage.setItem('elite_ortho_freememos', JSON.stringify(freeMemos));
@@ -968,33 +996,82 @@ function syncToCloud() {
   localStorage.setItem('elite_ortho_highlights', JSON.stringify(highlights));
   // If logged in, also sync to Firestore
   if (!firestoreReady || !currentUser) return;
+  localStorage.setItem(pendingSaveKey(), JSON.stringify(saveSnapshot()));
+  showSync('syncing', '서버 저장 대기 중');
   clearTimeout(syncDebounceTimer);
+  if (immediate) return saveToFirestore();
   syncDebounceTimer = setTimeout(() => {
     saveToFirestore();
   }, 1500);
 }
 
-async function saveToFirestore() {
-  if (!currentUser) return;
-  const uid = currentUser.uid;
-  try {
-    await db.collection('users').doc(uid).set({
-      memos: memos,
-      freeMemos: freeMemos,
-      viewData: viewData,
-      highlights: highlights,
-      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    // Also keep localStorage as offline cache
-    localStorage.setItem('elite_ortho_memos', JSON.stringify(memos));
-    localStorage.setItem('elite_ortho_freememos', JSON.stringify(freeMemos));
-    localStorage.setItem('elite_ortho_views', JSON.stringify(viewData));
-    localStorage.setItem('elite_ortho_highlights', JSON.stringify(highlights));
-  } catch(err) {
-    console.error('Firestore save error:', err);
-    showSync('error', '❌ 저장 실패');
+function manualServerSave() {
+  if (!currentUser || !firestoreReady) {
+    showSync('error', '로그인·동기화 후 저장해 주세요');
+    return Promise.resolve(false);
   }
+  return syncToCloud(true);
 }
+
+// Serialize writes so a slower, older save cannot overwrite a newer memo.
+function saveToFirestore() {
+  if (!currentUser) return Promise.resolve(false);
+  serverSaveRequested = true;
+  if (serverSavePromise) return serverSavePromise;
+  const uid = currentUser.uid;
+  const key = pendingSaveKey();
+  clearTimeout(syncDebounceTimer);
+  clearTimeout(serverRetryTimer);
+  const button = document.getElementById('serverSaveBtn');
+  button.disabled = true;
+  button.textContent = '저장 중…';
+  serverSavePromise = (async () => {
+    try {
+      do {
+        serverSaveRequested = false;
+        const snapshot = saveSnapshot();
+        const serialized = JSON.stringify(snapshot);
+        localStorage.setItem(key, serialized);
+        showSync('syncing', '사진·메모 서버 저장 중…');
+        const userDoc = db.collection('users').doc(uid);
+        for (const imgId of new Set([...snapshot.memos, ...snapshot.freeMemos].map(m => m.imgId).filter(Boolean))) {
+          const imageKey = uid + ':' + imgId;
+          if (confirmedMemoImages.has(imageKey)) continue;
+          const data = memoImgCache.get(imgId) || await idbGetImg(imgId).catch(() => null);
+          const imageDoc = userDoc.collection('memoImages').doc(imgId);
+          if (data) await imageDoc.set({ data, ts: Date.now() });
+          else {
+            const image = await imageDoc.get({ source: 'server' });
+            if (!image.exists || !image.data().data) throw new Error('첨부 사진을 찾을 수 없습니다');
+          }
+          confirmedMemoImages.add(imageKey);
+        }
+        await userDoc.set({ ...snapshot, lastUpdated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        if (currentUser?.uid !== uid) return false;
+        // Changes made during upload must also reach the server before reporting success.
+        if (JSON.stringify(saveSnapshot()) !== serialized) serverSaveRequested = true;
+        if (!serverSaveRequested) localStorage.removeItem(key);
+      } while (serverSaveRequested);
+      showSync('synced', '✓ 서버 저장 완료');
+      return true;
+    } catch (err) {
+      console.error('Firestore save error:', err);
+      if (currentUser?.uid === uid) {
+        showSync('error', '서버 저장 실패 · 재시도 예정');
+        serverRetryTimer = setTimeout(() => { if (currentUser?.uid === uid) saveToFirestore(); }, 15000);
+      }
+      return false;
+    } finally {
+      serverSavePromise = null;
+      button.disabled = false;
+      button.textContent = '☁ 서버 저장';
+    }
+  })();
+  return serverSavePromise;
+}
+window.addEventListener('online', () => {
+  if (currentUser && firestoreReady && localStorage.getItem(pendingSaveKey())) syncToCloud(true);
+});
 
 // ===== APP INIT (called after auth) =====
 let appInitialized = false;
@@ -4623,7 +4700,7 @@ function deleteMemo(id) {
 function saveMemos() {
   document.getElementById('memoCount').textContent = memos.length + freeMemos.length;
   renderSidebarMemoPreviews();
-  syncToCloud();
+  return syncToCloud(true);
 }
 
 function renderMemos() {
@@ -4728,7 +4805,7 @@ function deleteFreeMemo(id) {
 function saveFreeMemos() {
   document.getElementById('memoCount').textContent = memos.length + freeMemos.length;
   renderSidebarMemoPreviews();
-  syncToCloud();
+  return syncToCloud(true);
 }
 
 function renderFreeMemos() {
@@ -4886,12 +4963,9 @@ function idbDelImg(id) {
 const memoImgCache = new Map();
 function saveMemoImage(imgId, dataURL) {
   memoImgCache.set(imgId, dataURL);
+  if (currentUser) confirmedMemoImages.delete(currentUser.uid + ':' + imgId);
   const p = idbPutImg(imgId, dataURL).catch(e => console.warn('이미지 로컬 저장 실패:', e));
-  if (currentUser && db) {
-    db.collection('users').doc(currentUser.uid).collection('memoImages').doc(imgId)
-      .set({ data: dataURL, ts: Date.now() })
-      .catch(e => console.warn('이미지 클라우드 동기화 실패(로컬에는 저장됨):', e.message));
-  }
+  // The save queue uploads this photo before saving its memo and confirming success.
   return p;
 }
 async function loadMemoImage(imgId) {
