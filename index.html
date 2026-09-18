@@ -4466,7 +4466,7 @@ function renderInlineMemo(m, type, marker) {
   host.dataset.memoId = m.id;
   host.dataset.memoType = type;
   const card = document.createElement('div'); card.className = 'card';
-  card.innerHTML = `<div class="memo-toolbar"><small>${timeAgo(m.id)}</small><button type="button" class="memo-tool" data-action="add" aria-label="같은 위치에 메모 추가" title="메모 추가">+</button><button type="button" class="memo-tool" data-action="delete" aria-label="이 메모 삭제" title="메모 삭제">×</button></div>${m.note ? `<blockquote>${escapeHtml(m.text)}</blockquote><p>${escapeHtml(m.note)}</p>` : m.text ? `<p>${escapeHtml(m.text)}</p>` : ''}`;
+  card.innerHTML = `<div class="memo-toolbar"><small>${timeAgo(m.id)}</small><button type="button" class="memo-tool" data-action="add" aria-label="같은 위치에 메모 추가" title="메모 추가">+</button><button type="button" class="memo-tool" data-action="edit" aria-label="이 메모 수정" title="메모 수정">✎</button><button type="button" class="memo-tool" data-action="delete" aria-label="이 메모 삭제" title="메모 삭제">×</button></div>${m.note ? `<blockquote>${escapeHtml(m.text)}</blockquote><p>${escapeHtml(m.note)}</p>` : m.text ? `<p>${escapeHtml(m.text)}</p>` : ''}`;
   card.querySelector('[data-action="add"]').onclick = () => {
     const content=document.getElementById('chapterContent');
     const offset=resolveMemoOffset(m,content,type);
@@ -4474,6 +4474,7 @@ function renderInlineMemo(m, type, marker) {
     const quote=m.anchorText || (type==='hl'?m.text:'') || content.textContent.slice(offset,offset+60);
     beginSelectionMemo(quote,m.chapterNum,m.chapterTitle||currentChapter.title,offset,offset+quote.length);
   };
+  card.querySelector('[data-action="edit"]').onclick = () => editInlineMemo(m, type, host);
   card.querySelector('[data-action="delete"]').onclick = () => type === 'free' ? deleteFreeMemo(m.id) : deleteMemo(m.id);
   if (m.imgId) {
     const image = document.createElement('img'); image.alt = '메모에 첨부한 사진';
@@ -4484,6 +4485,37 @@ function renderInlineMemo(m, type, marker) {
   host.shadowRoot.appendChild(card);
   insertAfterMemoBlock(host, marker);
   return host;
+}
+
+function editInlineMemo(m, type, host) {
+  const card=host.shadowRoot.querySelector('.card');
+  if(card.querySelector('form'))return;
+  const display=[...card.children].filter(el=>el.tagName!=='IMG');
+  display.forEach(el=>el.hidden=true);
+  const form=document.createElement('form');
+  form.innerHTML='<textarea aria-label="메모 내용 수정"></textarea><div class="actions"><button type="submit" class="free-memo-add">저장</button><button type="button" data-action="cancel">취소</button></div>';
+  const input=form.querySelector('textarea');
+  input.value=m.note || m.text || '';
+  const cancel=()=>{form.remove();display.forEach(el=>el.hidden=false);card.querySelector('[data-action="edit"]').focus();};
+  form.querySelector('[data-action="cancel"]').onclick=cancel;
+  form.onkeydown=e=>{
+    if(e.key==='Escape'){e.preventDefault();cancel();}
+    else if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();form.requestSubmit();}
+  };
+  form.onsubmit=e=>{
+    e.preventDefault();
+    const record=(type==='free'?freeMemos:memos).find(item=>item.id===m.id);
+    if(!record){cancel();return;}
+    // Edit only the memo text; retain its identity, order, source anchor and photo.
+    if(type==='free')record.text=input.value.trim();
+    else record.note=input.value.trim();
+    if(type==='free'){saveFreeMemos();renderFreeMemos();}
+    else {saveMemos();renderMemos();}
+    renderMemoAnchors(currentChapter.num);
+    updateReadingProgress();
+  };
+  card.insertBefore(form,card.querySelector('img'));
+  input.focus({preventScroll:true});
 }
 
 let selectionMemoDraft = null;
