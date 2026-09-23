@@ -667,6 +667,38 @@ html.focus-session .sidebar:hover{opacity:1;filter:none}
 html.focus-session .main-header{opacity:.6;transition:opacity .4s}
 html.focus-session .main-header:hover{opacity:1}
 
+/* ====== SEARCH RESULTS ====== */
+.search-results{flex:1;overflow-y:auto;padding:2px 10px 80px}
+.search-results[hidden],.nav-list[hidden]{display:none}
+.search-results::-webkit-scrollbar{width:3px}.search-results::-webkit-scrollbar-thumb{background:var(--dark4);border-radius:2px}
+.sr-head{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px;font-size:11.5px;color:var(--text3)}
+.sr-head b{color:#e9dcc2;font-weight:700}
+.sr-clear{border:1px solid var(--border);background:none;color:var(--text3);font:inherit;font-size:11px;padding:3px 9px;border-radius:999px;cursor:pointer}
+.sr-clear:hover{color:#fff;border-color:var(--text3)}
+.sr-expand{display:flex;flex-wrap:wrap;gap:5px;padding:0 6px 10px}
+.sr-chip{font-size:10.5px;color:#cfe0d6;background:rgba(127,191,164,.12);border:1px solid rgba(127,191,164,.22);border-radius:999px;padding:2px 8px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-empty{padding:28px 10px;text-align:center;color:var(--text3);font-size:12px;line-height:1.8}
+.sr-item{padding:11px 12px;margin:0 0 6px;border-radius:9px;border:1px solid transparent;cursor:pointer;transition:background .2s,border-color .2s;animation:list-open .3s var(--ease-out) both}
+.sr-item:hover{background:#203b34}
+.sr-item.active{background:#294a40;border-color:#496e5c}
+.sr-title{display:flex;gap:9px;align-items:flex-start}
+.sr-num{min-width:22px;font-size:12px;color:#8fa699;padding-top:2px;font-variant-numeric:tabular-nums}
+.sr-name{flex:1;min-width:0;font-size:13px;line-height:1.5}
+.sr-name .title-en{display:block;font-size:13.5px;overflow-wrap:anywhere}
+.sr-name .title-ko{display:block;font-size:11.5px;color:#aabfb2}
+.sr-meta{margin:5px 0 0 31px;font-size:10.5px;color:#9db3a7}
+.sr-snippet{margin:6px 0 0 31px;font-size:11.5px;line-height:1.6;color:#b9cabf;word-break:keep-all;overflow-wrap:anywhere}
+.sr-snippet mark{background:rgba(233,207,159,.28);color:#fbf6e8;border-radius:3px;padding:0 2px}
+::highlight(search-hit){background-color:rgba(245,214,120,.55);color:inherit}
+::highlight(search-current){background-color:#f0b54a;color:#1d2a24}
+.search-hit-bar{position:absolute;top:112px;right:28px;z-index:6;display:flex;align-items:center;gap:4px;padding:5px 6px 5px 12px;border-radius:999px;background:rgba(20,40,38,.92);color:#e8efeb;font-size:12px;box-shadow:0 8px 24px rgba(8,22,18,.25);backdrop-filter:blur(8px);animation:ft-in .3s var(--ease-out)}
+.search-hit-bar .shb-q{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.search-hit-bar .shb-count{color:#e9dcc2;font-variant-numeric:tabular-nums;margin:0 4px;white-space:nowrap}
+.search-hit-bar button{width:26px;height:26px;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#e8efeb;cursor:pointer;font-size:11px}
+.search-hit-bar button:hover{background:rgba(255,255,255,.18)}
+.main{position:relative}
+@media(max-width:768px){.search-hit-bar{top:auto;bottom:84px;right:12px;left:12px;justify-content:space-between}.search-hit-bar .shb-q{max-width:40vw}}
+
 /* ====== FOCUS TIMER (floating, draggable) ====== */
 .focus-timer{position:fixed;z-index:2147483600;width:300px;max-width:calc(100vw - 16px);border-radius:18px;background:rgba(20,40,38,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#e8efeb;box-shadow:0 24px 60px rgba(8,22,18,.38),inset 0 0 0 1px rgba(233,220,194,.14);user-select:none;touch-action:none;animation:ft-in .35s var(--ease-out)}
 .focus-timer[hidden]{display:none}
@@ -714,6 +746,16 @@ html.focus-session .main-header:hover{opacity:1}
 .ft-options input{accent-color:#7fbfa4;width:14px;height:14px}
 .ft-foot{display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid rgba(233,220,194,.12);font-size:11.5px;color:#8fa99c;font-variant-numeric:tabular-nums}
 .focus-timer.mode-stopwatch .ft-presets,.focus-timer.mode-stopwatch .ft-custom,.focus-timer.mode-stopwatch .ft-adjust{display:none}
+/* Running: only the dial and the two controls; ⚙ brings the settings back */
+.focus-timer{transform-origin:top left}
+.ft-settings-btn{display:none}
+.focus-timer.running .ft-settings-btn{display:inline-block}
+.focus-timer.running:not(.show-settings) :is(.ft-modes,.ft-presets,.ft-custom,.ft-adjust,.ft-options,.ft-foot){display:none}
+.focus-timer.running:not(.show-settings) .ft-dial{margin-top:2px}
+.focus-timer.show-settings .ft-settings-btn{background:rgba(233,220,194,.2);color:#fff}
+.ft-resize{position:absolute;right:3px;bottom:3px;width:18px;height:18px;cursor:nwse-resize;touch-action:none;border-radius:0 0 14px 0;background:linear-gradient(135deg,transparent 45%,rgba(233,220,194,.35) 46%,rgba(233,220,194,.35) 54%,transparent 55%,transparent 68%,rgba(233,220,194,.35) 69%,rgba(233,220,194,.35) 77%,transparent 78%);opacity:.6;transition:opacity .2s}
+.ft-resize:hover,.focus-timer.resizing .ft-resize{opacity:1}
+.focus-timer.minimized .ft-resize{display:none}
 .ft-mini{display:none;align-items:center;gap:8px;padding:8px 8px 8px 14px;cursor:grab}
 .ft-mini-dot{width:8px;height:8px;border-radius:50%;background:#6f8f84}
 .focus-timer.running .ft-mini-dot{background:#f1dfb5;animation:dot-pulse 1.6s ease-in-out infinite}
@@ -733,7 +775,7 @@ html.focus-session .main-header:hover{opacity:1}
 @keyframes spark{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1.15)}}
 @keyframes dot-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.7)}}
 @keyframes breathe{0%,100%{transform:scale(.92);opacity:.6}50%{transform:scale(1.04);opacity:1}}
-@keyframes ft-in{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes ft-in{from{opacity:0;translate:0 10px}to{opacity:1;translate:0 0}}
 @keyframes ft-done{0%,100%{box-shadow:0 24px 60px rgba(8,22,18,.38),inset 0 0 0 1px rgba(233,220,194,.14)}50%{box-shadow:0 0 0 6px rgba(233,207,159,.55),0 24px 60px rgba(8,22,18,.38)}}
 @keyframes nudge{0%,100%{transform:none}25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}
 @keyframes correct-pop{0%{transform:scale(1)}40%{transform:scale(1.015)}100%{transform:scale(1)}}
@@ -784,7 +826,7 @@ html.focus-session .main-header:hover{opacity:1}
     <button class="logout-btn" id="logoutBtn" onclick="doLogout()">로그인 전환</button>
   </div>
   <div class="search-box">
-    <input type="text" id="searchInput" placeholder="단원명 또는 내용 검색..." oninput="filterChapters()">
+    <input type="text" id="searchInput" placeholder="내용 검색 (예: IT fx, RC repair, 골육종)" oninput="filterChapters()" autocomplete="off" spellcheck="false">
   </div>
   <div class="nav-list" id="navList"></div>
   <div class="memo-toggle" onclick="toggleMemo()">
@@ -965,6 +1007,7 @@ html.focus-session .main-header:hover{opacity:1}
   <header class="ft-head" data-drag-handle>
     <span class="ft-grip" aria-hidden="true">⋮⋮</span>
     <span class="ft-title">집중 타이머</span>
+    <button class="ft-icon ft-settings-btn" type="button" id="ftSettingsBtn" title="설정 펼치기" aria-label="설정 펼치기" aria-expanded="false">⚙</button>
     <button class="ft-icon" type="button" id="ftMinBtn" title="작게 보기" aria-label="작게 보기">–</button>
     <button class="ft-icon" type="button" id="ftCloseBtn" title="닫기 (타이머는 계속 진행)" aria-label="닫기">×</button>
   </header>
@@ -1009,6 +1052,7 @@ html.focus-session .main-header:hover{opacity:1}
     <button class="ft-icon" type="button" id="ftMiniPlay" aria-label="시작">▶</button>
     <button class="ft-icon" type="button" id="ftMiniExpand" title="크게 보기" aria-label="크게 보기">⤢</button>
   </div>
+  <div class="ft-resize" id="ftResize" title="드래그해서 크기 조절 · 더블클릭하면 기본 크기" aria-hidden="true"></div>
   <div class="ft-sr" id="ftLive" aria-live="assertive"></div>
 </section>
 
@@ -4592,6 +4636,7 @@ function goHome(event) {
   document.getElementById('docxLink').style.display = 'none';
   document.getElementById('readingProgress').hidden = true;
   const area = document.getElementById('contentArea');
+  clearSearchHits();
   if (homeWelcomeEl) area.replaceChildren(homeWelcomeEl);
   area.scrollTop = 0;
   history.replaceState(null, '', location.pathname + location.search);
@@ -4659,27 +4704,673 @@ function loadChapter(num) {
   area.scrollTop = savedProgress * Math.max(0, area.scrollHeight - area.clientHeight);
   updateReadingProgress();
   history.replaceState(null, '', `#ch${num}`);
+  if (typeof searchState !== 'undefined' && searchState.units.length) applySearchHits(false);
 }
 
-// ===== SEARCH =====
-function filterChapters() {
-  const query = document.getElementById('searchInput').value.toLowerCase().trim();
-  document.querySelectorAll('.section-group').forEach(group => {
-    let anyVisible = false;
-    group.querySelectorAll('.chapter-item').forEach(item => {
-      const title = item.getAttribute('data-title');
-      const chNum = item.getAttribute('data-ch');
-      const match = !query || title.replace(/\s/g, '').includes(query.replace(/\s/g, '')) || `ch${chNum}`.includes(query) || `chapter ${chNum}`.includes(query);
-      item.style.display = match ? '' : 'none';
-      if (match) anyVisible = true;
-    });
-    group.style.display = anyVisible ? '' : 'none';
-    if (query && anyVisible) {
-      group.querySelector('.section-header').classList.add('open');
-      group.querySelector('.chapter-list').classList.add('open');
-    }
+// ===== SEARCH (본문 전체 + 동의어·약어 확장) =====
+// Each line is one concept: every term is treated as equivalent when searching.
+// Terms written in CAPS (≤6 letters) are abbreviations matched case-sensitively in the text,
+// and terms starting with "!" are query shortcuts only (too ambiguous to look for in the text).
+const SEARCH_SYNONYMS = `
+FX|fx|fracture|골절
+DL|dislocation|탈구
+TX|tx|treatment|치료
+DX|dx|diagnosis|진단
+CX|cx|complication|합병증
+DDX|ddx|differential diagnosis|감별 진단
+!op|operation|surgery|수술
+repair|수복|봉합
+reconstruction|재건
+tear|rupture|파열
+injury|손상
+instability|불안정
+arthroscopy|arthroscopic|관절경
+arthroplasty|replacement|치환
+osteotomy|절골
+fusion|arthrodesis|유합
+classification|분류
+anatomy|해부
+approach|도달법|접근법
+tumor|tumour|종양
+cyst|낭종
+sarcoma|육종
+infection|감염
+necrosis|괴사
+ligament|인대
+cartilage|연골
+nerve|신경
+ROM|range of motion|운동 범위
+ORIF|open reduction and internal fixation|open reduction internal fixation|관혈적 정복
+CRIF|closed reduction and internal fixation|closed reduction internal fixation
+CRPP|closed reduction and percutaneous pinning|closed reduction percutaneous pinning|경피적 핀
+CR|closed reduction|도수 정복|폐쇄적 정복|cruciate retaining|cruciate-retaining
+PS|posterior stabilized|posterior-stabilized
+IMN|im nail|intramedullary nail|intramedullary nailing|골수강내 정|골수강내 금속정|골수정
+!exfix|ex fix|external fixator|external fixation|외고정
+MIPO|minimally invasive plate osteosynthesis|최소 침습 금속판
+LCP|locking compression plate|locking plate|잠김 금속판|legg-calve-perthes|legg calve perthes|perthes|페르테스
+DCP|dynamic compression plate|동적 압박 금속판
+TBW|tension band wiring|tension band|긴장대
+!kw|k-wire|k wire|kirschner wire|kirschner|키르쉬너
+DHS|SHS|CHS|dynamic hip screw|sliding hip screw|compression hip screw
+PFNA|CMN|proximal femoral nail|cephalomedullary nail|gamma nail|근위 대퇴골 골수정
+TAD|tip apex distance|tip-apex distance
+BMD|bone mineral density|골밀도
+DXA|DEXA|dual energy x-ray absorptiometry|이중 에너지
+BMP|bone morphogenetic protein|골형성 단백
+PTH|parathyroid hormone|teriparatide|부갑상선 호르몬
+NSAID|NSAIDs|nonsteroidal anti-inflammatory|non-steroidal anti-inflammatory|소염 진통제|비스테로이드성 소염
+MRI|magnetic resonance|자기 공명
+CT|computed tomography|전산화 단층
+bone scan|bone scintigraphy|골주사|골 스캔
+PET|positron emission tomography|양전자
+EMG|electromyography|근전도
+NCS|NCV|nerve conduction|신경 전도
+!us|ultrasound|ultrasonography|sonography|초음파
+!xray|x-ray|radiograph|x선|단순 방사선
+GCT|giant cell tumor|giant cell tumour|거대 세포종|거대세포 종양
+ABC|aneurysmal bone cyst|동맥류성 골낭종
+SBC|UBC|simple bone cyst|unicameral bone cyst|단순성 골낭종|단순 골낭종|단방성 골낭종
+OO|osteoid osteoma|유골 골종
+OB|osteoblastoma|골모세포종
+CB|chondroblastoma|연골 모세포종
+CMF|chondromyxoid fibroma|연골 점액양 섬유종|연골 점액 섬유종
+NOF|FCD|non-ossifying fibroma|nonossifying fibroma|fibrous cortical defect|비골화성 섬유종|섬유성 피질 결손
+FD|fibrous dysplasia|섬유성 이형성증|섬유성 골이형성증
+OFD|osteofibrous dysplasia|골섬유성 이형성증
+LCH|EG|eosinophilic granuloma|langerhans cell histiocytosis|histiocytosis|호산구성 육아종|조직구증
+!os|osteosarcoma|골육종
+!es|ewing sarcoma|ewing's sarcoma|ewing|유잉 육종|유윙 육종
+!cs|chondrosarcoma|연골 육종
+MFH|UPS|malignant fibrous histiocytoma|undifferentiated pleomorphic sarcoma|악성 섬유성 조직구종|미분화 다형성 육종
+MM|multiple myeloma|myeloma|다발성 골수종
+PVNS|TGCT|pigmented villonodular synovitis|tenosynovial giant cell tumor|색소 융모 결절성 활막염
+synovial chondromatosis|활막 연골종증
+synovial sarcoma|활막 육종
+MO|myositis ossificans|골화성 근염
+!mets|metastasis|metastatic|전이
+HO|heterotopic ossification|이소성 골화
+enchondroma|내연골종
+osteochondroma|exostosis|골연골종|외골종
+MHE|HME|multiple hereditary exostoses|hereditary multiple exostoses|다발성 유전성 외골종
+FNA|FNAB|fine needle aspiration|세침 흡인
+biopsy|생검
+!chemo|chemotherapy|항암 화학|화학 요법
+RT|radiotherapy|radiation therapy|방사선 치료
+mirels|미렐스
+schwannoma|neurilemmoma|신경초종
+NF|NF1|neurofibromatosis|신경섬유종증
+neurofibroma|신경섬유종
+hemangioma|혈관종
+lipoma|지방종
+liposarcoma|지방 육종
+OA|DJD|osteoarthritis|degenerative arthritis|degenerative joint disease|퇴행성 관절염|골관절염
+RA|rheumatoid arthritis|rheumatoid|류마티스 관절염|류마토이드
+JRA|JIA|juvenile rheumatoid arthritis|juvenile idiopathic arthritis|연소기 류마티스|소아 특발성 관절염
+!as|ankylosing spondylitis|강직성 척추염
+SLE|lupus|루푸스
+CPPD|pseudogout|chondrocalcinosis|가성 통풍
+gout|통풍
+DMARD|DMARDs|disease modifying|항류마티스
+MTX|methotrexate|메토트렉세이트
+OP|osteoporosis|골다공증
+BP|bisphosphonate|bisphosphonates|비스포스포네이트
+SERM|raloxifene|selective estrogen receptor
+AFF|atypical femoral fracture|atypical femur fracture|비전형 대퇴골 골절|비정형 대퇴골 골절
+ONJ|BRONJ|MRONJ|osteonecrosis of the jaw|턱뼈 괴사|악골 괴사
+OI|osteogenesis imperfecta|골형성 부전증
+CP|cerebral palsy|뇌성 마비
+BPI|OBPP|brachial plexus|상완 신경총
+PNI|peripheral nerve injury|말초 신경 손상
+AHO|acute hematogenous osteomyelitis|급성 혈행성 골수염
+osteomyelitis|골수염
+!sa|septic arthritis|infectious arthritis|pyogenic arthritis|화농성 관절염|감염성 관절염
+MRSA|methicillin-resistant|methicillin resistant|메티실린 내성
+TB|tuberculosis|결핵|pott
+BKA|below knee amputation|below-knee amputation|transtibial amputation|슬하 절단|하퇴 절단
+AKA|above knee amputation|above-knee amputation|transfemoral amputation|슬상 절단|대퇴 절단
+amputation|절단
+AFO|ankle foot orthosis|ankle-foot orthosis|단하지 보조기
+KAFO|knee ankle foot orthosis|knee-ankle-foot orthosis|장하지 보조기
+TLSO|thoracolumbosacral orthosis
+orthosis|보조기
+prosthesis|의지
+CPT|congenital pseudarthrosis of the tibia|congenital pseudarthrosis|선천성 경골 가관절증|선천성 가관절증
+achondroplasia|연골 무형성증
+rickets|구루병
+osteomalacia|골연화증
+RC|RCT|rotator cuff|rotator cuff tear|회전근개|회전근 개
+RCR|rc repair|rct repair|rotator cuff repair|회전근개 봉합|회전근개 수복
+MRCT|massive rotator cuff tear|massive rct|massive rc tear|광범위 회전근개 파열|대량 회전근개
+CTA|cuff tear arthropathy|회전근개 파열 관절병증
+RSA|RTSA|reverse shoulder arthroplasty|reverse total shoulder|역행성 견관절|역 견관절 치환|역행성 인공 견관절
+TSA|total shoulder arthroplasty|견관절 전치환
+!ha|hemiarthroplasty|반치환
+SSN|suprascapular nerve|견갑상 신경
+QSS|quadrilateral space|사각 공간|사각 간극
+SLAP|superior labrum anterior posterior|상부 관절와순
+bankart|방카르트
+hill-sachs|hill sachs|힐삭스
+GIRD|glenohumeral internal rotation deficit|내회전 결손
+MDI|multidirectional instability|다방향 불안정
+AC|AC joint|acromioclavicular|견봉 쇄골
+SC|SC joint|sternoclavicular|흉쇄
+TOS|thoracic outlet|흉곽 출구
+frozen shoulder|adhesive capsulitis|유착성 관절낭염|오십견|동결견
+calcific tendinitis|calcific tendinopathy|석회성 건염
+LHB|long head of biceps|long head of the biceps|biceps tendon|이두건|이두근 장두
+PHF|proximal humerus fracture|proximal humeral fracture|근위 상완골 골절
+!hsf|humeral shaft fracture|humerus shaft fracture|상완골 간부 골절
+DHF|distal humerus fracture|distal humeral fracture|원위 상완골 골절
+!le|lateral epicondylitis|tennis elbow|외상과염|테니스 엘보
+!me|medial epicondylitis|golfer elbow|golfers elbow|내상과염|골프 엘보
+CTS|carpal tunnel syndrome|carpal tunnel|수근관 증후군|수근관
+!cubts|cubital tunnel|주관 증후군|주관 터널
+AIN|anterior interosseous|전골간 신경
+PIN|posterior interosseous|후골간 신경
+OCD|osteochondritis dissecans|박리성 골연골염
+UCL|ulnar collateral ligament|척측 측부 인대
+MCL|medial collateral ligament|내측 측부 인대
+LCL|lateral collateral ligament|외측 측부 인대
+LUCL|lateral ulnar collateral ligament|외측 척측 측부 인대
+PLRI|posterolateral rotatory instability|posterolateral rotatory|후외방 회전 불안정|후외측 회전 불안정
+terrible triad|삼주징
+DRUJ|distal radioulnar joint|distal radio-ulnar joint|원위 요척 관절
+TFCC|triangular fibrocartilage|삼각 섬유 연골
+DRF|distal radius fracture|distal radial fracture|원위 요골 골절
+colles|콜레스|콜리스
+SL|scapholunate|주상 월상
+SLAC|scapholunate advanced collapse
+SNAC|scaphoid nonunion advanced collapse
+DISI|dorsal intercalated segment instability
+VISI|volar intercalated segment instability
+kienbock|kienböck|월상골 무혈성 괴사|키엔벡
+dequervain|de quervain|드퀘르벵|드꿰르뱅
+trigger finger|stenosing tenosynovitis|방아쇠 수지|방아쇠 손가락
+CMC|carpometacarpal|수근 중수
+MCP|MP joint|metacarpophalangeal|중수 수지
+PIP|proximal interphalangeal|근위 지간
+DIP|distal interphalangeal|원위 지간
+FDP|flexor digitorum profundus|심수지 굴근
+FDS|flexor digitorum superficialis|천수지 굴근
+FPL|flexor pollicis longus|장무지 굴근
+EPL|extensor pollicis longus|장무지 신전건|장무지 신건
+mallet finger|mallet|망치 수지|추지
+boutonniere|boutonnière|단추 구멍
+swan neck|백조목
+CRPS|RSD|complex regional pain syndrome|reflex sympathetic dystrophy|복합 부위 통증 증후군|반사성 교감 신경 이영양증
+dupuytren|듀푸이트렌
+volkmann|폴크만
+scaphoid fracture|주상골 골절
+!itfx|!it fx|!itc fx|!itcfx|!itf|intertrochanteric fracture|intertrochanteric fx|intertrochanter fracture|intertrochanter fx|intertrochanter|ITC|전자간 골절|전자간
+!stfx|!st fx|!stc fx|subtrochanteric fracture|subtrochanteric fx|subtrochanter|전자하 골절|전자하
+!fnf|!fn fx|femoral neck fracture|femur neck fracture|neck of femur fracture|femoral neck|대퇴골 경부 골절|대퇴 경부 골절|대퇴골 경부
+hip fracture|hip fx|고관절 골절
+THA|THR|total hip arthroplasty|total hip replacement|고관절 전치환|인공 고관절
+BHA|bipolar hemiarthroplasty|bipolar|양극성 반치환
+ONFH|AVN|avascular necrosis|osteonecrosis|femoral head necrosis|무혈성 괴사|골괴사
+FAI|femoroacetabular impingement|대퇴 비구 충돌
+DDH|developmental dysplasia of the hip|발달성 고관절 이형성
+SCFE|SUFE|slipped capital femoral epiphysis|대퇴 골두 골단 분리|대퇴골두 골단 분리
+PAO|periacetabular osteotomy|비구 주위 절골
+LCEA|center edge angle|center-edge angle|중심 변연각
+neck shaft angle|neck-shaft angle|경간각
+!pe|pulmonary embolism|폐색전
+DVT|deep vein thrombosis|심부 정맥 혈전
+VTE|venous thromboembolism|정맥 혈전 색전
+PJI|periprosthetic joint infection|인공 관절 주위 감염|인공관절 감염
+PPF|periprosthetic fracture|인공 관절 주위 골절|치환물 주위 골절|주위 골절
+vancouver|밴쿠버
+PMMA|bone cement|골 시멘트
+UHMWPE|polyethylene|폴리에틸렌
+XLPE|highly cross-linked|cross-linked polyethylene|고교차 결합
+MOM|metal-on-metal|metal on metal|금속 대 금속
+COC|ceramic-on-ceramic|ceramic on ceramic|세라믹 대 세라믹
+ALTR|ARMD|ALVAL|adverse local tissue reaction|pseudotumor|가성 종양
+osteolysis|골용해
+GT|greater trochanter|대전자
+LT|lesser trochanter|소전자
+ETO|extended trochanteric osteotomy|확장 대전자 절골
+ACL|anterior cruciate ligament|전방 십자 인대
+ACLR|acl reconstruction|anterior cruciate ligament reconstruction|전방 십자 인대 재건
+PCL|posterior cruciate ligament|후방 십자 인대
+PLC|posterolateral corner|후외측 구조물|후외방 구조물|후외측 복합체
+MPFL|medial patellofemoral ligament|내측 슬개 대퇴 인대
+TKA|TKR|total knee arthroplasty|total knee replacement|슬관절 전치환|인공 슬관절
+UKA|UKR|unicompartmental knee arthroplasty|unicondylar knee|단일 구획 슬관절 치환|단일구획
+HTO|high tibial osteotomy|근위 경골 절골|고위 경골 절골
+DFO|distal femoral osteotomy|원위 대퇴골 절골
+TTO|tibial tubercle osteotomy|경골 조면 절골
+TT-TG|tt tg|tibial tubercle trochlear groove|tibial tubercle-trochlear groove
+OAT|OATS|mosaicplasty|osteochondral autograft|자가 골연골 이식
+ACI|MACI|autologous chondrocyte implantation|자가 연골 세포 이식
+MAT|meniscal allograft transplantation|meniscus allograft|반월상 연골 동종 이식
+meniscus|menisci|meniscal|반월상 연골|반월 연골
+discoid meniscus|원판형 반월상
+!pfj|patellofemoral|슬개 대퇴
+!tpf|tibial plateau fracture|plateau fracture|tibia plateau|경골 고평부 골절|경골 고평부
+!tsf|tibial shaft fracture|tibia shaft fracture|경골 간부 골절
+!dff|distal femur fracture|distal femoral fracture|원위 대퇴골 골절
+patella fracture|patellar fracture|patella fx|슬개골 골절
+!kd|knee dislocation|슬관절 탈구
+ATR|achilles tendon rupture|achilles rupture|아킬레스건 파열
+achilles|아킬레스
+OLT|OCLT|osteochondral lesion of the talus|osteochondral lesion|거골 골연골 병변|골연골 병변
+PTTD|posterior tibial tendon dysfunction|tibialis posterior tendon dysfunction|후경골건 기능 부전|후경골건
+AAFD|PCFD|adult acquired flatfoot|acquired flatfoot|성인형 편평족|후천성 편평족
+flatfoot|flat foot|pes planus|편평족
+cavus|pes cavus|cavovarus|요족
+CMT|charcot-marie-tooth|charcot marie tooth|샤르코 마리 투스
+HV|hallux valgus|bunion|무지 외반
+!hr|hallux rigidus|무지 강직
+HVA|hallux valgus angle|무지 외반각
+IMA|intermetatarsal angle|중족골간 각
+DMAA|distal metatarsal articular angle
+TAA|TAR|total ankle arthroplasty|total ankle replacement|인공 족관절|인공 발목
+!dmf|diabetic foot|당뇨 발
+DM|diabetes|diabetes mellitus|당뇨
+charcot|neuropathic arthropathy|charcot arthropathy|샤르코 관절병증
+!tts|tarsal tunnel|족근관
+morton|morton neuroma|mortons neuroma|interdigital neuroma|모튼 신경종|지간 신경종
+!pf|plantar fasciitis|plantar fascia|족저 근막염|족저 근막
+lisfranc|TMT|tarsometatarsal|리스프랑|족근 중족
+jones|jones fracture|5th metatarsal|fifth metatarsal|제5 중족골
+pilon|plafond|필론
+!calc fx|calcaneus fracture|calcaneal fracture|calcaneus|종골 골절|종골
+sanders|샌더스
+bohler|böhler|뵐러
+talus fracture|talar neck|talar fracture|거골 경부|거골 골절
+hawkins|호킨스
+syndesmosis|syndesmotic|high ankle sprain|원위 경비 인대 결합|경비 인대 결합
+ankle fracture|ankle fx|발목 골절|족관절 골절
+weber|웨버
+lauge-hansen|lauge hansen|라우지 한센
+ankle sprain|발목 염좌|족관절 염좌
+ATFL|anterior talofibular|전거비 인대
+CFL|calcaneofibular|종비 인대
+!tc|tarsal coalition|족근골 유합|족근 유합
+HNP|HIVD|disc herniation|herniated nucleus pulposus|herniated disc|herniated intervertebral disc|추간판 탈출|디스크 탈출
+LSS|spinal stenosis|lumbar spinal stenosis|척추 협착|척추관 협착
+CSM|cervical spondylotic myelopathy|cervical myelopathy|경추 척수증|경추 척수병증
+OPLL|ossification of the posterior longitudinal ligament|후종 인대 골화
+spondylolisthesis|척추 전방 전위|척추 전위
+spondylolysis|척추 분리
+AIS|adolescent idiopathic scoliosis|청소년 특발성 측만
+scoliosis|측만
+kyphosis|후만
+scheuermann|슈이어만
+SCI|spinal cord injury|척수 손상
+CES|cauda equina|마미 증후군|마미
+ASIA|asia impairment scale|asia 척도
+TLICS|thoracolumbar injury classification
+SLIC|subaxial cervical injury classification|subaxial injury classification
+burst fracture|방출성 골절
+chance fracture|chance
+OVCF|VCF|osteoporotic compression fracture|osteoporotic vertebral fracture|vertebral compression fracture|골다공증성 압박 골절|압박 골절
+vertebroplasty|kyphoplasty|척추 성형
+ACDF|anterior cervical discectomy and fusion|anterior cervical discectomy
+PLIF|posterior lumbar interbody fusion
+TLIF|transforaminal lumbar interbody fusion
+ALIF|anterior lumbar interbody fusion
+OLIF|XLIF|DLIF|LLIF|lateral lumbar interbody fusion|oblique lumbar interbody fusion
+pedicle screw|추경 나사|척추경 나사
+hangman|traumatic spondylolisthesis of the axis|행맨
+odontoid|dens|치돌기
+jefferson|atlas fracture|환추 골절
+atlantoaxial|환축추
+SSEP|SEP|MEP|evoked potential|유발 전위
+CTEV|clubfoot|club foot|talipes equinovarus|내반족
+CVT|congenital vertical talus|선천성 수직 거골
+LLD|leg length discrepancy|limb length discrepancy|하지 부동
+blount|tibia vara|블라운트
+genu varum|내반슬|o다리
+genu valgum|외반슬|x다리
+!sh|salter-harris|salter harris|솔터 해리스
+!scf|supracondylar fracture|supracondylar humerus fracture|supracondylar|과상부 골절|상완골 과상
+!lcf|lateral condyle fracture|lateral condylar fracture|lateral condyle|외과 골절|상완골 외과
+!mef|medial epicondyle fracture|medial epicondyle|내측 상과 골절|내측 상과
+nursemaid elbow|pulled elbow|radial head subluxation|요골두 아탈구
+monteggia|몬테지아
+galeazzi|갈레아치|갈레아찌
+tillaux|틸로
+triplane|삼면 골절
+!nai|nonaccidental injury|non-accidental injury|child abuse|아동 학대
+transient synovitis|일과성 활막염|고관절 활액막염
+femoral anteversion|대퇴골 전염|전경각
+tibial torsion|경골 염전
+!of|open fracture|개방성 골절|개방 골절
+gustilo|구스틸로
+DCO|damage control orthopedics|damage control orthopaedics|damage control|손상 통제
+ETC|early total care|조기 전체 처치
+ACS|compartment syndrome|acute compartment syndrome|구획 증후군
+CECS|chronic exertional compartment syndrome|chronic exertional|만성 운동성 구획
+FES|fat embolism|지방 색전
+ARDS|acute respiratory distress
+nonunion|non-union|불유합
+delayed union|지연 유합
+malunion|부정 유합
+!bg|bone graft|골 이식
+autograft|자가골|자가 골
+allograft|동종골|동종 골
+ICBG|iliac crest bone graft|장골 이식
+!tq|tourniquet|지혈대|공기 압박대
+`;
+
+const SEARCH_STOP = new Set(['it', 'as', 'or', 'in', 'on', 'at', 'to', 'is', 'be', 'an', 'no', 'so', 'do', 'us', 'of', 'the', 'and', 'a']);
+const searchKey = s => s.toLowerCase().replace(/[\s\-.,·/'’()]+/g, '');
+const SEARCH_GROUPS = [];
+const SEARCH_KEY_INDEX = new Map();   // compact query key → [group index]
+SEARCH_SYNONYMS.trim().split('\n').forEach(line => {
+  const terms = line.split('|').map(t => t.trim()).filter(Boolean);
+  const gi = SEARCH_GROUPS.length;
+  SEARCH_GROUPS.push(terms.filter(t => !t.startsWith('!')));   // text alternatives exclude "!" shortcuts
+  terms.forEach(t => {
+    const key = searchKey(t.replace(/^!/, ''));
+    if (!key) return;
+    if (!SEARCH_KEY_INDEX.has(key)) SEARCH_KEY_INDEX.set(key, []);
+    SEARCH_KEY_INDEX.get(key).push(gi);
   });
+});
+
+const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const HANGUL_RE = /[가-힣]/;
+function termToRegexSource(term) {
+  // Separators may appear as space, hyphen or nothing in the notes;
+  // Hangul may be written with or without spaces between syllables.
+  const parts = term.split(/[\s\-]+/).filter(Boolean).map(part =>
+    HANGUL_RE.test(part) ? [...part].map(escapeRe).join('\\s*') : escapeRe(part));
+  let src = parts.join('[\\s\\-]*');
+  if (/[A-Za-z0-9]/.test(term[0])) src = '(?<![A-Za-z0-9])' + src;
+  return src;
 }
+const searchRegexCache = new Map();
+function searchTermRegex(term) {
+  if (searchRegexCache.has(term)) return searchRegexCache.get(term);
+  const isAbbrev = /^[A-Z0-9][A-Z0-9\-]{0,6}$/.test(term) && /[A-Z]/.test(term);
+  let src = termToRegexSource(term);
+  // Abbreviations must stand alone (FX, not "FXR"); longer words may be prefixes (fracture → fractures).
+  if (isAbbrev) src += 's?(?![A-Za-z0-9])';
+  else if (/^[a-z0-9]{1,3}$/i.test(term)) src += '(?![A-Za-z0-9])';
+  const re = new RegExp(src, isAbbrev ? 'g' : 'gi');
+  searchRegexCache.set(term, re);
+  return re;
+}
+
+// Query → units; a chapter matches when every unit has at least one alternative in it.
+function groupAlts(groups) {
+  const a = new Set();
+  groups.forEach(g => SEARCH_GROUPS[g].forEach(t => a.add(t)));
+  return [...a];
+}
+// Greedy longest match of dictionary phrases over tokens[from..to); null if any token is unknown.
+function parseKnownSpan(tokens, from, to, maxLen) {
+  const out = [];
+  let i = from;
+  while (i < to) {
+    let hit = null;
+    for (let j = Math.min(to, i + maxLen); j > i; j--) {
+      const key = searchKey(tokens.slice(i, j).join(''));
+      if (SEARCH_KEY_INDEX.has(key) && !(j - i === 1 && SEARCH_STOP.has(tokens[i].toLowerCase()))) { hit = { j, key }; break; }
+    }
+    if (!hit) return null;
+    out.push({ label: tokens.slice(i, hit.j).join(' '), alts: groupAlts(SEARCH_KEY_INDEX.get(hit.key)) });
+    i = hit.j;
+  }
+  return out;
+}
+function parseSearchQuery(raw) {
+  const tokens = raw.trim().split(/\s+/).filter(Boolean);
+  const units = [];
+  let i = 0;
+  while (i < tokens.length) {
+    let matched = null;
+    for (let j = Math.min(tokens.length, i + 6); j > i; j--) {
+      const key = searchKey(tokens.slice(i, j).join(''));
+      if (SEARCH_KEY_INDEX.has(key)) { matched = { j, groups: SEARCH_KEY_INDEX.get(key), label: tokens.slice(i, j).join(' ') }; break; }
+    }
+    if (matched) {
+      const unit = { label: matched.label, alts: groupAlts(matched.groups) };
+      // "RC repair" / "rotator cuff repair" also match chapters that mention the parts separately
+      // (rotator cuff … 봉합), but only when the phrase splits entirely into known terms —
+      // "IT fx" is never split because "it" alone is ambiguous.
+      if (matched.j - i > 1) {
+        const parts = parseKnownSpan(tokens, i, matched.j, matched.j - i - 1);
+        if (parts && parts.length > 1) unit.fallback = parts;
+      }
+      units.push(unit);
+      i = matched.j;
+      continue;
+    }
+    let tok = tokens[i++].replace(/^[.,·/'’()]+|[.,·/'’()]+$/g, '');
+    if (!tok || SEARCH_STOP.has(tok.toLowerCase())) continue;
+    if (/^[a-z]{5,}s$/i.test(tok)) tok = tok.slice(0, -1);   // fractures → fracture (prefix match)
+    units.push({ label: tok, alts: [tok] });
+  }
+  return units;
+}
+
+let searchTextCache = null;
+function decodeEntities(s) {
+  return s.replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&amp;/g, '&');
+}
+function getSearchTexts() {
+  if (searchTextCache) return searchTextCache;
+  searchTextCache = Object.values(CHAPTERS_DATA).map(ch => {
+    const title = (ch.displayTitle || ch.title || '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/_/g, ' ');
+    const body = decodeEntities((ch.content || '').replace(/<img[^>]*>/gi, ' ').replace(/<(style|script)[^>]*>[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ');
+    return { num: ch.num, title, body, volName: ch.volName };
+  });
+  return searchTextCache;
+}
+
+function countMatches(text, alts, limit) {
+  // Synonyms overlap ("rotator cuff" / "rotator cuff tear"), so each position counts once.
+  const seen = new Set();
+  let first = -1, firstLen = 0;
+  for (const t of alts) {
+    const re = searchTermRegex(t);
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(text))) {
+      if (!m[0].length) { re.lastIndex++; continue; }
+      if (first < 0 || m.index < first) { first = m.index; firstLen = m[0].length; }
+      seen.add(m.index);
+      if (seen.size >= limit) return { n: seen.size, first, firstLen };
+    }
+  }
+  return { n: seen.size, first, firstLen };
+}
+
+function unitHits(doc, u) {
+  const t = countMatches(doc.title, u.alts, 5);
+  const b = countMatches(doc.body, u.alts, 200);
+  if (t.n || b.n || !u.fallback) return { t: t.n, titleBonus: t.n ? 60 : 0, b: b.n, first: b.first, firstLen: b.firstLen, weight: 2 };
+  const parts = u.fallback.map(f => ({ t: countMatches(doc.title, f.alts, 5), b: countMatches(doc.body, f.alts, 200) }));
+  if (!parts.every(x => x.t.n || x.b.n)) return { t: 0, titleBonus: 0, b: 0, first: -1, firstLen: 0, weight: 1 };
+  // Split match: body strength = its weakest part (ranked below a whole-phrase match);
+  // each part found in the chapter title earns its share of the title bonus.
+  const inTitle = parts.filter(x => x.t.n).length;
+  return { t: inTitle === parts.length ? 1 : 0, titleBonus: 60 * inTitle / parts.length, b: Math.min(...parts.map(x => x.b.n)),
+           first: parts[0].b.first, firstLen: parts[0].b.firstLen, weight: 1 };
+}
+function runSearch(query) {
+  const units = parseSearchQuery(query);
+  const numMatch = query.trim().match(/^(?:ch(?:apter)?\s*)?(\d{1,3})$/i);
+  const results = [];
+  if (!units.length && !numMatch) return { units, results };
+  const docs = getSearchTexts();
+  const hits = docs.map(doc => units.map(u => unitHits(doc, u)));
+  // Rare terms decide the ranking; words found in almost every chapter (치료, 골절) barely count.
+  const idf = units.map((_, k) => {
+    const df = hits.reduce((n, h) => n + (h[k].t || h[k].b || h[k].titleBonus ? 1 : 0), 0);
+    return Math.log(1 + docs.length / Math.max(1, df));
+  });
+  docs.forEach((doc, d) => {
+    const h = hits[d];
+    let ok = units.length > 0 && h.every(x => x.t || x.b || x.titleBonus);
+    let score = 0, titleHits = 0, bodyHits = 0, snippetAt = -1, snippetLen = 0;
+    h.forEach((x, k) => {
+      titleHits += x.t; bodyHits += x.b;
+      score += (x.titleBonus + Math.min(x.b, 40) * x.weight) * idf[k];
+      if (x.first >= 0 && (snippetAt < 0 || x.first < snippetAt)) { snippetAt = x.first; snippetLen = x.firstLen; }
+    });
+    if (numMatch && Number(numMatch[1]) === doc.num) { ok = true; score += 10000; }
+    if (ok) results.push({ doc, score, titleHits, bodyHits, snippetAt, snippetLen });
+  });
+  results.sort((a, b) => b.score - a.score || a.doc.num - b.doc.num);
+  return { units, results };
+}
+
+function searchSnippetHtml(r, units) {
+  if (r.snippetAt < 0) return '';
+  const body = r.doc.body;
+  const start = Math.max(0, r.snippetAt - 36), end = Math.min(body.length, r.snippetAt + r.snippetLen + 60);
+  const text = body.slice(start, end);
+  const alts = [...new Set(units.flatMap(u => u.alts.concat(...(u.fallback || []).map(f => f.alts))))];
+  const spans = [];
+  for (const a of alts) {
+    const re = searchTermRegex(a); re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(text))) { if (m[0].length) spans.push([m.index, m.index + m[0].length]); else re.lastIndex++; }
+  }
+  spans.sort((x, y) => x[0] - y[0] || y[1] - x[1]);
+  let html = start ? '…' : '', pos = 0;
+  for (const [s, e] of spans) {
+    if (s < pos) continue;
+    html += escapeHtml(text.slice(pos, s)) + '<mark>' + escapeHtml(text.slice(s, e)) + '</mark>';
+    pos = e;
+  }
+  return html + escapeHtml(text.slice(pos)) + (end < body.length ? '…' : '');
+}
+
+let searchState = { query: '', units: [] };
+let searchDebounce = null;
+function filterChapters() {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(renderSearch, 180);
+}
+function renderSearch() {
+  const input = document.getElementById('searchInput');
+  const query = input.value.trim();
+  const navList = document.getElementById('navList');
+  let box = document.getElementById('searchResults');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'searchResults';
+    box.className = 'search-results';
+    navList.parentNode.insertBefore(box, navList);
+  }
+  searchState = { query: '', units: [] };
+  if (!query || (query.length < 2 && !/^\d$/.test(query))) {
+    box.hidden = true; box.innerHTML = '';
+    navList.hidden = false;
+    clearSearchHits();
+    return;
+  }
+  const { units, results } = runSearch(query);
+  searchState = { query, units };
+  navList.hidden = true;
+  box.hidden = false;
+  const chips = units.filter(u => u.alts.length > 1 || u.alts[0] !== u.label)
+    .map(u => `<span class="sr-chip" title="${escapeHtml(u.alts.join(' · '))}">${escapeHtml(u.label)} → ${escapeHtml(u.alts.slice(0, 3).join(', '))}${u.alts.length > 3 ? ' …' : ''}</span>`).join('');
+  box.innerHTML = `
+    <div class="sr-head"><span>검색 결과 <b>${results.length}</b>개 단원</span><button type="button" class="sr-clear" onclick="clearSearch()">지우기</button></div>
+    ${chips ? `<div class="sr-expand">${chips}</div>` : ''}
+    ${results.length ? '' : '<div class="sr-empty">일치하는 내용이 없습니다.<br>다른 표현이나 약어로 검색해 보세요.</div>'}
+    ${results.slice(0, 120).map(r => `
+      <div class="sr-item${currentChapter?.num === r.doc.num ? ' active' : ''}" role="button" tabindex="0" data-ch="${r.doc.num}"
+           onclick="openSearchResult(${r.doc.num})" onkeydown="if(event.key==='Enter')openSearchResult(${r.doc.num})">
+        <div class="sr-title"><span class="sr-num">${r.doc.num}</span><span class="sr-name">${formatNavTitle(CHAPTERS_DATA[r.doc.num])}</span></div>
+        <div class="sr-meta">${escapeHtml(r.doc.volName || '')}${r.bodyHits ? ` · 본문 ${r.bodyHits >= 200 ? '200+' : r.bodyHits}곳` : ''}${r.titleHits ? ' · 제목 일치' : ''}</div>
+        ${r.snippetAt >= 0 ? `<div class="sr-snippet">${searchSnippetHtml(r, units)}</div>` : ''}
+      </div>`).join('')}
+    ${results.length > 120 ? '<div class="sr-empty">상위 120개만 표시합니다. 검색어를 더 구체적으로 입력하세요.</div>' : ''}`;
+  if (currentChapter) applySearchHits(false);
+}
+function clearSearch() {
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  renderSearch();
+  input.focus();
+}
+function openSearchResult(num) {
+  loadChapter(num);
+  document.querySelectorAll('.sr-item').forEach(el => el.classList.toggle('active', Number(el.dataset.ch) === num));
+  applySearchHits(true);
+}
+
+/* In-chapter hits use the CSS Custom Highlight API, so the page DOM (highlights, memo anchors) is never modified. */
+let searchHitRanges = [], searchHitIndex = -1;
+function clearSearchHits() {
+  searchHitRanges = []; searchHitIndex = -1;
+  if (window.CSS && CSS.highlights) { CSS.highlights.delete('search-hit'); CSS.highlights.delete('search-current'); }
+  document.getElementById('searchHitBar')?.remove();
+}
+function applySearchHits(scrollToFirst) {
+  clearSearchHits();
+  const content = document.getElementById('chapterContent');
+  if (!content || !searchState.units.length) return;
+  const alts = [...new Set(searchState.units.flatMap(u => u.alts.concat(...(u.fallback || []).map(f => f.alts))))];
+  const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => n.parentElement.closest('.chapter-meta,script,style') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+  });
+  const ranges = [];
+  for (let node; (node = walker.nextNode());) {
+    const text = node.nodeValue;
+    const spans = [];
+    for (const a of alts) {
+      const re = searchTermRegex(a); re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(text))) { if (m[0].length) spans.push([m.index, m.index + m[0].length]); else re.lastIndex++; }
+    }
+    spans.sort((x, y) => x[0] - y[0] || y[1] - x[1]);
+    let lastEnd = -1;
+    for (const [s, e] of spans) {
+      if (s < lastEnd) continue;
+      const r = document.createRange(); r.setStart(node, s); r.setEnd(node, e);
+      ranges.push(r); lastEnd = e;
+    }
+  }
+  // Hidden text (e.g. unrevealed quiz answers) stays marked but is skipped when stepping.
+  searchHitRanges = ranges.filter(r => r.getClientRects().length > 0);
+  if (window.CSS && CSS.highlights && ranges.length) CSS.highlights.set('search-hit', new Highlight(...ranges));
+  const bar = document.createElement('div');
+  bar.id = 'searchHitBar';
+  bar.className = 'search-hit-bar';
+  bar.innerHTML = `<span class="shb-q">🔍 ${escapeHtml(searchState.query)}</span><span class="shb-count" id="searchHitCount"></span>
+    <button type="button" onclick="stepSearchHit(-1)" aria-label="이전 검색 결과" title="이전 (Shift+Enter)">▲</button>
+    <button type="button" onclick="stepSearchHit(1)" aria-label="다음 검색 결과" title="다음 (Enter)">▼</button>
+    <button type="button" onclick="clearSearchHits()" aria-label="검색 강조 닫기" title="강조 닫기">✕</button>`;
+  document.querySelector('.main').appendChild(bar);
+  updateSearchHitCount();
+  if (scrollToFirst && searchHitRanges.length) stepSearchHit(1);
+}
+function updateSearchHitCount() {
+  const el = document.getElementById('searchHitCount');
+  if (!el) return;
+  el.textContent = !searchHitRanges.length ? '본문 일치 없음'
+    : (searchHitIndex < 0 ? '' : (searchHitIndex + 1) + '/') + searchHitRanges.length + (searchHitIndex < 0 ? '곳' : '');
+}
+function stepSearchHit(dir) {
+  if (!searchHitRanges.length) return;
+  searchHitIndex = (searchHitIndex + dir + searchHitRanges.length) % searchHitRanges.length;
+  const r = searchHitRanges[searchHitIndex];
+  if (window.CSS && CSS.highlights) CSS.highlights.set('search-current', new Highlight(r));
+  const area = document.getElementById('contentArea');
+  const rect = r.getBoundingClientRect(), ar = area.getBoundingClientRect();
+  area.scrollTo({ top: area.scrollTop + rect.top - ar.top - area.clientHeight / 3, behavior: document.documentElement.dataset.motion === 'off' ? 'auto' : 'smooth' });
+  updateSearchHitCount();
+}
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { clearSearch(); return; }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    clearTimeout(searchDebounce); renderSearch();
+    if (searchHitRanges.length) stepSearchHit(e.shiftKey ? -1 : 1);
+    else document.querySelector('.sr-item')?.click();
+  }
+});
 
 // ===== MEMO (암기노트) - Enhanced with section filter + free memo =====
 let currentMemoTab = 'highlight';  // 'highlight' or 'free'
@@ -7046,18 +7737,24 @@ const motionOn = () => document.documentElement.dataset.motion !== 'off';
   ['statSections', 'statChapters', 'statFocus'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    let busy = false;
+    // Observer callbacks arrive asynchronously, so our own frame writes are recognised by value, not by a flag.
+    let written = null, target = null, raf = 0;
     new MutationObserver(() => {
-      if (busy) return;
-      const target = parseInt(el.textContent, 10);
-      if (!motionOn() || !(target > 0)) return;
-      busy = true;
+      const text = el.textContent;
+      if (text === written) return;                 // a frame we wrote ourselves
+      const value = parseInt(text, 10);
+      if (value === target) { written = text; return; }   // same number re-set from outside: no replay
+      target = value;
+      cancelAnimationFrame(raf);
+      if (!motionOn() || !(value > 0)) { written = text; return; }
       const start = performance.now(), dur = 900;
-      (function step(t){
+      const step = t => {
         const p = Math.min(1, (t - start) / dur);
-        el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
-        if (p < 1) requestAnimationFrame(step); else { el.textContent = target; busy = false; }
-      })(start);
+        written = String(Math.round(value * (1 - Math.pow(1 - p, 3))));
+        el.textContent = written;
+        if (p < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
     }).observe(el, { childList: true, characterData: true, subtree: true });
   });
 })();
@@ -7110,7 +7807,7 @@ window.onHomeShown = () => { refreshHeroResume(); window.focusTimerRefresh?.(); 
   const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} };
   const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
 
-  const st = load(KEY, { mode: 'timer', durationMs: 25 * 60000, remainMs: 25 * 60000, endAt: 0, running: false, swElapsed: 0, swStart: 0, sound: true, focus: false, open: false, minimized: false, finished: false });
+  const st = load(KEY, { mode: 'timer', durationMs: 25 * 60000, remainMs: 25 * 60000, endAt: 0, running: false, swElapsed: 0, swStart: 0, sound: true, focus: false, open: false, minimized: false, finished: false, scale: 1, showSettings: false });
   let stats = load(STAT_KEY, { day: todayKey(), ms: 0, done: 0 });
   let tickId = null, titleFlashId = null, audioCtx = null;
   const baseTitle = document.title;
@@ -7161,6 +7858,9 @@ window.onHomeShown = () => { refreshHeroResume(); window.focusTimerRefresh?.(); 
     panel.classList.toggle('running', st.running);
     panel.classList.toggle('mode-stopwatch', !isTimer);
     panel.classList.toggle('minimized', !!st.minimized);
+    panel.classList.toggle('show-settings', !!st.showSettings);
+    applyScale();   // also picks up a size changed in another tab
+    $('ftSettingsBtn').setAttribute('aria-expanded', String(!!st.showSettings));
     panel.querySelectorAll('.ft-modes button').forEach(b => b.classList.toggle('active', b.dataset.mode === st.mode));
     panel.querySelectorAll('.ft-presets button').forEach(b => b.classList.toggle('active', isTimer && Number(b.dataset.min) * 60000 === st.durationMs));
     $('ftSound').checked = !!st.sound;
@@ -7176,7 +7876,7 @@ window.onHomeShown = () => { refreshHeroResume(); window.focusTimerRefresh?.(); 
     $('ftToday').textContent = '오늘 집중 ' + mins + '분';
     $('ftDone').textContent = '완료 ' + stats.done + '회';
     const sf = $('statFocus');
-    if (sf && sf.textContent !== String(mins)) sf.textContent = mins;
+    if (sf && sf.dataset.value !== String(mins)) { sf.dataset.value = mins; sf.textContent = mins; }
   }
 
   function tick() {
@@ -7237,7 +7937,7 @@ window.onHomeShown = () => { refreshHeroResume(); window.focusTimerRefresh?.(); 
     } else {
       st.swStart = Date.now();
     }
-    st.running = true; st.segStart = Date.now(); panel.classList.remove('done');
+    st.running = true; st.segStart = Date.now(); st.showSettings = false; panel.classList.remove('done');
     save(); startLoop(); render();
   }
   function pause() {
@@ -7279,8 +7979,11 @@ window.onHomeShown = () => { refreshHeroResume(); window.focusTimerRefresh?.(); 
   }
 
   /* --- Open / close / minimize + dragging --- */
+  const MIN_SCALE = 0.65, MAX_SCALE = 1.8;
+  const scaleOf = () => Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number(st.scale) || 1));
+  function applyScale() { panel.style.scale = String(scaleOf()); }
   function clampInto(left, top) {
-    const w = panel.offsetWidth, h = panel.offsetHeight, m = 8;
+    const k = scaleOf(), w = panel.offsetWidth * k, h = panel.offsetHeight * k, m = 8;
     return [Math.min(Math.max(m, left), Math.max(m, innerWidth - w - m)), Math.min(Math.max(m, top), Math.max(m, innerHeight - h - m))];
   }
   function place(left, top) {
@@ -7290,10 +7993,10 @@ window.onHomeShown = () => { refreshHeroResume(); window.focusTimerRefresh?.(); 
   function restorePosition() {
     const p = load(POS_KEY, {});
     if (typeof p.left === 'number') place(p.left, p.top);
-    else place(innerWidth - panel.offsetWidth - 24, innerHeight - panel.offsetHeight - 24);
+    else place(innerWidth - panel.offsetWidth * scaleOf() - 24, innerHeight - panel.offsetHeight * scaleOf() - 24);
   }
   function openPanel(silent) {
-    panel.hidden = false; st.open = true; save(); render(); restorePosition();
+    panel.hidden = false; st.open = true; save(); applyScale(); render(); restorePosition();
     if (!silent && !st.minimized) setTimeout(() => startBtn.focus({ preventScroll: true }), 50);
   }
   function closePanel() { panel.hidden = true; st.open = false; save(); toggleBtn.focus({ preventScroll: true }); }
@@ -7301,7 +8004,7 @@ window.onHomeShown = () => { refreshHeroResume(); window.focusTimerRefresh?.(); 
     const r = panel.getBoundingClientRect();
     st.minimized = v; save(); render();
     // keep the right edge anchored so the window shrinks/grows in place
-    place(r.right - panel.offsetWidth, r.top);
+    place(r.right - panel.offsetWidth * scaleOf(), r.top);
     store(POS_KEY, { left: panel.offsetLeft, top: panel.offsetTop });
   }
 
@@ -7325,6 +8028,34 @@ window.onHomeShown = () => { refreshHeroResume(); window.focusTimerRefresh?.(); 
       handle.addEventListener('pointercancel', up);
     });
   });
+  const grip = $('ftResize');
+  grip.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const r = panel.getBoundingClientRect(), baseW = panel.offsetWidth, baseH = panel.offsetHeight;
+    grip.setPointerCapture(e.pointerId);
+    panel.classList.add('resizing');
+    const move = ev => {
+      // grow/shrink from the top-left corner; follow whichever direction was dragged further
+      const k = Math.max((ev.clientX - r.left) / baseW, (ev.clientY - r.top) / baseH);
+      st.scale = Math.round(Math.min(MAX_SCALE, Math.max(MIN_SCALE, k)) * 100) / 100;
+      applyScale();
+    };
+    const up = () => {
+      panel.classList.remove('resizing');
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', up);
+      grip.removeEventListener('pointercancel', up);
+      save(); keepOnScreen();
+      store(POS_KEY, { left: panel.offsetLeft, top: panel.offsetTop });
+    };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', up);
+    grip.addEventListener('pointercancel', up);
+  });
+  grip.addEventListener('dblclick', () => { st.scale = 1; applyScale(); save(); keepOnScreen(); });
+  $('ftSettingsBtn').addEventListener('click', () => { st.showSettings = !st.showSettings; save(); render(); });
+
   const keepOnScreen = () => { if (!panel.hidden) place(panel.offsetLeft, panel.offsetTop); };
   window.addEventListener('resize', keepOnScreen);
   // the window changes height between timer/stopwatch modes — keep it fully visible
