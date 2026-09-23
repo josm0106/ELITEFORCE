@@ -563,6 +563,24 @@ body{height:100dvh}
 .section-progress{margin:0 16px 10px;color:#c6dacc;font-size:11px;display:flex;align-items:center;gap:8px}
 .section-progress progress{width:60px;height:5px;flex:1;accent-color:#a6c6a7}
 .quiz-result::before{content:attr(data-result)}.quiz-result{font-size:13px;margin-right:10px;color:#456438}
+/* Quiet, decorative motion stays outside the study text. */
+.study-motion{height:150px;position:relative;display:flex;align-items:center;justify-content:center;margin:-12px 0 28px;overflow:hidden;border-radius:12px;background:radial-gradient(ellipse at center,#dde9da88,transparent 70%);pointer-events:none}
+.study-motion svg{width:300px;height:150px;overflow:visible}
+.study-orbit{transform-origin:150px 75px;animation:study-orbit 32s linear infinite}
+.study-orbit.reverse{animation-direction:reverse;animation-duration:46s}
+.study-emblem{transform-origin:150px 75px;animation:study-breathe 7s ease-in-out infinite}
+.study-motion-label{position:absolute;left:14px;bottom:12px;font:10px 'Times New Roman',serif;letter-spacing:3px;color:#7e937d}
+.welcome h2,.welcome>p,.welcome .stats{animation:study-reveal .65s ease-out both}
+.welcome>p{animation-delay:.08s}.welcome .stats{animation-delay:.16s}
+.chapter-meta{animation:study-reveal .38s ease-out both}
+#motionToggle{border:0;background:transparent;color:#718073;font:inherit;font-size:11px;padding:6px;cursor:pointer;white-space:nowrap;border-radius:5px}
+#motionToggle:hover{background:#e9efe5}#motionToggle:disabled{cursor:default;opacity:.65}
+@keyframes study-orbit{to{transform:rotate(360deg)}}
+@keyframes study-breathe{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.045);opacity:1}}
+@keyframes study-reveal{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+html[data-motion="off"] *,html[data-motion="off"] *::before,html[data-motion="off"] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+html[data-motion="off"] #sidebarGlow,html[data-motion="off"] #confettiLayer{display:none!important}
+@media(max-width:768px){.study-motion{height:125px;margin-bottom:22px}#motionToggle{font-size:10px;padding:4px}}
 </style>
 </head>
 <body>
@@ -618,6 +636,7 @@ body{height:100dvh}
   <div class="main-header" id="mainHeader">
     <span id="headerTitle">엘리트 정형외과 단원별 열람</span>
     <div class="server-save-controls">
+      <button id="motionToggle" type="button" aria-pressed="true" onclick="toggleStudyMotion()">모션 켬</button>
       <span id="syncIndicator" role="status" aria-live="polite"></span>
       <button id="serverSaveBtn" type="button" onclick="manualServerSave()">☁ 서버 저장</button>
     </div>
@@ -629,6 +648,15 @@ body{height:100dvh}
   </div>
   <div class="content-area" id="contentArea">
     <div class="welcome">
+      <div class="study-motion" aria-hidden="true">
+        <svg viewBox="0 0 300 150" fill="none">
+          <path d="M12 75H288M150 7V143" stroke="#c8d7c4" stroke-dasharray="2 6"/>
+          <g class="study-orbit"><ellipse cx="150" cy="75" rx="65" ry="48" stroke="#7b9a7c" stroke-opacity=".5"/><circle cx="215" cy="75" r="4" fill="#65886a"/></g>
+          <g class="study-orbit reverse"><circle cx="150" cy="75" r="69" stroke="#b69c65" stroke-opacity=".45" stroke-dasharray="3 7"/><circle cx="150" cy="6" r="3" fill="#b69c65"/></g>
+          <g class="study-emblem"><rect x="127" y="52" width="46" height="46" rx="12" fill="#315e4b"/><text x="150" y="88" text-anchor="middle" fill="#fffdf3" font-family="Times New Roman,serif" font-size="38">E</text></g>
+        </svg>
+        <span class="study-motion-label">ELITE ORTHOPAEDICS</span>
+      </div>
       <h2>단원을 선택하세요</h2>
       <p>왼쪽 목차에서 섹션을 펼치고 단원을 클릭하면 내용을 열람할 수 있습니다.</p>
       <div class="stats">
@@ -6675,6 +6703,25 @@ function closeSidebar() {
 
 <!-- ===== PREMIUM EFFECTS: sidebar spotlight + quiz confetti ===== -->
 <script>
+const studyMotionPreference = window.matchMedia('(prefers-reduced-motion:reduce)');
+let studyMotionEnabled = true;
+try { studyMotionEnabled = localStorage.getItem('elite_ortho_motion') !== 'off'; } catch (_) {}
+function applyStudyMotion() {
+  const enabled = studyMotionEnabled && !studyMotionPreference.matches;
+  document.documentElement.dataset.motion = enabled ? 'on' : 'off';
+  const button = document.getElementById('motionToggle');
+  button.setAttribute('aria-pressed', String(enabled));
+  button.textContent = enabled ? '모션 켬' : '모션 끔';
+  button.disabled = studyMotionPreference.matches;
+  button.title = studyMotionPreference.matches ? '기기의 동작 줄이기 설정이 적용되었습니다' : '화면 모션 켜기 또는 끄기';
+}
+function toggleStudyMotion() {
+  studyMotionEnabled = !studyMotionEnabled;
+  try { localStorage.setItem('elite_ortho_motion', studyMotionEnabled ? 'on' : 'off'); } catch (_) {}
+  applyStudyMotion();
+}
+studyMotionPreference.addEventListener('change', applyStudyMotion);
+applyStudyMotion();
 (function(){
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
   /* Sidebar cursor spotlight */
@@ -6682,6 +6729,7 @@ function closeSidebar() {
   if (sb && glow && !reduce) {
     var raf = null, px = 0, py = 0;
     sb.addEventListener('pointermove', function(e){
+      if (document.documentElement.dataset.motion === 'off') return;
       var r = sb.getBoundingClientRect(); px = e.clientX - r.left; py = e.clientY - r.top;
       if (raf) return;
       raf = requestAnimationFrame(function(){ raf = null; glow.style.setProperty('--mx', px + 'px'); glow.style.setProperty('--my', py + 'px'); glow.style.opacity = '1'; });
@@ -6692,6 +6740,7 @@ function closeSidebar() {
 
 /* Confetti burst on a correct answer (dependency-free, RAF physics) */
 function fireConfetti(x, y){
+  if (document.documentElement.dataset.motion === 'off') return;
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches) return;
   var layer = document.getElementById('confettiLayer');
   if (!layer){ layer = document.createElement('div'); layer.id = 'confettiLayer'; document.body.appendChild(layer); }
