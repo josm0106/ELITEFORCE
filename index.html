@@ -589,6 +589,9 @@ html[data-motion="off"] #sidebarGlow,html[data-motion="off"] #confettiLayer{disp
 .sidebar-header{position:relative}
 .sidebar-header::after{content:'';position:absolute;left:23px;right:23px;bottom:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);background-size:200% 100%;animation:line-sweep 9s linear infinite;opacity:.55}
 .sidebar-header h1{display:flex;align-items:center;gap:10px}
+.sidebar-home{display:block;color:inherit;text-decoration:none;border-radius:10px;margin:-6px -8px;padding:6px 8px;transition:background .2s}
+.sidebar-home:hover{background:rgba(255,255,255,.05)}
+.sidebar-home:hover h1::before{box-shadow:0 0 0 1px rgba(233,220,194,.5),0 6px 18px rgba(0,0,0,.3)}
 .sidebar-header h1::before{content:'E';display:inline-grid;place-items:center;width:30px;height:30px;border-radius:9px;background:linear-gradient(140deg,#2d7a66,#1a4d42);color:#fbf6e8;font:400 19px 'Times New Roman',serif;box-shadow:0 0 0 1px rgba(233,220,194,.25),0 6px 16px rgba(0,0,0,.25)}
 .section-header{transition:background .25s,color .25s}
 .section-header:hover{color:#e3efe6}
@@ -769,8 +772,10 @@ html.focus-session .main-header:hover{opacity:1}
 <div class="sidebar">
   <div id="sidebarGlow" aria-hidden="true"></div>
   <div class="sidebar-header">
-    <h1>엘리트 정형외과</h1>
-    <div class="sub">단원별 열람 학습 사이트</div>
+    <a class="sidebar-home" href="#" onclick="goHome(event)" title="홈 화면으로">
+      <h1>엘리트 정형외과</h1>
+      <div class="sub">단원별 열람 학습 사이트</div>
+    </a>
   </div>
   <div class="user-bar" id="userBar" style="display:none">
     <div class="user-info"><span class="user-icon">J</span><span id="userDisplayName">오프라인</span></div>
@@ -4559,6 +4564,26 @@ function openStudyExplanation(num, q) {
 }
 
 // ===== LOAD CHAPTER =====
+let homeWelcomeEl = null;
+
+function goHome(event) {
+  event?.preventDefault();
+  closeSidebar();
+  if (!currentChapter) return;
+  updateReadingProgress();   // save where the chapter was left off
+  parkSelectionMemoComposer();
+  currentChapter = null;
+  document.querySelectorAll('.chapter-item.active').forEach(el => el.classList.remove('active'));
+  document.getElementById('headerTitle').textContent = '엘리트 정형외과 단원별 열람';
+  document.getElementById('docxLink').style.display = 'none';
+  document.getElementById('readingProgress').hidden = true;
+  const area = document.getElementById('contentArea');
+  if (homeWelcomeEl) area.replaceChildren(homeWelcomeEl);
+  area.scrollTop = 0;
+  history.replaceState(null, '', location.pathname + location.search);
+  window.onHomeShown?.();
+}
+
 function loadChapter(num) {
   const ch = CHAPTERS_DATA[num];
   if (!ch) return;
@@ -4597,6 +4622,8 @@ function loadChapter(num) {
 
   parkSelectionMemoComposer();
   const area = document.getElementById('contentArea');
+  const welcome = area.querySelector(':scope > .welcome');
+  if (welcome) homeWelcomeEl = welcome;   // kept so goHome() can bring the same home screen back
   area.innerHTML = `
     <div class="chapter-content" id="chapterContent">
       <div class="chapter-meta">
@@ -7041,14 +7068,18 @@ function latestViewedChapter() {
   return best;
 }
 function heroResumeChapter() { const n = latestViewedChapter(); if (n) loadChapter(n); }
-(function refreshHeroResume(){
+let heroResumeTimer = null;
+function refreshHeroResume() {
+  clearTimeout(heroResumeTimer);
   const btn = document.getElementById('heroResumeBtn');
   if (!btn || !btn.isConnected) return;
   const n = latestViewedChapter();
   btn.hidden = !n;
   if (n) btn.textContent = '↺ 이어 읽기 · Ch' + n;
-  setTimeout(refreshHeroResume, 3000);
-})();
+  heroResumeTimer = setTimeout(refreshHeroResume, 3000);
+}
+refreshHeroResume();
+window.onHomeShown = () => { refreshHeroResume(); window.focusTimerRefresh?.(); };
 
 /* ===== Focus timer ===== */
 (function(){
@@ -7325,6 +7356,7 @@ function heroResumeChapter() { const n = latestViewedChapter(); if (n) loadChapt
     if (!st.running) start();
   };
 
+  window.focusTimerRefresh = render;
   render();
   if (st.open) openPanel(true);
   if (st.running) startLoop();
