@@ -480,8 +480,8 @@ body{height:100dvh}
 .server-save-controls{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;flex-shrink:0;max-width:55%}
 #serverSaveBtn{border:1px solid #c8d5c8;border-radius:6px;background:#f2f6ed;color:#365c45;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
 #serverSaveBtn:disabled{opacity:.65;cursor:wait}
-.server-save-status{font-size:11px;color:#567160;line-height:1.4;text-align:right;overflow-wrap:anywhere}
-.server-save-status.error{color:#b43c35}.server-save-status.syncing{color:#8a692d}
+.server-save-status{font-size:10px;color:#a3b3a8;line-height:1.4;text-align:right;overflow-wrap:anywhere;transition:color .4s}
+.server-save-status.error{color:#cf8a84}.server-save-status.syncing{color:#b8a57f}
 @media(max-width:768px){.server-save-controls{gap:4px;max-width:48%}.server-save-status{font-size:10px}#serverSaveBtn{font-size:11px;padding:5px 8px}}
 .main-header .docx-link{flex-shrink:0;border:1px solid #d6e0d7;color:#456b57;border-radius:5px;padding:5px 9px;white-space:nowrap}
 .main-header .docx-link:hover{background:#edf3ed;box-shadow:none;transform:none;color:#21675b}
@@ -651,6 +651,8 @@ html[data-motion="off"] #sidebarGlow,html[data-motion="off"] #confettiLayer{disp
 .hero-btn.primary{background:linear-gradient(120deg,#21675b,#2f7f6a);color:#fff;border-color:transparent;box-shadow:0 8px 22px rgba(33,103,91,.25)}
 .hero-btn.primary:hover{box-shadow:0 12px 30px rgba(33,103,91,.32)}
 .hero-btn[hidden]{display:none}
+#motionToggle{width:32px;padding:6px 0;font-size:14px;line-height:1;color:var(--gold);text-align:center}
+#motionToggle[aria-pressed="false"]{color:#a8b5ab}
 .welcome .stats{gap:clamp(28px,6vw,64px)}
 .welcome .stat-num{font-variant-numeric:tabular-nums}
 .hero-features{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:34px}
@@ -738,7 +740,7 @@ html.focus-session .main-header:hover{opacity:1}
 @keyframes wrong-shake{0%,100%{transform:none}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 .study-spark{transform-box:fill-box;transform-origin:center}
 @media(max-width:900px){.hero-features{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:768px){.welcome h2{font-size:28px}.welcome .study-motion svg{width:300px;height:150px}.welcome .study-motion{height:150px}.hero-aurora{inset:-20px -18px auto;height:340px}#timerToggle .tt-label{display:none}#motionToggle,#timerToggle,#serverSaveBtn{padding:5px 9px;font-size:11px}.focus-timer{width:280px}.ft-dial{width:150px;height:150px}.ft-time{font-size:38px}}
+@media(max-width:768px){.welcome h2{font-size:28px}.welcome .study-motion svg{width:300px;height:150px}.welcome .study-motion{height:150px}.hero-aurora{inset:-20px -18px auto;height:340px}#timerToggle .tt-label{display:none}#timerToggle,#serverSaveBtn{padding:5px 9px;font-size:11px}.focus-timer{width:280px}.ft-dial{width:150px;height:150px}.ft-time{font-size:38px}}
 </style>
 </head>
 <body>
@@ -797,7 +799,7 @@ html.focus-session .main-header:hover{opacity:1}
     <span id="headerTitle">엘리트 정형외과 단원별 열람</span>
     <div class="server-save-controls">
       <button id="timerToggle" type="button" title="집중 타이머 열기/닫기 (Alt+T)" aria-controls="focusTimer"><span class="tt-dot" aria-hidden="true"></span><span aria-hidden="true">⏱</span><span class="tt-label" id="timerToggleLabel">타이머</span></button>
-      <button id="motionToggle" type="button" aria-pressed="true" onclick="toggleStudyMotion()">모션 켬</button>
+      <button id="motionToggle" type="button" aria-pressed="true" aria-label="화면 모션 켜짐" onclick="toggleStudyMotion()">✦</button>
       <span id="syncIndicator" role="status" aria-live="polite"></span>
       <button id="serverSaveBtn" type="button" onclick="manualServerSave()">☁ 서버 저장</button>
     </div>
@@ -1055,9 +1057,13 @@ const confirmedMemoImages = new Set();
 // ===== SYNC INDICATOR =====
 function showSync(state, msg) {
   const el = document.getElementById('syncIndicator');
-  el.className = 'server-save-status ' + state;
-  el.textContent = msg || '';
+  const cls = 'server-save-status ' + state;
+  if (el.className !== cls) el.className = cls;
+  if (el.textContent !== (msg || '')) el.textContent = msg || '';
 }
+// Automatic saves run quietly; only a manual save shows progress text.
+let manualSaveActive = false;
+const AUTO_SAVE_DELAY_MS = 8000;
 
 // ===== ALLOWED EMAILS (본인만 사용 가능) =====
 const ALLOWED_EMAILS = [
@@ -1257,20 +1263,29 @@ function syncToCloud(immediate = false) {
   // If logged in, also sync to Firestore
   if (!firestoreReady || !currentUser) return;
   localStorage.setItem(pendingSaveKey(), JSON.stringify(saveSnapshot()));
-  showSync('syncing', '서버 저장 대기 중');
   clearTimeout(syncDebounceTimer);
   if (immediate) return saveToFirestore();
   syncDebounceTimer = setTimeout(() => {
+    syncDebounceTimer = null;
     saveToFirestore();
-  }, 1500);
+  }, AUTO_SAVE_DELAY_MS);
 }
+// Leaving the tab flushes a waiting save right away.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && syncDebounceTimer) {
+    clearTimeout(syncDebounceTimer);
+    syncDebounceTimer = null;
+    saveToFirestore();
+  }
+});
 
 function manualServerSave() {
   if (!currentUser || !firestoreReady) {
     showSync('error', '로그인·동기화 후 저장해 주세요');
     return Promise.resolve(false);
   }
-  return syncToCloud(true);
+  manualSaveActive = true;
+  return Promise.resolve(syncToCloud(true)).finally(() => { manualSaveActive = false; });
 }
 
 // Serialize writes so a slower, older save cannot overwrite a newer memo.
@@ -1283,8 +1298,8 @@ function saveToFirestore() {
   clearTimeout(syncDebounceTimer);
   clearTimeout(serverRetryTimer);
   const button = document.getElementById('serverSaveBtn');
-  button.disabled = true;
-  button.textContent = '저장 중…';
+  const manual = manualSaveActive;
+  if (manual) { button.disabled = true; button.textContent = '저장 중…'; }
   serverSavePromise = (async () => {
     try {
       do {
@@ -1292,7 +1307,7 @@ function saveToFirestore() {
         const snapshot = saveSnapshot();
         const serialized = JSON.stringify(snapshot);
         localStorage.setItem(key, serialized);
-        showSync('syncing', '사진·메모 서버 저장 중…');
+        if (manual) showSync('syncing', '저장 중…');
         const userDoc = db.collection('users').doc(uid);
         for (const imgId of new Set([...snapshot.memos, ...snapshot.freeMemos].map(m => m.imgId).filter(Boolean))) {
           const imageKey = uid + ':' + imgId;
@@ -1312,7 +1327,7 @@ function saveToFirestore() {
         if (JSON.stringify(saveSnapshot()) !== serialized) serverSaveRequested = true;
         if (!serverSaveRequested) localStorage.removeItem(key);
       } while (serverSaveRequested);
-      showSync('synced', '✓ 서버 저장 완료');
+      showSync('synced', '✓ 저장됨');
       return true;
     } catch (err) {
       console.error('Firestore save error:', err);
@@ -1323,8 +1338,7 @@ function saveToFirestore() {
       return false;
     } finally {
       serverSavePromise = null;
-      button.disabled = false;
-      button.textContent = '☁ 서버 저장';
+      if (manual) { button.disabled = false; button.textContent = '☁ 서버 저장'; }
     }
   })();
   return serverSavePromise;
@@ -6961,9 +6975,10 @@ function applyStudyMotion() {
   document.documentElement.dataset.motion = enabled ? 'on' : 'off';
   const button = document.getElementById('motionToggle');
   button.setAttribute('aria-pressed', String(enabled));
-  button.textContent = enabled ? '모션 켬' : '모션 끔';
+  button.textContent = enabled ? '✦' : '✧';
+  button.setAttribute('aria-label', enabled ? '화면 모션 켜짐' : '화면 모션 꺼짐');
   button.disabled = studyMotionPreference.matches;
-  button.title = studyMotionPreference.matches ? '기기의 동작 줄이기 설정이 적용되었습니다' : '화면 모션 켜기 또는 끄기';
+  button.title = studyMotionPreference.matches ? '기기의 동작 줄이기 설정이 적용되었습니다' : (enabled ? '화면 모션 켜짐 · 누르면 끔' : '화면 모션 꺼짐 · 누르면 켬');
 }
 function toggleStudyMotion() {
   studyMotionEnabled = !studyMotionEnabled;
