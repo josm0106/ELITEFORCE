@@ -254,7 +254,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;bac
 .memo-item .memo-photo-btn{position:absolute;top:8px;right:32px;cursor:pointer;color:var(--text3);font-size:12px;transition:color .15s,transform .15s}
 .memo-item .memo-photo-btn:hover{color:var(--accent);transform:scale(1.15)}
 .memo-item .memo-img-wrap{margin-top:8px}
-.memo-item .memo-img{display:block;max-width:100%;max-height:150px;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;background:#fff}
+.memo-item .memo-img{display:block;max-width:100%;width:auto;height:auto;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;background:#fff}
 .memo-item .memo-img-missing{margin-top:8px;padding:10px;border:1px dashed var(--border);border-radius:6px;color:var(--text3);font-size:10.5px;text-align:center}
 .memo-item.flash{background:rgba(37,99,235,.3)!important}
 /* Composer attach */
@@ -742,6 +742,7 @@ html.focus-session .main-header:hover{opacity:1}
 .ft-btn.primary:hover{box-shadow:0 10px 26px rgba(185,155,104,.4)}
 .focus-timer.running .ft-btn.primary{background:rgba(255,255,255,.12);color:#fbf6e8;box-shadow:none}
 .ft-options{display:flex;justify-content:space-between;gap:8px;margin-top:12px;font-size:12px;color:#b5c9be}
+.ft-opacity{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:#b5c9be}.ft-opacity input{flex:1;accent-color:#7fbfa4;cursor:pointer}.ft-opacity span:last-child{min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
 .ft-options label{display:flex;align-items:center;gap:6px;cursor:pointer}
 .ft-options input{accent-color:#7fbfa4;width:14px;height:14px}
 .ft-foot{display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid rgba(233,220,194,.12);font-size:11.5px;color:#8fa99c;font-variant-numeric:tabular-nums}
@@ -750,7 +751,7 @@ html.focus-session .main-header:hover{opacity:1}
 .focus-timer{transform-origin:top left}
 .ft-settings-btn{display:none}
 .focus-timer.running .ft-settings-btn{display:inline-block}
-.focus-timer.running:not(.show-settings) :is(.ft-modes,.ft-presets,.ft-custom,.ft-adjust,.ft-options,.ft-foot){display:none}
+.focus-timer.running:not(.show-settings) :is(.ft-modes,.ft-presets,.ft-custom,.ft-adjust,.ft-options,.ft-opacity,.ft-foot){display:none}
 .focus-timer.running:not(.show-settings) .ft-dial{margin-top:2px}
 .focus-timer.show-settings .ft-settings-btn{background:rgba(233,220,194,.2);color:#fff}
 .ft-resize{position:absolute;right:3px;bottom:3px;width:18px;height:18px;cursor:nwse-resize;touch-action:none;border-radius:0 0 14px 0;background:linear-gradient(135deg,transparent 45%,rgba(233,220,194,.35) 46%,rgba(233,220,194,.35) 54%,transparent 55%,transparent 68%,rgba(233,220,194,.35) 69%,rgba(233,220,194,.35) 77%,transparent 78%);opacity:.6;transition:opacity .2s}
@@ -1044,6 +1045,7 @@ html.focus-session .main-header:hover{opacity:1}
       <label><input type="checkbox" id="ftSound"> 종료 알림음</label>
       <label title="진행 중에는 목차와 상단바를 흐리게 표시"><input type="checkbox" id="ftFocus"> 집중 모드</label>
     </div>
+    <div class="ft-opacity"><span>투명도</span><input type="range" id="ftOpacity" min="20" max="100" step="5" value="100" aria-label="타이머 불투명도"><span id="ftOpacityVal">100%</span></div>
     <div class="ft-foot"><span id="ftToday">오늘 집중 0분</span><span id="ftDone">완료 0회</span></div>
   </div>
   <div class="ft-mini" data-drag-handle>
@@ -7870,6 +7872,7 @@ window.onHomeShown = () => { refreshHeroResume(); window.focusTimerRefresh?.(); 
     panel.querySelectorAll('.ft-presets button').forEach(b => b.classList.toggle('active', isTimer && Number(b.dataset.min) * 60000 === st.durationMs));
     $('ftSound').checked = !!st.sound;
     $('ftFocus').checked = !!st.focus;
+    { const op = Math.min(100, Math.max(20, +st.opacity || 100)); $('ftOpacity').value = op; $('ftOpacityVal').textContent = op + '%'; panel.style.opacity = op / 100; }
 
     toggleBtn.classList.toggle('running', st.running);
     toggleBtn.classList.toggle('done', st.finished && !st.running);
@@ -8086,6 +8089,7 @@ window.onHomeShown = () => { refreshHeroResume(); window.focusTimerRefresh?.(); 
   $('ftCustom').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyCustom(); } });
   $('ftSound').addEventListener('change', e => { st.sound = e.target.checked; save(); if (st.sound) unlockAudio(); });
   $('ftFocus').addEventListener('change', e => { st.focus = e.target.checked; save(); render(); });
+  $('ftOpacity').addEventListener('input', e => { st.opacity = +e.target.value; $('ftOpacityVal').textContent = st.opacity + '%'; panel.style.opacity = st.opacity / 100; save(); });
   panel.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
   document.addEventListener('keydown', e => {
     if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 't' || e.key === 'T' || e.code === 'KeyT')) {
