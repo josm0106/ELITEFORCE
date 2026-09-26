@@ -511,6 +511,17 @@ body{height:100dvh}
 .chapter-content table td,.chapter-content .content-table td{font-size:14px;line-height:1.8;padding:12px 16px;word-break:keep-all;min-width:70px}
 .chapter-content table tr:nth-child(even) td{background:#f0f3eb}
 .chapter-content table tr:hover td{background:#eaf0e5}
+/* compact tables: cells hold <p> blocks whose paragraph margins made rows very tall */
+.chapter-content table th,.chapter-content .content-table th{padding:8px 12px;line-height:1.45}
+.chapter-content table td,.chapter-content .content-table td{font-size:13.5px;line-height:1.5;padding:6px 12px;vertical-align:top;min-width:56px}
+.chapter-content table td p,.chapter-content table th p{margin:0!important;text-align:left;line-height:inherit}
+.chapter-content table td p+p,.chapter-content table th p+p{margin-top:3px!important}
+.chapter-content table td ul,.chapter-content table td ol{margin:2px 0 2px 18px;padding:0}
+.chapter-content table td li{line-height:1.5;margin:0}
+.chapter-content .table-scroll{overflow-x:auto;margin:14px 0 20px;border:1px solid #dce3d6;border-radius:6px}
+.chapter-content .table-scroll>table{display:table;width:100%;margin:0;border:0;border-radius:0;overflow:visible}
+.chapter-content table tr:first-child td:has(> p > strong:only-child){background:#e3ebdc;color:#244236}
+.chapter-content table td:first-child{font-weight:500}
 .chapter-content img{max-width:100%;height:auto}
 .chapter-content blockquote{background:#edf2e8;border-color:#8da284;border-radius:0 6px 6px 0;font-style:normal;padding:18px 22px}
 .q-opt{background:#fffefa;border:1px solid #dce3d6;border-radius:7px;padding:14px 18px;box-shadow:none;word-break:keep-all;overflow-wrap:break-word}
@@ -536,7 +547,7 @@ body{height:100dvh}
 :focus-visible{outline:2px solid #b79a58;outline-offset:3px}
 #confettiLayer{position:fixed;inset:0;pointer-events:none;z-index:99990;overflow:hidden}.confetti-piece{position:absolute;width:9px;height:14px;border-radius:2px;will-change:transform,opacity}
 @media(max-width:1100px) and (min-width:769px){:root{--sidebar-w:272px}.content-area{padding:30px 24px 80px}.chapter-meta{padding:22px}.chapter-meta .meta-title{font-size:22px}}
-@media(max-width:768px){:root{--sidebar-w:290px}.sidebar{width:290px;min-width:290px;left:-310px}.sidebar.open{left:0}.memo-toggle{width:290px}.main-header{padding:13px 14px 13px 54px;font-size:11px;gap:8px}.main-header .docx-link{font-size:11px;padding:4px 6px}#readingProgress{padding:7px 17px}.content-area{padding:24px 18px 85px}.chapter-content{font-size:15px}.chapter-meta{padding:20px 18px;margin-bottom:30px}.chapter-meta .meta-title{font-size:21px}.chapter-content h2,.chapter-content h2.auto-heading{font-size:20px}.chapter-content h3,.chapter-content h3.auto-heading{font-size:18px}.chapter-content table td{font-size:13px;padding:10px}.welcome{margin:4vh auto 0;padding:28px 8px}.welcome h2{font-size:27px}.memo-panel.open{max-width:100vw}.chapter-item .ch-name{font-size:13px}}
+@media(max-width:768px){:root{--sidebar-w:290px}.sidebar{width:290px;min-width:290px;left:-310px}.sidebar.open{left:0}.memo-toggle{width:290px}.main-header{padding:13px 14px 13px 54px;font-size:11px;gap:8px}.main-header .docx-link{font-size:11px;padding:4px 6px}#readingProgress{padding:7px 17px}.content-area{padding:24px 18px 85px}.chapter-content{font-size:15px}.chapter-meta{padding:20px 18px;margin-bottom:30px}.chapter-meta .meta-title{font-size:21px}.chapter-content h2,.chapter-content h2.auto-heading{font-size:20px}.chapter-content h3,.chapter-content h3.auto-heading{font-size:18px}.chapter-content table td{font-size:13px;padding:6px 9px}.welcome{margin:4vh auto 0;padding:28px 8px}.welcome h2{font-size:27px}.memo-panel.open{max-width:100vw}.chapter-item .ch-name{font-size:13px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 
@@ -4700,6 +4711,7 @@ function loadChapter(num) {
   area.scrollTop = 0;
   processQuizzes();   // wire quizzes FIRST so heading-detection can't swallow 정답/보기 lines
   processHeadings();
+  wrapContentTables();
   addStudyExplanations(num);
   restoreHighlightsForChapter(num);
   renderMemoAnchors(num);
@@ -7532,6 +7544,14 @@ function onQuizClick(e){
   }
 }
 
+function wrapContentTables() {
+  // full-width tables; horizontal scroll lives on a wrapper so wide tables never break the page
+  document.querySelectorAll('#chapterContent table').forEach(t => {
+    if (t.parentElement.classList.contains('table-scroll')) return;
+    const w = document.createElement('div'); w.className = 'table-scroll';
+    t.parentNode.insertBefore(w, t); w.appendChild(t);
+  });
+}
 function processHeadings() {
   const content = document.getElementById('chapterContent');
   if (!content) return;
@@ -7548,6 +7568,8 @@ function processHeadings() {
   ps.forEach(p => {
     // never turn a wired quiz line (answer / option / reveal) into a heading
     if (p.classList.contains('quiz-answer') || p.classList.contains('q-opt') || p.closest('.q-cont')) return;
+    // table cells stay plain text — headings inside cells made rows very tall
+    if (p.closest('td,th')) return;
     const text = p.textContent.trim();
     const len = text.length;
     if (len === 0 || len > 120) return;
