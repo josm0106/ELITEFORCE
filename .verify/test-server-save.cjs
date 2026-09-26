@@ -43,14 +43,14 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   assert.equal(writes[0], 'image:photo');
   assert.equal(writes[1].memos[0].text, 'first');
   assert.equal(w.localStorage.getItem(w.pendingSaveKey()), null);
-  assert.match(w.document.getElementById('syncIndicator').textContent, /서버 저장 완료/);
+  assert.match(w.document.getElementById('syncIndicator').textContent, /저장됨/);
 
   let release;
   hold = new Promise(resolve => { release = resolve; });
   writes = [];
   const saving = w.syncToCloud(true);
   await tick();
-  assert.equal(w.document.getElementById('serverSaveBtn').disabled, true);
+  assert.equal(w.document.getElementById('serverSaveBtn').disabled, false, 'automatic saves stay quiet and leave the button alone');
   w.memos.push({ id: 2, text: 'during upload' });
   const queued = w.syncToCloud(true);
   assert.equal(saving, queued, 'one serialized save queue');
@@ -59,6 +59,16 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   assert.equal(writes.length, 2);
   assert.equal(writes[0].memos.length, 1);
   assert.equal(writes[1].memos.length, 2, 'latest edit reaches server before completed status');
+
+  // A manual save locks the button while it runs, then releases it.
+  hold = new Promise(resolve => { release = resolve; });
+  const manualRun = w.manualServerSave();
+  await tick();
+  assert.equal(w.document.getElementById('serverSaveBtn').disabled, true, 'manual save locks the button');
+  release();
+  assert.equal(await manualRun, true);
+  assert.equal(w.document.getElementById('serverSaveBtn').disabled, false, 'button released after manual save');
+  hold = null;
 
   w.memos.push({ id: 3, imgId: 'missing' });
   assert.equal(await w.manualServerSave(), false, 'missing local and remote images cannot report completion');

@@ -12,7 +12,9 @@ function saveMemos(){} function saveFreeMemos(){} function renderMemos(){} funct
 `+html.slice(html.indexOf('const selectionComposerElement'),html.indexOf('let selectionMemoDraft'))+
 html.slice(html.indexOf('function resolveMemoOffset'),html.indexOf('// --- Highlight memos ---'))+
 html.slice(html.indexOf('function offsetToRange'),html.indexOf('// ===== 본문 메모 마커'))+
-html.slice(html.indexOf('function renderMemoAnchors'),html.indexOf('function removeMemoMarkerPop')));
+html.slice(html.indexOf('function renderMemoAnchors'),html.indexOf('function removeMemoMarkerPop'))+
+// memo bold formatter (**text** → <strong>) lives with the memo-image helpers
+html.slice(html.indexOf('function memoFmt'),html.indexOf('function memoImgDB')));
 const content=w.document.getElementById('chapterContent'),original=content.textContent;
 w.memos=[{id:200,chapterNum:1,text:'First',anchorOffset:0,note:'Second note',imgId:'photo'},{id:100,chapterNum:1,text:'First',anchorOffset:0,note:'First note'}];
 w.freeMemos=[{id:300,chapterNum:1,text:'Third note',anchorOffset:0}];
@@ -59,4 +61,8 @@ const answerOffset='First source paragraph.'.length;
 w.memos.push({id:400,chapterNum:1,text:'Answer',anchorOffset:answerOffset,note:'Answer memo'});w.renderMemoAnchors(1);
 assert(content.querySelector('.quiz-answer .inline-memo-stack .inline-memo-card'),'answer memo stays within hidden answer');
 assert.equal(content.textContent,original);
-console.log('PASS: compact controls; ordered stack; add/delete; edit/cancel both memo types; preserved photo/anchor/order; answer scope; stable source offsets');
+// Bold markup renders as <strong> in memo cards while HTML stays escaped.
+assert.equal(w.memoFmt('a **b** <i>'),'a <strong>b</strong> &lt;i&gt;');
+w.memos=[{id:400,chapterNum:1,text:'First',anchorOffset:0,note:'**굵게** 메모'}];w.freeMemos=[];w.renderMemoAnchors(1);
+assert.equal(hosts()[0].shadowRoot.querySelector('strong').textContent,'굵게');
+console.log('PASS: compact controls; bold memo text; ordered stack; add/delete; edit/cancel both memo types; preserved photo/anchor/order; answer scope; stable source offsets');
