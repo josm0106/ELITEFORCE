@@ -523,6 +523,12 @@ body{height:100dvh}
 .chapter-content .ko-sum{display:block;margin-top:8px;padding:9px 13px;background:#eef4ea;border-left:3px solid #5f8a68;border-radius:0 6px 6px 0;color:#1f2d24;font-size:1.075em;line-height:1.75}
 .chapter-content .ko-sum>strong:first-child{color:#3c6b4b;margin-right:4px;font-size:.92em}
 .chapter-content td .ko-sum{margin-top:5px;padding:6px 9px}
+.chapter-content .pdf-fig{margin:10px 0 18px;padding:8px;background:#fff;border:1px solid #dce3d6;border-radius:8px;text-align:center;position:relative}
+.chapter-content .pdf-fig img{max-width:100%;height:auto;max-height:520px;width:auto;cursor:zoom-in;border-radius:4px}
+.chapter-content .pdf-fig::after{content:"교재 그림 · p." attr(data-page);display:block;margin-top:4px;font-size:11px;color:#8a978c}
+.chapter-content li .pdf-fig{margin:8px 0 6px}
+#figViewer{position:fixed;inset:0;z-index:10000;background:rgba(10,20,15,.88);display:none;align-items:center;justify-content:center;padding:12px;cursor:zoom-out}
+#figViewer img{max-width:100%;max-height:100%;object-fit:contain;background:#fff;border-radius:6px}
 .chapter-content .table-scroll{overflow-x:auto;margin:14px 0 20px;border:1px solid #dce3d6;border-radius:6px}
 .chapter-content .table-scroll>table{display:table;width:100%;margin:0;border:0;border-radius:0;overflow:visible}
 @media(max-width:768px){
@@ -1087,6 +1093,7 @@ html.focus-session .main-header:hover{opacity:1}
 </section>
 
 <!-- Firebase SDK -->
+<script src="images/figmap.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -4728,6 +4735,7 @@ function loadChapter(num) {
   processHeadings();
   wrapContentTables();
   markKoreanSummaries();
+  injectTextbookFigures(num);
   addStudyExplanations(num);
   restoreHighlightsForChapter(num);
   renderMemoAnchors(num);
@@ -7560,6 +7568,44 @@ function onQuizClick(e){
   }
 }
 
+function injectTextbookFigures(num) {
+  // textbook (PDF) figures placed after the block they belong to; no text nodes are added,
+  // so saved memo/highlight character offsets stay valid
+  const list = (window.FIGMAP || {})[String(num)];
+  const root = document.getElementById('chapterContent');
+  if (!list || !root || root.querySelector('.pdf-fig')) return;
+  const norm = t => t.toLowerCase().replace(/[^0-9a-z가-힣]/g, '');
+  const els = [...root.querySelectorAll('p,li,td,h1,h2,h3,h4,h5')].filter(e => !e.querySelector('p,li,table'));
+  const keys = els.map(e => norm(e.textContent).slice(0, 50));
+  const lastFor = new Map();
+  list.forEach(([src, w, h, anchor, occ, page]) => {
+    let seen = -1, target = null;
+    for (let i = 0; i < els.length; i++) if (keys[i] === anchor && ++seen === occ) { target = els[i]; break; }
+    if (!target) return;
+    const fig = document.createElement('figure');
+    fig.className = 'pdf-fig'; fig.dataset.page = page;
+    const img = document.createElement('img');
+    img.loading = 'lazy'; img.decoding = 'async'; img.src = src; img.width = w; img.height = h;
+    img.alt = '교재 그림 p.' + page;
+    img.addEventListener('click', () => openFigViewer(src));
+    fig.appendChild(img);
+    let host = target;
+    if (target.tagName === 'TD') host = target.closest('.table-scroll') || target.closest('table');
+    const prev = lastFor.get(target);
+    if (target.tagName === 'LI') (prev ? prev.after(fig) : target.appendChild(fig));
+    else (prev || host).after(fig);
+    lastFor.set(target, fig);
+  });
+}
+function openFigViewer(src) {
+  let v = document.getElementById('figViewer');
+  if (!v) {
+    v = document.createElement('div'); v.id = 'figViewer';
+    v.innerHTML = '<img alt="">'; v.addEventListener('click', () => { v.style.display = 'none'; });
+    document.body.appendChild(v);
+  }
+  v.querySelector('img').src = src; v.style.display = 'flex';
+}
 function markKoreanSummaries() {
   // "▸ 한글 요약" lines under long English passages: box the Korean part, mute the English source
   document.querySelectorAll('#chapterContent strong').forEach(label => {
