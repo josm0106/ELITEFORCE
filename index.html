@@ -532,6 +532,20 @@ body{height:100dvh}
 .chapter-content .pdf-fig.fig-hidden::after,.chapter-content .pdf-fig.fig-hidden.fig-moved::after{content:"숨긴 교재 그림 · p." attr(data-page) " (✎ → 숨김 버튼으로 다시 보이기)";text-align:left}
 #figDropLine{position:fixed;height:4px;background:#e0572b;border-radius:2px;z-index:9999;pointer-events:none;box-shadow:0 0 0 3px rgba(224,87,43,.18);display:none}
 .chapter-content .pdf-fig img{max-width:100%;height:auto;max-height:520px;width:auto;cursor:zoom-in;border-radius:4px}
+/*figcrop*/.chapter-content .pdf-fig.fig-cropping .fig-ctl-host{display:none}
+.chapter-content .pdf-fig .fig-frame{position:relative;margin:0 auto;width:min(var(--sz,100%),calc(520px * var(--ar,1)));max-width:100%;aspect-ratio:var(--ar,1)}
+.chapter-content .pdf-fig .fig-frame img{display:block;width:100%;height:auto;max-height:none;border-radius:4px}
+.chapter-content .pdf-fig .fig-frame.cropped{overflow:hidden;border-radius:4px}
+.chapter-content .pdf-fig .fig-frame.cropped img{position:absolute;max-width:none;border-radius:0}
+.chapter-content .pdf-fig.fig-cropping .fig-frame{overflow:visible}
+.fig-cropbox{position:absolute;border:2px solid #e0572b;box-shadow:0 0 0 9999px rgba(0,0,0,.45);cursor:move;touch-action:none;z-index:2}
+.fig-cropbox i{position:absolute;width:18px;height:18px;background:#fff;border:2px solid #e0572b;border-radius:50%;touch-action:none}
+.fig-cropbox i[data-h=nw]{left:-10px;top:-10px;cursor:nwse-resize}.fig-cropbox i[data-h=ne]{right:-10px;top:-10px;cursor:nesw-resize}
+.fig-cropbox i[data-h=sw]{left:-10px;bottom:-10px;cursor:nesw-resize}.fig-cropbox i[data-h=se]{right:-10px;bottom:-10px;cursor:nwse-resize}
+.fig-cropbox i[data-h=n]{left:calc(50% - 9px);top:-10px;cursor:ns-resize}.fig-cropbox i[data-h=s]{left:calc(50% - 9px);bottom:-10px;cursor:ns-resize}
+.fig-cropbox i[data-h=e]{top:calc(50% - 9px);right:-10px;cursor:ew-resize}.fig-cropbox i[data-h=w]{top:calc(50% - 9px);left:-10px;cursor:ew-resize}
+.fig-cropbar{display:block;text-align:center;margin-top:10px;position:relative;z-index:3}
+
 .chapter-content .pdf-fig::after{content:"교재 그림 · p." attr(data-page);display:block;margin-top:4px;font-size:11px;color:#8a978c}
 .chapter-content li .pdf-fig{margin:8px 0 6px}
 #figViewer{position:fixed;inset:0;z-index:10000;background:rgba(10,20,15,.88);display:none;align-items:center;justify-content:center;padding:12px;cursor:zoom-out}
@@ -7618,7 +7632,10 @@ function injectTextbookFigures(num) {
     img.loading = 'lazy'; img.decoding = 'async'; img.src = src; img.width = w; img.height = h;
     img.alt = '교재 그림 p.' + page;
     img.addEventListener('click', () => { if (!fig.classList.contains('fig-editing')) openFigViewer(src); });
-    fig.appendChild(img);
+    const frame = document.createElement('div'); frame.className = 'fig-frame';
+    frame.appendChild(img); fig.appendChild(frame);
+    fig.dataset.w = w; fig.dataset.h = h;
+    applyFigView(fig, mv);
     attachFigControls(fig);
     placeFigAfter(fig, target);
   });
@@ -7641,6 +7658,9 @@ function attachFigControls(fig) {
     <button class="drag" title="누른 채로 끌어서 원하는 줄로 이동" aria-label="끌어서 이동">✥ 끌어서 이동</button>
     <button class="up" title="한 줄 위로" aria-label="한 줄 위로">▲</button>
     <button class="down" title="한 줄 아래로" aria-label="한 줄 아래로">▼</button>
+    <button class="crop" title="보이는 범위 자르기" aria-label="자르기">✂ 자르기</button>
+    <button class="smaller" title="작게" aria-label="작게">－</button>
+    <button class="bigger" title="크게" aria-label="크게">＋</button>
     <button class="hide" title="숨기기/보이기" aria-label="숨기기">숨김</button>
     <button class="reset" title="처음 위치로" aria-label="처음 위치로">↺</button>
     <button class="done" title="완료" aria-label="완료">완료</button>
@@ -7664,6 +7684,14 @@ function attachFigControls(fig) {
   sh.querySelector('.up').onclick = e => { e.stopPropagation(); step(-1); };
   sh.querySelector('.down').onclick = e => { e.stopPropagation(); step(1); };
   sh.querySelector('.drag').addEventListener('pointerdown', e => startFigDrag(e, fig));
+  const resize = d => {
+    const mv = figMoves[fig.dataset.src] || {};
+    const cur = mv.size || 100, next = Math.max(30, Math.min(100, cur + d));
+    setFigProp(fig, 'size', next === 100 ? undefined : next);
+  };
+  sh.querySelector('.smaller').onclick = e => { e.stopPropagation(); resize(-10); };
+  sh.querySelector('.bigger').onclick = e => { e.stopPropagation(); resize(10); };
+  sh.querySelector('.crop').onclick = e => { e.stopPropagation(); startFigCrop(fig); };
   fig.appendChild(host);
 }
 function figCurrentBlock(fig, els) {
@@ -7720,6 +7748,69 @@ function startFigDrag(e, fig) {
   };
   addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   pick(lastY); raf = requestAnimationFrame(scroller);
+}
+
+function applyFigView(fig, mv) {
+  mv = mv || figMoves[fig.dataset.src] || {};
+  const w = +fig.dataset.w, h = +fig.dataset.h, frame = fig.querySelector('.fig-frame'), img = frame.querySelector('img');
+  const [cx, cy, cw, ch] = mv.crop || [0, 0, 1, 1];
+  frame.style.setProperty('--ar', (w * cw) / (h * ch));
+  frame.style.setProperty('--sz', (mv.size || 100) + '%');
+  frame.classList.toggle('cropped', !!mv.crop);
+  if (mv.crop) {
+    Object.assign(img.style, { width: (100 / cw) + '%', left: (-cx / cw * 100) + '%', top: (-cy / ch * 100) + '%' });
+  } else { img.style.width = img.style.left = img.style.top = ''; }
+}
+function setFigProp(fig, key, val) {
+  const src = fig.dataset.src, mv = figMoves[src] ? { ...figMoves[src] } : {};
+  if (val === undefined) delete mv[key]; else mv[key] = val;
+  if (Object.keys(mv).length) figMoves[src] = mv; else delete figMoves[src];
+  applyFigView(fig, mv); syncToCloud(true);
+}
+function startFigCrop(fig) {
+  if (fig.querySelector('.fig-cropbox')) return;
+  const src = fig.dataset.src, mv = figMoves[src] || {};
+  const frame = fig.querySelector('.fig-frame');
+  // show the whole image while choosing the crop
+  applyFigView(fig, { ...mv, crop: undefined });
+  fig.classList.add('fig-cropping');
+  let [x, y, w, h] = mv.crop || [0.05, 0.05, 0.9, 0.9];
+  const box = document.createElement('div'); box.className = 'fig-cropbox';
+  ['nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w'].forEach(k => { const hd = document.createElement('i'); hd.dataset.h = k; box.appendChild(hd); });
+  const bar = document.createElement('div'); bar.className = 'fig-cropbar';
+  const host = bar.attachShadow({ mode: 'open' });
+  host.innerHTML = '<style>button{font:600 13px/1 system-ui,sans-serif;border:1px solid #c9d5c4;background:#fff;color:#315548;border-radius:6px;padding:8px 12px;margin:0 3px;cursor:pointer}'
+    + '.ok{background:#315548;color:#fff;border-color:#315548}</style>'
+    + '<button class="ok" aria-label="자르기 적용">적용</button><button class="orig" aria-label="자르기 해제">원본</button><button class="no" aria-label="취소">취소</button>';
+  frame.appendChild(box); fig.appendChild(bar);
+  const draw = () => Object.assign(box.style, { left: x * 100 + '%', top: y * 100 + '%', width: w * 100 + '%', height: h * 100 + '%' });
+  draw();
+  box.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation();
+    const r = frame.getBoundingClientRect(), k = e.target.dataset.h || 'move';
+    const sx = e.clientX, sy = e.clientY, o = [x, y, w, h], MIN = 0.06;
+    const mvf = ev => {
+      const dx = (ev.clientX - sx) / r.width, dy = (ev.clientY - sy) / r.height;
+      let [nx, ny, nw, nh] = o;
+      if (k === 'move') { nx = Math.min(1 - nw, Math.max(0, o[0] + dx)); ny = Math.min(1 - nh, Math.max(0, o[1] + dy)); }
+      if (k.includes('w')) { nx = Math.min(o[0] + o[2] - MIN, Math.max(0, o[0] + dx)); nw = o[0] + o[2] - nx; }
+      if (k.includes('e')) nw = Math.min(1 - o[0], Math.max(MIN, o[2] + dx));
+      if (k.includes('n')) { ny = Math.min(o[1] + o[3] - MIN, Math.max(0, o[1] + dy)); nh = o[1] + o[3] - ny; }
+      if (k.includes('s')) nh = Math.min(1 - o[1], Math.max(MIN, o[3] + dy));
+      [x, y, w, h] = [nx, ny, nw, nh]; draw();
+    };
+    const upf = () => { removeEventListener('pointermove', mvf); removeEventListener('pointerup', upf); removeEventListener('pointercancel', upf); };
+    addEventListener('pointermove', mvf); addEventListener('pointerup', upf); addEventListener('pointercancel', upf);
+  });
+  const end = () => { box.remove(); bar.remove(); fig.classList.remove('fig-cropping'); };
+  host.querySelector('.ok').onclick = e => {
+    e.stopPropagation(); end();
+    const r4 = v => Math.round(v * 1000) / 1000;
+    const full = x < 0.005 && y < 0.005 && w > 0.99 && h > 0.99;
+    setFigProp(fig, 'crop', full ? undefined : [r4(x), r4(y), r4(w), r4(h)]);
+  };
+  host.querySelector('.orig').onclick = e => { e.stopPropagation(); end(); setFigProp(fig, 'crop', undefined); };
+  host.querySelector('.no').onclick = e => { e.stopPropagation(); end(); applyFigView(fig); };
 }
 function openFigViewer(src) {
   let v = document.getElementById('figViewer');
