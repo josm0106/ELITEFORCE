@@ -524,6 +524,13 @@ body{height:100dvh}
 .chapter-content .ko-sum>strong:first-child{color:#3c6b4b;margin-right:4px;font-size:.92em}
 .chapter-content td .ko-sum{margin-top:5px;padding:6px 9px}
 .chapter-content .pdf-fig{margin:10px 0 18px;padding:8px;background:#fff;border:1px solid #dce3d6;border-radius:8px;text-align:center;position:relative}
+.chapter-content .pdf-fig.fig-editing{outline:2px dashed #5f8a68;outline-offset:2px}
+.chapter-content .pdf-fig.fig-dragging{opacity:.45}
+.chapter-content .pdf-fig.fig-hidden{padding:6px 8px;min-height:38px;opacity:.65}
+.chapter-content .pdf-fig.fig-hidden img{display:none}
+.chapter-content .pdf-fig.fig-moved::after{content:"교재 그림 · p." attr(data-page) " · 위치 수정됨"}
+.chapter-content .pdf-fig.fig-hidden::after,.chapter-content .pdf-fig.fig-hidden.fig-moved::after{content:"숨긴 교재 그림 · p." attr(data-page) " (✎ → 숨김 버튼으로 다시 보이기)";text-align:left}
+#figDropLine{position:fixed;height:4px;background:#e0572b;border-radius:2px;z-index:9999;pointer-events:none;box-shadow:0 0 0 3px rgba(224,87,43,.18);display:none}
 .chapter-content .pdf-fig img{max-width:100%;height:auto;max-height:520px;width:auto;cursor:zoom-in;border-radius:4px}
 .chapter-content .pdf-fig::after{content:"교재 그림 · p." attr(data-page);display:block;margin-top:4px;font-size:11px;color:#8a978c}
 .chapter-content li .pdf-fig{margin:8px 0 6px}
@@ -1285,6 +1292,7 @@ async function loadFromFirestore() {
       freeMemos = data.freeMemos || [];
       viewData = data.viewData || {};
       highlights = data.highlights || {};
+      figMoves = data.figMoves || JSON.parse(localStorage.getItem('elite_ortho_figmoves') || '{}');
     } else {
       // First login: check if localStorage has data to migrate
       const localMemos = JSON.parse(localStorage.getItem('elite_ortho_memos') || '[]');
@@ -1311,7 +1319,7 @@ async function loadFromFirestore() {
     const pending = JSON.parse(localStorage.getItem(pendingSaveKey()) || 'null');
     if (pending) {
       memos = pending.memos; freeMemos = pending.freeMemos;
-      viewData = pending.viewData; highlights = pending.highlights;
+      viewData = pending.viewData; highlights = pending.highlights; figMoves = pending.figMoves || figMoves;
     }
     showSync(pending ? 'syncing' : 'synced', pending ? '서버 미저장 자료 복원 중' : '동기화 완료');
   } catch(err) {
@@ -1322,10 +1330,11 @@ async function loadFromFirestore() {
     freeMemos = JSON.parse(localStorage.getItem('elite_ortho_freememos') || '[]');
     viewData = JSON.parse(localStorage.getItem('elite_ortho_views') || '{}');
     highlights = JSON.parse(localStorage.getItem('elite_ortho_highlights') || '{}');
+    figMoves = JSON.parse(localStorage.getItem('elite_ortho_figmoves') || '{}');
     const pending = JSON.parse(localStorage.getItem(pendingSaveKey()) || 'null');
     if (pending) {
       memos = pending.memos; freeMemos = pending.freeMemos;
-      viewData = pending.viewData; highlights = pending.highlights;
+      viewData = pending.viewData; highlights = pending.highlights; figMoves = pending.figMoves || figMoves;
     }
   }
 }
@@ -1333,7 +1342,7 @@ async function loadFromFirestore() {
 // ===== FIRESTORE: SAVE ALL DATA (debounced) =====
 function pendingSaveKey() { return 'elite_ortho_pending_' + currentUser.uid; }
 function saveSnapshot() {
-  return JSON.parse(JSON.stringify({ memos, freeMemos, viewData, highlights }));
+  return JSON.parse(JSON.stringify({ memos, freeMemos, viewData, highlights, figMoves }));
 }
 function syncToCloud(immediate = false) {
   // Always save to localStorage as backup
@@ -1341,6 +1350,7 @@ function syncToCloud(immediate = false) {
   localStorage.setItem('elite_ortho_freememos', JSON.stringify(freeMemos));
   localStorage.setItem('elite_ortho_views', JSON.stringify(viewData));
   localStorage.setItem('elite_ortho_highlights', JSON.stringify(highlights));
+  localStorage.setItem('elite_ortho_figmoves', JSON.stringify(figMoves));
   // If logged in, also sync to Firestore
   if (!firestoreReady || !currentUser) return;
   localStorage.setItem(pendingSaveKey(), JSON.stringify(saveSnapshot()));
@@ -6797,6 +6807,7 @@ function initMemoResize() {
 
 // ===== HIGHLIGHT (형광펜) SYSTEM =====
 let highlights = {};
+let figMoves = (() => { try { return JSON.parse(localStorage.getItem('elite_ortho_figmoves') || '{}'); } catch (e) { return {}; } })();
 const HL_COLORS = ['yellow','green','blue','pink','purple'];
 
 function saveHighlights() {
@@ -7568,34 +7579,147 @@ function onQuizClick(e){
   }
 }
 
+const FIG_NORM = t => t.toLowerCase().replace(/[^0-9a-z가-힣]/g, '');
+function figBlocks(root) {
+  return [...root.querySelectorAll('p,li,td,h1,h2,h3,h4,h5')]
+    .filter(e => !e.querySelector('p,li,table') && !e.closest('.pdf-fig'));
+}
+function figAnchorOf(el, els) {
+  const key = FIG_NORM(el.textContent).slice(0, 50);
+  let occ = 0;
+  for (const e of els) { if (e === el) break; if (FIG_NORM(e.textContent).slice(0, 50) === key) occ++; }
+  return { a: key, o: occ };
+}
+function placeFigAfter(fig, target) {
+  if (target.tagName === 'LI') { target.appendChild(fig); return; }
+  const host = target.tagName === 'TD' ? (target.closest('.table-scroll') || target.closest('table')) : target;
+  let after = host;
+  while (after.nextElementSibling && after.nextElementSibling.classList.contains('pdf-fig') && after.nextElementSibling !== fig) after = after.nextElementSibling;
+  after.after(fig);
+}
 function injectTextbookFigures(num) {
-  // textbook (PDF) figures placed after the block they belong to; no text nodes are added,
-  // so saved memo/highlight character offsets stay valid
+  // textbook (PDF) figures placed after the block they belong to. No text nodes are added
+  // to the chapter (controls live in a shadow root), so memo/highlight offsets stay valid.
   const list = (window.FIGMAP || {})[String(num)];
   const root = document.getElementById('chapterContent');
-  if (!list || !root || root.querySelector('.pdf-fig')) return;
-  const norm = t => t.toLowerCase().replace(/[^0-9a-z가-힣]/g, '');
-  const els = [...root.querySelectorAll('p,li,td,h1,h2,h3,h4,h5')].filter(e => !e.querySelector('p,li,table'));
-  const keys = els.map(e => norm(e.textContent).slice(0, 50));
-  const lastFor = new Map();
+  if (!list || !root) return;
+  root.querySelectorAll('.pdf-fig').forEach(f => f.remove());
+  const els = figBlocks(root);
+  const keys = els.map(e => FIG_NORM(e.textContent).slice(0, 50));
+  const find = (anchor, occ) => { let seen = -1; for (let i = 0; i < els.length; i++) if (keys[i] === anchor && ++seen === occ) return els[i]; return null; };
   list.forEach(([src, w, h, anchor, occ, page]) => {
-    let seen = -1, target = null;
-    for (let i = 0; i < els.length; i++) if (keys[i] === anchor && ++seen === occ) { target = els[i]; break; }
+    const mv = figMoves[src];
+    const target = (mv && mv.a != null && find(mv.a, mv.o)) || find(anchor, occ);
     if (!target) return;
     const fig = document.createElement('figure');
-    fig.className = 'pdf-fig'; fig.dataset.page = page;
+    fig.className = 'pdf-fig' + (mv && mv.hide ? ' fig-hidden' : '') + (mv && mv.a != null ? ' fig-moved' : '');
+    fig.dataset.page = page; fig.dataset.src = src; fig.dataset.ch = num;
     const img = document.createElement('img');
     img.loading = 'lazy'; img.decoding = 'async'; img.src = src; img.width = w; img.height = h;
     img.alt = '교재 그림 p.' + page;
-    img.addEventListener('click', () => openFigViewer(src));
+    img.addEventListener('click', () => { if (!fig.classList.contains('fig-editing')) openFigViewer(src); });
     fig.appendChild(img);
-    let host = target;
-    if (target.tagName === 'TD') host = target.closest('.table-scroll') || target.closest('table');
-    const prev = lastFor.get(target);
-    if (target.tagName === 'LI') (prev ? prev.after(fig) : target.appendChild(fig));
-    else (prev || host).after(fig);
-    lastFor.set(target, fig);
+    attachFigControls(fig);
+    placeFigAfter(fig, target);
   });
+}
+function attachFigControls(fig) {
+  const host = document.createElement('span');
+  host.className = 'fig-ctl-host';
+  const sh = host.attachShadow({ mode: 'open' });
+  sh.innerHTML = `<style>
+    :host{position:absolute;top:6px;right:6px;z-index:3}
+    button{font:600 12px/1 system-ui,sans-serif;border:1px solid #c9d5c4;background:rgba(255,255,255,.94);color:#315548;border-radius:6px;padding:7px 9px;cursor:pointer;touch-action:none}
+    button:hover{background:#eef4ea}
+    .bar{display:none;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:280px}
+    :host(.on) .bar{display:flex} :host(.on) .edit{display:none}
+    .drag{cursor:grab;background:#315548;color:#fff;border-color:#315548}
+    .edit{opacity:.6} .edit:hover{opacity:1}
+  </style>
+  <button class="edit" title="위치 수정" aria-label="사진 위치 수정">✎</button>
+  <div class="bar">
+    <button class="drag" title="누른 채로 끌어서 원하는 줄로 이동" aria-label="끌어서 이동">✥ 끌어서 이동</button>
+    <button class="up" title="한 줄 위로" aria-label="한 줄 위로">▲</button>
+    <button class="down" title="한 줄 아래로" aria-label="한 줄 아래로">▼</button>
+    <button class="hide" title="숨기기/보이기" aria-label="숨기기">숨김</button>
+    <button class="reset" title="처음 위치로" aria-label="처음 위치로">↺</button>
+    <button class="done" title="완료" aria-label="완료">완료</button>
+  </div>`;
+  const on = v => { host.classList.toggle('on', v); fig.classList.toggle('fig-editing', v); };
+  sh.querySelector('.edit').onclick = e => { e.stopPropagation(); on(true); };
+  sh.querySelector('.done').onclick = e => { e.stopPropagation(); on(false); };
+  sh.querySelector('.hide').onclick = e => { e.stopPropagation(); fig.classList.toggle('fig-hidden'); saveFigMove(fig); };
+  sh.querySelector('.reset').onclick = e => {
+    e.stopPropagation(); delete figMoves[fig.dataset.src]; syncToCloud(true);
+    const src = fig.dataset.src; injectTextbookFigures(+fig.dataset.ch);
+    const again = document.querySelector('.pdf-fig[data-src="' + src + '"]'); if (again) again.scrollIntoView({ block: 'center' });
+  };
+  const step = dir => {
+    const root = document.getElementById('chapterContent'), els = figBlocks(root);
+    const cur = figCurrentBlock(fig, els);
+    const i = cur ? els.indexOf(cur) : -1;
+    const next = els[Math.max(0, Math.min(els.length - 1, i + dir))];
+    if (next) { placeFigAfter(fig, next); saveFigMove(fig, next); fig.scrollIntoView({ block: 'nearest' }); }
+  };
+  sh.querySelector('.up').onclick = e => { e.stopPropagation(); step(-1); };
+  sh.querySelector('.down').onclick = e => { e.stopPropagation(); step(1); };
+  sh.querySelector('.drag').addEventListener('pointerdown', e => startFigDrag(e, fig));
+  fig.appendChild(host);
+}
+function figCurrentBlock(fig, els) {
+  // the block this figure currently follows
+  if (fig.parentElement && fig.parentElement.tagName === 'LI' && els.includes(fig.parentElement)) return fig.parentElement;
+  let prev = fig.previousElementSibling;
+  while (prev && prev.classList.contains('pdf-fig')) prev = prev.previousElementSibling;
+  if (!prev) return null;
+  if (els.includes(prev)) return prev;
+  const inner = [...prev.querySelectorAll('p,li,td,h1,h2,h3,h4,h5')].filter(e => els.includes(e));
+  return inner.length ? inner[inner.length - 1] : null;
+}
+function saveFigMove(fig, target) {
+  const src = fig.dataset.src, root = document.getElementById('chapterContent'), els = figBlocks(root);
+  const t = target || figCurrentBlock(fig, els);
+  const mv = figMoves[src] ? { ...figMoves[src] } : {};
+  if (t) Object.assign(mv, figAnchorOf(t, els));
+  if (fig.classList.contains('fig-hidden')) mv.hide = 1; else delete mv.hide;
+  figMoves[src] = mv; fig.classList.add('fig-moved');
+  syncToCloud(true);
+}
+function startFigDrag(e, fig) {
+  e.preventDefault(); e.stopPropagation();
+  const root = document.getElementById('chapterContent'), els = figBlocks(root);
+  const area = document.querySelector('.content-area') || document.scrollingElement;
+  const line = document.createElement('div'); line.id = 'figDropLine'; document.body.appendChild(line);
+  fig.classList.add('fig-dragging');
+  let target = null, lastY = e.clientY, raf = 0;
+  const boxOf = el => (el.tagName === 'TD' ? (el.closest('.table-scroll') || el) : el).getBoundingClientRect();
+  const pick = y => {
+    target = null; let best = Infinity;
+    for (const el of els) {
+      const box = boxOf(el);
+      if (!box.height || box.bottom < -60 || box.top > innerHeight + 60) continue;
+      const d = Math.abs(box.bottom - y);
+      if (d < best) { best = d; target = el; }
+    }
+    if (target) {
+      const tb = boxOf(target), cb = root.getBoundingClientRect();
+      Object.assign(line.style, { top: (tb.bottom + 2) + 'px', left: cb.left + 'px', width: cb.width + 'px', display: 'block' });
+    }
+  };
+  const scroller = () => {
+    const edge = 80;
+    if (lastY < edge) area.scrollBy(0, -14); else if (lastY > innerHeight - edge) area.scrollBy(0, 14);
+    pick(lastY); raf = requestAnimationFrame(scroller);
+  };
+  const move = ev => { lastY = ev.clientY; };
+  const up = () => {
+    cancelAnimationFrame(raf);
+    removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+    line.remove(); fig.classList.remove('fig-dragging');
+    if (target) { placeFigAfter(fig, target); saveFigMove(fig, target); fig.scrollIntoView({ block: 'nearest' }); }
+  };
+  addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  pick(lastY); raf = requestAnimationFrame(scroller);
 }
 function openFigViewer(src) {
   let v = document.getElementById('figViewer');
