@@ -17,7 +17,7 @@ w.firebase = { firestore: { FieldValue: { serverTimestamp: () => 'SERVER' } } };
 w.console.error = () => {};
 w.eval(`var currentUser={uid:'test'}, firestoreReady=true, syncDebounceTimer=null;
 var serverSavePromise=null,serverSaveRequested=false,serverRetryTimer=null;
-var confirmedMemoImages=new Set(),memoImgCache=new Map(),memos=[],freeMemos=[],viewData={},highlights={};
+var confirmedMemoImages=new Set(),memoImgCache=new Map(),memos=[],freeMemos=[],viewData={},highlights={},figMoves={};
 function idbGetImg(){return Promise.resolve(null)}
 ` + html.slice(html.indexOf('function showSync('), html.indexOf('// ===== ALLOWED EMAILS')) +
 html.slice(html.indexOf('function pendingSaveKey()'), html.indexOf('// ===== APP INIT')));
