@@ -4723,9 +4723,10 @@ function revealChapterInNav(num, smooth) {
     navList.scrollTo({ top: Math.max(0, top - navList.clientHeight / 2 + item.offsetHeight / 2), behavior: smooth ? 'smooth' : 'auto' });
   });
 }
-// Header chapter title → leave search results and show the chapter in the sidebar list.
+// Header chapter title → jump to the start of the chapter and show it selected in the sidebar list.
 function showCurrentChapterInNav() {
   if (!currentChapter) return;
+  document.getElementById('contentArea').scrollTo({ top: 0, behavior: 'smooth' });
   const input = document.getElementById('searchInput');
   if (input.value) { input.value = ''; renderSearch(); }
   if (window.innerWidth <= 768 && !document.querySelector('.sidebar').classList.contains('open')) toggleSidebar();
