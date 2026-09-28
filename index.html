@@ -1114,7 +1114,7 @@ html.focus-session .main-header:hover{opacity:1}
 </section>
 
 <!-- Firebase SDK -->
-<script src="images/figmap.js"></script>
+<script src="images/figmap.js?v=color1"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -7611,6 +7611,7 @@ function placeFigAfter(fig, target) {
   while (after.nextElementSibling && after.nextElementSibling.classList.contains('pdf-fig') && after.nextElementSibling !== fig) after = after.nextElementSibling;
   after.after(fig);
 }
+const FIG_VER = "?v=color1"; // 사진 교체 시 올려서 브라우저 캐시 무효화
 function injectTextbookFigures(num) {
   // textbook (PDF) figures placed after the block they belong to. No text nodes are added
   // to the chapter (controls live in a shadow root), so memo/highlight offsets stay valid.
@@ -7629,7 +7630,7 @@ function injectTextbookFigures(num) {
     fig.className = 'pdf-fig' + (mv && mv.hide ? ' fig-hidden' : '') + (mv && mv.a != null ? ' fig-moved' : '');
     fig.dataset.page = page; fig.dataset.src = src; fig.dataset.ch = num;
     const img = document.createElement('img');
-    img.loading = 'lazy'; img.decoding = 'async'; img.src = src; img.width = w; img.height = h;
+    img.loading = 'lazy'; img.decoding = 'async'; img.src = src + FIG_VER; img.width = w; img.height = h;
     img.alt = '교재 그림 p.' + page;
     img.addEventListener('click', () => { if (!fig.classList.contains('fig-editing')) openFigViewer(src); });
     const frame = document.createElement('div'); frame.className = 'fig-frame';
@@ -7819,7 +7820,7 @@ function openFigViewer(src) {
     v.innerHTML = '<img alt="">'; v.addEventListener('click', () => { v.style.display = 'none'; });
     document.body.appendChild(v);
   }
-  v.querySelector('img').src = src; v.style.display = 'flex';
+  v.querySelector('img').src = src + FIG_VER; v.style.display = 'flex';
 }
 function markKoreanSummaries() {
   // "▸ 한글 요약" lines under long English passages: box the Korean part, mute the English source
