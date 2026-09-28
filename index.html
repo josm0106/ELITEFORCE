@@ -476,7 +476,7 @@ body{height:100dvh}
 .memo-toggle .count{background:#335b46;color:#d8e9d7}
 .main{min-width:0}
 .main-header{background:#fbfcf8;border-bottom:1px solid #e0e5dc;box-shadow:none;padding:17px 30px;gap:18px;color:#59685e;font-size:13px;min-height:58px;backdrop-filter:none}
-#headerTitle{min-width:0;word-break:keep-all;overflow-wrap:anywhere;line-height:1.55}
+#headerTitle{min-width:0;word-break:keep-all;overflow-wrap:anywhere;line-height:1.55}#headerTitle.is-link{cursor:pointer}#headerTitle.is-link:hover{text-decoration:underline;text-underline-offset:3px}
 .server-save-controls{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;flex-shrink:0;max-width:55%}
 #serverSaveBtn{border:1px solid #c8d5c8;border-radius:6px;background:#f2f6ed;color:#365c45;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
 #serverSaveBtn:disabled{opacity:.65;cursor:wait}
@@ -892,7 +892,7 @@ html.focus-session .main-header:hover{opacity:1}
 <!-- MAIN -->
 <div class="main">
   <div class="main-header" id="mainHeader">
-    <span id="headerTitle">엘리트 정형외과 단원별 열람</span>
+    <span id="headerTitle" onclick="showCurrentChapterInNav()">엘리트 정형외과 단원별 열람</span>
     <div class="server-save-controls">
       <button id="timerToggle" type="button" title="집중 타이머 열기/닫기 (Alt+T)" aria-controls="focusTimer"><span class="tt-dot" aria-hidden="true"></span><span aria-hidden="true">⏱</span><span class="tt-label" id="timerToggleLabel">타이머</span></button>
       <button id="motionToggle" type="button" aria-pressed="true" aria-label="화면 모션 켜짐" onclick="toggleStudyMotion()">✦</button>
@@ -4694,6 +4694,7 @@ function goHome(event) {
   currentChapter = null;
   document.querySelectorAll('.chapter-item.active').forEach(el => el.classList.remove('active'));
   document.getElementById('headerTitle').textContent = '엘리트 정형외과 단원별 열람';
+  document.getElementById('headerTitle').classList.remove('is-link');
   document.getElementById('docxLink').style.display = 'none';
   document.getElementById('readingProgress').hidden = true;
   const area = document.getElementById('contentArea');
@@ -4704,6 +4705,32 @@ function goHome(event) {
   window.onHomeShown?.();
 }
 
+// Open the chapter's volume in the sidebar, mark it active and scroll it into the middle of the list.
+function revealChapterInNav(num, smooth) {
+  const item = document.querySelector(`.chapter-item[data-ch="${num}"]`);
+  const navList = document.getElementById('navList');
+  if (!item || !navList) return;
+  document.querySelectorAll('.chapter-item.active').forEach(el => { if (el !== item) el.classList.remove('active'); });
+  item.classList.add('active');
+  const group = item.closest('.section-group');
+  if (group) {
+    group.querySelector('.section-header').classList.add('open');
+    group.querySelector('.chapter-list').classList.add('open');
+  }
+  if (navList.hidden) return;
+  requestAnimationFrame(() => {
+    const top = item.getBoundingClientRect().top - navList.getBoundingClientRect().top + navList.scrollTop;
+    navList.scrollTo({ top: Math.max(0, top - navList.clientHeight / 2 + item.offsetHeight / 2), behavior: smooth ? 'smooth' : 'auto' });
+  });
+}
+// Header chapter title → leave search results and show the chapter in the sidebar list.
+function showCurrentChapterInNav() {
+  if (!currentChapter) return;
+  const input = document.getElementById('searchInput');
+  if (input.value) { input.value = ''; renderSearch(); }
+  if (window.innerWidth <= 768 && !document.querySelector('.sidebar').classList.contains('open')) toggleSidebar();
+  revealChapterInNav(currentChapter.num, true);
+}
 function loadChapter(num) {
   const ch = CHAPTERS_DATA[num];
   if (!ch) return;
@@ -4728,6 +4755,8 @@ function loadChapter(num) {
   }
 
   document.getElementById('headerTitle').innerHTML = `Ch${num}. ${formatContentTitle(ch.displayTitle || ch.title)}`;
+  document.getElementById('headerTitle').classList.add('is-link');
+  revealChapterInNav(num);
   const docxLink = document.getElementById('docxLink');
   if (ch.filename) {
     docxLink.style.display = 'inline-flex';
@@ -5328,8 +5357,10 @@ function renderSearch() {
   searchState = { query: '', units: [] };
   if (!query || (query.length < 2 && !/^\d$/.test(query))) {
     box.hidden = true; box.innerHTML = '';
+    const wasHidden = navList.hidden;
     navList.hidden = false;
     clearSearchHits();
+    if (wasHidden && currentChapter) revealChapterInNav(currentChapter.num);
     return;
   }
   const { units, results } = runSearch(query);
