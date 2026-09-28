@@ -883,9 +883,10 @@ html.focus-session .main-header:hover{opacity:1}
     <input type="text" id="searchInput" placeholder="내용 검색 (예: IT fx, RC repair, 골육종)" oninput="filterChapters()" autocomplete="off" spellcheck="false">
   </div>
   <div class="nav-list" id="navList"></div>
-  <div class="memo-toggle" onclick="toggleMemo()">
-    <span class="icon">📋</span> 암기노트
-    <span class="count" id="memoCount">0</span>
+  <div class="memo-toggle dock">
+    <button type="button" class="dock-btn" onclick="toggleMemo()"><span class="icon">📋</span>암기노트<span class="count" id="memoCount">0</span></button>
+    <button type="button" class="dock-btn" onclick="openReviewNote()"><span class="icon">📕</span>오답노트<span class="count" id="reviewCount">0</span></button>
+    <button type="button" class="dock-btn" onclick="openTrophy()" title="5독 챌린지 · 티어와 배지"><span class="icon" id="dockTier">🏆</span><span id="dockTierName">배지</span></button>
   </div>
 </div>
 
@@ -1307,6 +1308,8 @@ async function loadFromFirestore() {
       viewData = data.viewData || {};
       highlights = data.highlights || {};
       figMoves = data.figMoves || JSON.parse(localStorage.getItem('elite_ortho_figmoves') || '{}');
+      // study is one JSON string field: thousands of quiz results would otherwise each become an indexed Firestore field
+      studyData = data.studyJson ? JSON.parse(data.studyJson) : JSON.parse(localStorage.getItem('elite_ortho_study') || 'null');
     } else {
       // First login: check if localStorage has data to migrate
       const localMemos = JSON.parse(localStorage.getItem('elite_ortho_memos') || '[]');
@@ -1334,6 +1337,7 @@ async function loadFromFirestore() {
     if (pending) {
       memos = pending.memos; freeMemos = pending.freeMemos;
       viewData = pending.viewData; highlights = pending.highlights; figMoves = pending.figMoves || figMoves;
+      if (pending.studyJson) studyData = JSON.parse(pending.studyJson);
     }
     showSync(pending ? 'syncing' : 'synced', pending ? '서버 미저장 자료 복원 중' : '동기화 완료');
   } catch(err) {
@@ -1345,10 +1349,12 @@ async function loadFromFirestore() {
     viewData = JSON.parse(localStorage.getItem('elite_ortho_views') || '{}');
     highlights = JSON.parse(localStorage.getItem('elite_ortho_highlights') || '{}');
     figMoves = JSON.parse(localStorage.getItem('elite_ortho_figmoves') || '{}');
+    studyData = JSON.parse(localStorage.getItem('elite_ortho_study') || 'null');
     const pending = JSON.parse(localStorage.getItem(pendingSaveKey()) || 'null');
     if (pending) {
       memos = pending.memos; freeMemos = pending.freeMemos;
       viewData = pending.viewData; highlights = pending.highlights; figMoves = pending.figMoves || figMoves;
+      if (pending.studyJson) studyData = JSON.parse(pending.studyJson);
     }
   }
 }
@@ -1356,7 +1362,7 @@ async function loadFromFirestore() {
 // ===== FIRESTORE: SAVE ALL DATA (debounced) =====
 function pendingSaveKey() { return 'elite_ortho_pending_' + currentUser.uid; }
 function saveSnapshot() {
-  return JSON.parse(JSON.stringify({ memos, freeMemos, viewData, highlights, figMoves }));
+  return JSON.parse(JSON.stringify({ memos, freeMemos, viewData, highlights, figMoves, ...(studyData ? { studyJson: JSON.stringify(studyData) } : {}) }));
 }
 function syncToCloud(immediate = false) {
   // Always save to localStorage as backup
@@ -1365,6 +1371,7 @@ function syncToCloud(immediate = false) {
   localStorage.setItem('elite_ortho_views', JSON.stringify(viewData));
   localStorage.setItem('elite_ortho_highlights', JSON.stringify(highlights));
   localStorage.setItem('elite_ortho_figmoves', JSON.stringify(figMoves));
+  if (studyData) localStorage.setItem('elite_ortho_study', JSON.stringify(studyData));
   // If logged in, also sync to Firestore
   if (!firestoreReady || !currentUser) return;
   localStorage.setItem(pendingSaveKey(), JSON.stringify(saveSnapshot()));
@@ -1470,6 +1477,7 @@ function initApp() {
   }
 
   buildNav();
+  studyInit();
   initFreeMemoTargets();
   renderFilterChips();
   renderMemos();
@@ -4793,6 +4801,8 @@ function loadChapter(num) {
   addStudyExplanations(num);
   restoreHighlightsForChapter(num);
   renderMemoAnchors(num);
+  studyOnChapterLoad(num);
+  injectQuizStudy(num);
   mountSelectionMemoComposer(false);
   document.getElementById('readingProgress').hidden = false;
   area.scrollTop = savedProgress * Math.max(0, area.scrollHeight - area.clientHeight);
@@ -6667,6 +6677,7 @@ function updateReadingProgress() {
   const record = viewData[num] || (viewData[num] = { count: 0, lastViewed: 0 });
   const changed = record.scrollProgress !== ratio;
   record.scrollProgress = ratio;
+  studyTrackReading(num, ratio, area);
   const percent = Math.round(ratio * 100);
   document.getElementById('readingProgressPercent').textContent = `${percent}%`;
   document.getElementById('readingProgressBar').value = percent;
@@ -7623,6 +7634,7 @@ function onQuizClick(e){
     const mine=+opt.dataset.i;
     const result=document.querySelector('.quiz-result[data-q="'+id+'"]');
     if(result){const label=cset.includes(mine)?'정답입니다':'오답입니다 · 해설을 확인하세요';result.dataset.result=label;result.setAttribute('aria-label',label);}
+    if (typeof studyRecordAnswer === 'function') studyRecordAnswer(currentChapter.num, id, cset.includes(mine));
     if(cset.length){
       if(cset.includes(mine)){ const r=opt.getBoundingClientRect(); if(window.fireConfetti) fireConfetti(r.left+r.width/2, r.top+r.height/2); }
       else opt.classList.add('q-wrong');
@@ -8041,6 +8053,751 @@ function closeSidebar() {
   sidebar.classList.remove('open');
   overlay.classList.remove('open');
 }
+
+// ===== 오답노트 · 문항 스티커(R / ?) · 5독 배지 · 티어 =====
+// Everything is stored in studyData (saved with the other user data as the JSON string `studyJson`).
+// Question controls live in shadow roots, so chapter textContent (memo/highlight offsets) never changes.
+var studyData = null;
+const STUDY_KEY = 'elite_ortho_study';
+const STUDY_GOAL_PASSES = 5, STUDY_GOAL_DAYS = 92;
+let studyReady = false, studyVisit = { num: null, counted: false };
+
+function studyDayKey(d = new Date()) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function studyNormalize(s) {
+  s = (s && typeof s === 'object' && !Array.isArray(s)) ? s : {};
+  for (const k of ['reads', 'pass', 'quiz', 'marks', 'qtext', 'qn', 'badges', 'days', 'stats'])
+    if (!s[k] || typeof s[k] !== 'object' || Array.isArray(s[k])) s[k] = {};
+  if (!s.start) s.start = studyDayKey();
+  s.v = 1;
+  return s;
+}
+function studySave() { if (typeof syncToCloud === 'function') syncToCloud(); }
+function studyChapters() { return Object.keys(CHAPTERS_DATA).map(Number).sort((a, b) => a - b); }
+function studySectionOf(num) { return SECTIONS.findIndex(s => num >= s.range[0] && num <= s.range[1]); }
+function studySectionChapters(idx) {
+  const s = SECTIONS[idx];
+  return studyChapters().filter(n => n >= s.range[0] && n <= s.range[1]);
+}
+function studyVolShort(idx) { return (SECTIONS[idx]?.name || '').replace(/\s*-\s*/, ' '); }
+
+// ---- first run: credit chapters already read to the end as the 1st pass ----
+function studyInit() {
+  if (!studyData) { try { studyData = JSON.parse(localStorage.getItem(STUDY_KEY) || 'null'); } catch (e) { studyData = null; } }
+  studyData = studyNormalize(studyData);
+  if (!studyData.seeded) {
+    studyChapters().forEach(n => {
+      const p = Number(viewData[n]?.scrollProgress) || 0;
+      if (p >= 0.99) { studyData.reads[n] = Math.max(1, studyData.reads[n] || 0); studyData.pass[n] = [0, 0]; }
+      else if (p > 0 && !studyData.pass[n]) studyData.pass[n] = [Math.round(p * 1000) / 1000, 1];
+    });
+    studyData.seeded = 1;
+  }
+  studyReady = true;
+  studyCheckBadges(true);           // unlock silently what is already earned
+  studyCheckTier();
+  studyPaintAllChapters();
+  studyPaintDock();
+  studySave();
+}
+
+// ---- daily activity log: days[YYYY-MM-DD] = [chapterReads, correct, wrong] ----
+function studyDayAdd(i, n = 1) {
+  const k = studyDayKey();
+  const d = studyData.days[k] || (studyData.days[k] = [0, 0, 0]);
+  d[i] += n;
+  const h = new Date().getHours();
+  if (h < 4) studyData.stats.night = 1;
+  if (h >= 5 && h < 7) studyData.stats.dawn = 1;
+}
+
+// ---- reading passes (독) ----
+// A pass counts when the reader scrolls through the chapter without jumping more than ~1.5 screens
+// at a time. After a pass the chapter must be scrolled back to the top before the next one starts.
+function studyOnChapterLoad(num) { studyVisit = { num, counted: false }; }
+function studyTrackReading(num, ratio, area) {
+  if (!studyReady || !studyData) return;
+  const max = area.scrollHeight - area.clientHeight;
+  if (max <= 0) {                      // fits on one screen: one pass per visit
+    if (studyVisit.num === num && !studyVisit.counted) { studyVisit.counted = true; studyCompletePass(num); }
+    return;
+  }
+  const step = Math.max(0.25, 1.5 * area.clientHeight / max);
+  const p = studyData.pass[num] || (studyData.pass[num] = [0, 1]);
+  if (!p[1]) { if (ratio <= 0.08) { p[0] = Math.round(ratio * 1000) / 1000; p[1] = 1; } return; }
+  if (ratio > p[0] && ratio <= p[0] + step) p[0] = Math.round(ratio * 1000) / 1000;
+  if (p[0] >= 0.97) { studyData.pass[num] = [0, 0]; studyCompletePass(num); }
+}
+function studyCompletePass(num) {
+  studyData.reads[num] = (studyData.reads[num] || 0) + 1;
+  studyDayAdd(0);
+  studyToast({ icon: '📖', title: `Ch${num} ${studyData.reads[num]}독 완료`, sub: '+10 XP · ' + studyPassSummaryText() });
+  studyAfterChange(num);
+}
+function studyMinReads(nums) { return nums.length ? Math.min(...nums.map(n => studyData.reads[n] || 0)) : 0; }
+function studyBookPasses() { return studyMinReads(studyChapters()); }
+function studyVolPasses(idx) { return studyMinReads(studySectionChapters(idx)); }
+function studyPassProgress(nums) {
+  const done = studyMinReads(nums), next = done + 1;
+  return { done, next, have: nums.filter(n => (studyData.reads[n] || 0) >= next).length, total: nums.length };
+}
+function studyPassSummaryText() {
+  const p = studyPassProgress(studyChapters());
+  return `${p.next}독 진행 ${p.have}/${p.total}`;
+}
+
+// ---- quiz results: quiz[ch][q] = [wrongCount, correctDays, last(1 ok / 0 wrong), lastCorrectDay, firstTry(1/0)] ----
+function studyEntry(num, q) {
+  const ch = studyData.quiz[num] || (studyData.quiz[num] = {});
+  return ch[q] || (ch[q] = [0, 0, -1, '', -1]);
+}
+function studyRememberText(num, q, text) {
+  if (text) studyData.qtext[num + ':' + q] = text.replace(/\s+/g, ' ').trim().slice(0, 140);
+}
+function studyRecordAnswer(num, id, ok) {
+  if (!studyReady || !studyData) return;
+  const q = Number(String(id).replace(/^q/, ''));
+  const e = studyEntry(num, q), today = studyDayKey();
+  if (e[4] === -1) e[4] = ok ? 1 : 0;
+  if (ok) {
+    if (e[3] !== today) {                          // XP and "recovered" count once per question per day
+      e[1]++; e[3] = today; studyDayAdd(1);
+      if (e[2] === 0) studyData.stats.fixed = (studyData.stats.fixed || 0) + 1;
+      if (studyMarkOf(num, q).r) studyData.stats.rHit = (studyData.stats.rHit || 0) + 1;
+    }
+    e[2] = 1;
+  } else {
+    e[0]++; e[2] = 0; studyDayAdd(2);
+    studyRememberText(num, q, studyStemText(num, q));
+  }
+  studyAfterChange(num, q);
+}
+
+// ---- stickers: marks[ch][q] = { r: day, u: day } ----
+function studyMarkOf(num, q) { return (studyData?.marks[num] || {})[q] || {}; }
+function studyToggleMark(num, q, kind) {
+  const ch = studyData.marks[num] || (studyData.marks[num] = {});
+  const m = ch[q] || (ch[q] = {});
+  if (m[kind]) {
+    if (kind === 'u' && m.u !== studyDayKey()) studyData.stats.uSolved = (studyData.stats.uSolved || 0) + 1;
+    delete m[kind];
+  } else {
+    m[kind] = studyDayKey();
+    studyRememberText(num, q, studyStemText(num, q));
+  }
+  if (!Object.keys(m).length) delete ch[q];
+  if (!Object.keys(ch).length) delete studyData.marks[num];
+  studyAfterChange(num, q);
+}
+function studyChapterCounts(num) {
+  const quiz = studyData?.quiz[num] || {}, marks = studyData?.marks[num] || {};
+  const m = Object.values(marks);
+  return {
+    wrong: Object.values(quiz).filter(e => e[2] === 0).length,
+    everWrong: Object.values(quiz).filter(e => e[0] > 0).length,
+    r: m.filter(x => x.r).length, u: m.filter(x => x.u).length,
+    reads: studyData?.reads[num] || 0
+  };
+}
+
+// ---- finding the question stem (where the stickers go: left of the question number) ----
+const STUDY_SKIP = '.pdf-fig,.inline-memo-stack,.inline-memo-card,.study-explanation-link,.qself-host,.quiz-single-instruction,.quiz-statements';
+function studyFindStem(root, id) {
+  const pill = root.querySelector(`.quiz-reveal[data-q="${id}"]`);
+  if (!pill) return null;
+  const cont = root.querySelector(`.q-cont[data-qc="${id}"]`);
+  let el = cont ? (cont.closest('.table-scroll') || cont) : pill;
+  let nearest = null;
+  for (let i = 0; i < 7; i++) {
+    let prev = el.previousElementSibling;
+    while (!prev && el.parentElement && el.parentElement !== root) { el = el.parentElement; prev = el.previousElementSibling; }
+    if (!prev) break;
+    el = prev;
+    if (el.matches(STUDY_SKIP) || !el.textContent.trim()) continue;
+    if (el.matches('.quiz-answer,.quiz-reveal,.quiz-retry,.quiz-result,.q-cont,.chapter-meta') || el.querySelector('.quiz-reveal,.q-cont')) break;
+    const t = el.textContent.trim();
+    const numbered = /^(?:문제\s*)?\d{1,3}\s*[.번]\s?/.test(t) || /^문제\s*\d/.test(t) || /^Q\s*\d/i.test(t);
+    if (/^H[1-6]$/.test(el.tagName)) return (numbered || !nearest) ? el : nearest;
+    if (numbered) return el;
+    nearest = nearest || el;
+  }
+  return nearest || pill;
+}
+function studyStemText(num, q) {
+  const root = document.getElementById('chapterContent');
+  if (!root || currentChapter?.num !== num) return '';
+  const stem = studyFindStem(root, 'q' + q);
+  return stem && !stem.classList.contains('quiz-reveal') ? stem.textContent : '';
+}
+
+// ---- in-chapter UI ----
+const QM_CSS = `
+:host{display:inline-flex;align-items:center;gap:5px;margin:0 9px 0 -2px;vertical-align:middle;line-height:1;position:relative;top:-1px}
+button{all:unset;cursor:pointer;display:inline-grid;place-items:center;box-sizing:border-box;font:800 13px/1 'Times New Roman',serif;transition:transform .18s,opacity .18s,box-shadow .18s}
+button:focus-visible{outline:2px solid #2f6b52;outline-offset:2px}
+.r{width:26px;height:26px;border-radius:50%;color:#b8bfb9;border:1.5px dashed #c9d2cb;opacity:.55}
+.u{width:26px;height:26px;border-radius:50%;color:#b8bfb9;border:1.5px dashed #c9d2cb;opacity:.55;font-family:system-ui,sans-serif;font-size:14px}
+button:hover{opacity:1;transform:scale(1.08)}
+.r.on{opacity:1;color:#fff;border:0;background:radial-gradient(circle at 32% 28%,#ff8a7a,#e0342a 58%,#a3140f);box-shadow:0 2px 5px rgba(160,20,15,.45),inset 0 -2px 3px rgba(0,0,0,.18);transform:rotate(-8deg);font-size:15px;width:30px;height:30px}
+.u.on{opacity:1;color:#4b3aa8;border:2.5px solid #5b47c4;background:rgba(236,232,255,.85);box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 3.5px #5b47c4;transform:rotate(12deg);font-size:17px;font-weight:900;width:30px;height:30px}
+.wr{font:700 11px/1 system-ui,sans-serif;color:#c0392b;background:#fdecea;border:1px solid #f3c1bb;border-radius:9px;padding:4px 7px;white-space:nowrap}
+.wr.ok{color:#2f6b52;background:#e7f3ec;border-color:#bcd9c7}
+.wr[hidden]{display:none}
+`;
+const QSELF_CSS = `
+:host{display:inline-flex;gap:6px;margin:6px 0 4px 8px;vertical-align:middle}
+button{all:unset;cursor:pointer;font:600 12px/1 system-ui,sans-serif;padding:7px 11px;border-radius:14px;border:1px solid #c9d8cd;background:#fbfdfb;color:#3c5a4b}
+button:hover{background:#eef5ef}
+.x.on{background:#fdecea;border-color:#e6a39b;color:#b3261e}
+.o.on{background:#e3f2e8;border-color:#8fc3a2;color:#23643f}
+`;
+function injectQuizStudy(num) {
+  const root = document.getElementById('chapterContent');
+  if (!root || !studyData) return;
+  const pills = [...root.querySelectorAll('.quiz-reveal[data-q]')];
+  studyData.qn[num] = pills.filter(p => studyGradable(root, p)).length;
+  pills.forEach(pill => {
+    const id = pill.dataset.q, q = Number(id.slice(1));
+    const stem = studyFindStem(root, id);
+    if (stem && stem !== pill && !stem.querySelector(':scope > .qm-host')) {
+      const host = document.createElement('span');
+      host.className = 'qm-host'; host.dataset.q = id;
+      const sh = host.attachShadow({ mode: 'open' });
+      sh.innerHTML = `<style>${QM_CSS}</style><button class="r" data-k="r"></button><button class="u" data-k="u"></button><span class="wr" hidden></span>`;
+      sh.addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) return;
+        e.stopPropagation();
+        studyToggleMark(num, q, b.dataset.k);
+      });
+      stem.prepend(host);
+      stem.classList.add('qm-stem');
+    }
+    if (!studyGradable(root, pill) && !pill.parentNode.querySelector(`.qself-host[data-q="${id}"]`)) {
+      const host = document.createElement('span');
+      host.className = 'qself-host'; host.dataset.q = id;
+      const sh = host.attachShadow({ mode: 'open' });
+      sh.innerHTML = `<style>${QSELF_CSS}</style><button class="o" aria-label="맞혔어요">○ 맞힘</button><button class="x" aria-label="틀렸어요 · 오답노트에 추가">✗ 틀림</button>`;
+      sh.addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) return;
+        e.stopPropagation();
+        studyRecordAnswer(num, id, b.classList.contains('o'));
+      });
+      pill.after(host);
+    }
+    studyPaintQuestion(num, q);
+  });
+  studyPaintChapterMeta(num);
+}
+function studyGradable(root, pill) {
+  const cont = root.querySelector(`.q-cont[data-qc="${pill.dataset.q}"]`);
+  return !!cont && cont.dataset.review !== 'true' && (pill.dataset.correct || '').split(',').filter(Boolean).length === 1;
+}
+function studyPaintQuestion(num, q) {
+  const root = document.getElementById('chapterContent');
+  if (!root || currentChapter?.num !== num) return;
+  const m = studyMarkOf(num, q), e = (studyData.quiz[num] || {})[q];
+  const host = root.querySelector(`.qm-host[data-q="q${q}"]`);
+  if (host) {
+    const sh = host.shadowRoot, r = sh.querySelector('.r'), u = sh.querySelector('.u'), wr = sh.querySelector('.wr');
+    r.textContent = 'R'; u.textContent = '?';
+    r.classList.toggle('on', !!m.r); u.classList.toggle('on', !!m.u);
+    r.title = m.r ? 'R 반복 문제 · 누르면 해제' : 'R 스티커 붙이기 · 반복해야 할 문제';
+    u.title = m.u ? '? 도장 · 잘 모르는 문제 · 누르면 해제' : '? 도장 찍기 · 잘 모르겠는 문제';
+    r.setAttribute('aria-pressed', !!m.r); u.setAttribute('aria-pressed', !!m.u);
+    r.setAttribute('aria-label', r.title); u.setAttribute('aria-label', u.title);
+    if (e && e[0] > 0) {
+      wr.hidden = false;
+      wr.classList.toggle('ok', e[2] === 1);
+      wr.textContent = e[2] === 1 ? `오답 ${e[0]}회 → 극복` : `오답 ${e[0]}회`;
+    } else wr.hidden = true;
+    host.closest('.qm-stem')?.classList.toggle('qm-flag', !!(m.r || m.u || (e && e[2] === 0)));
+  }
+  const self = root.querySelector(`.qself-host[data-q="q${q}"]`);
+  if (self && e) {
+    self.shadowRoot.querySelector('.o').classList.toggle('on', e[2] === 1);
+    self.shadowRoot.querySelector('.x').classList.toggle('on', e[2] === 0);
+  }
+}
+function studyPaintChapterMeta(num) {
+  const meta = document.querySelector('#chapterContent .chapter-meta');
+  if (!meta || !studyData) return;
+  let host = meta.querySelector(':scope > .study-meta-host');
+  if (!host) {
+    host = document.createElement('div'); host.className = 'study-meta-host';
+    host.attachShadow({ mode: 'open' });
+    meta.appendChild(host);
+  }
+  const c = studyChapterCounts(num), p = studyData.pass[num];
+  const cover = p && p[1] ? Math.round(p[0] * 100) : 0;
+  host.shadowRoot.innerHTML = `<style>
+    :host{display:block;margin-top:10px}
+    .row{display:flex;flex-wrap:wrap;gap:6px;font:600 11.5px/1 system-ui,sans-serif}
+    span{padding:6px 9px;border-radius:12px;background:#eef4ee;color:#3b5a4a;border:1px solid #d3e2d6}
+    .w{background:#fdecea;color:#b3261e;border-color:#f1c0ba}.r{background:#fde9e7;color:#c0392b;border-color:#f3b8b1}
+    .u{background:#eeeafd;color:#4b3aa8;border-color:#d4cdf6}.p{background:#f7f1e3;color:#8a6a1f;border-color:#e6d6ae}
+  </style><div class="row">
+    <span class="p" title="이 단원을 끝까지 읽은 횟수">📖 ${c.reads}독${cover ? ` · 다음 독 ${cover}%` : ''}</span>
+    <span class="w" title="마지막 풀이가 오답인 문제">오답 ${c.wrong}</span>
+    <span class="r" title="R 스티커 붙인 문제">R ${c.r}</span>
+    <span class="u" title="? 도장 찍은 문제">? ${c.u}</span>
+  </div>`;
+}
+function studyPaintChapterItem(num) {
+  const item = document.querySelector(`.chapter-item[data-ch="${num}"]`);
+  if (!item || !studyData) return;
+  let el = item.querySelector('.ch-study');
+  const c = studyChapterCounts(num);
+  const parts = [];
+  if (c.reads) parts.push(`<span class="cs-read" title="${c.reads}독 완료">📖${c.reads}</span>`);
+  if (c.wrong) parts.push(`<span class="cs-wrong" title="오답 ${c.wrong}문제">✗${c.wrong}</span>`);
+  if (c.r) parts.push(`<span class="cs-r" title="R 반복 ${c.r}문제">R${c.r}</span>`);
+  if (c.u) parts.push(`<span class="cs-u" title="? 모름 ${c.u}문제">?${c.u}</span>`);
+  if (!parts.length) { el?.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.className = 'ch-study'; item.querySelector('.ch-title-row')?.after(el); }
+  el.innerHTML = parts.join('');
+}
+function studyPaintAllChapters() { studyChapters().forEach(studyPaintChapterItem); }
+
+function studyAfterChange(num, q) {
+  if (q != null) studyPaintQuestion(num, q);
+  if (currentChapter?.num === num) studyPaintChapterMeta(num);
+  studyPaintChapterItem(num);
+  studyCheckBadges(false);
+  studyCheckTier();
+  studyPaintDock();
+  if (document.getElementById('reviewDialog')?.open) renderReviewNote();
+  if (document.getElementById('trophyDialog')?.open) renderTrophy();
+  studySave();
+}
+
+// ===== XP · 티어 =====
+const STUDY_TIERS = [
+  { name: '아이언', en: 'IRON', at: 0, c: ['#4d4744', '#8f8a86', '#cfcac6'] },
+  { name: '브론즈', en: 'BRONZE', at: 800, c: ['#6b3d22', '#b0703f', '#f0bf8a'] },
+  { name: '실버', en: 'SILVER', at: 2500, c: ['#56636e', '#a9b6c1', '#f2f6f9'] },
+  { name: '골드', en: 'GOLD', at: 5500, c: ['#7d5a10', '#d4a52c', '#fff0b3'] },
+  { name: '플래티넘', en: 'PLATINUM', at: 9500, c: ['#1e5f5a', '#4fb3a8', '#c9f5ee'] },
+  { name: '에메랄드', en: 'EMERALD', at: 14500, c: ['#0b5234', '#22a86a', '#a8f5cf'] },
+  { name: '다이아몬드', en: 'DIAMOND', at: 20000, c: ['#29398f', '#6f8cf0', '#e0e8ff'] },
+  { name: '마스터', en: 'MASTER', at: 25000, gate: 3, c: ['#4d1a6e', '#a45bd6', '#f1d6ff'] },
+  { name: '그랜드마스터', en: 'GRANDMASTER', at: 31000, gate: 4, c: ['#6e1020', '#d9404f', '#ffd0d0'] },
+  { name: '챌린저', en: 'CHALLENGER', at: 38000, gate: 5, c: ['#123a70', '#3d8fd6', '#fff3b0'] }
+];
+const STUDY_RARITY = {
+  common: { xp: 30, label: '일반', ring: ['#7a4a26', '#c98a57', '#f3c998'] },
+  rare: { xp: 80, label: '희귀', ring: ['#5c6873', '#b8c4ce', '#f7fafc'] },
+  epic: { xp: 200, label: '영웅', ring: ['#7d5a10', '#e0b43a', '#fff2b8'] },
+  legend: { xp: 500, label: '전설', ring: ['#4a1d7a', '#c26bff', '#ffe28a'] }
+};
+function studyXP() {
+  if (!studyData) return 0;
+  let xp = 0;
+  Object.values(studyData.reads).forEach(n => xp += 10 * n);
+  Object.values(studyData.quiz).forEach(ch => Object.values(ch).forEach(e => xp += e[1]));
+  xp += 3 * (studyData.stats.fixed || 0);
+  Object.keys(studyData.badges).forEach(id => { const b = STUDY_BADGES.find(x => x.id === id); if (b) xp += STUDY_RARITY[b.rarity].xp; });
+  return xp;
+}
+function studyTier() {
+  const xp = studyXP(), passes = studyBookPasses();
+  let index = 0;
+  STUDY_TIERS.forEach((t, i) => { if (xp >= t.at && (!t.gate || passes >= t.gate)) index = i; });
+  const t = STUDY_TIERS[index], next = STUDY_TIERS[index + 1];
+  const span = (next ? next.at : t.at + 10000) - t.at;
+  let div = '';
+  if (index <= 6) { const d = Math.min(3, Math.floor(Math.max(0, xp - t.at) / (span / 4))); div = ['IV', 'III', 'II', 'I'][d]; }
+  return { index, tier: t, next, xp, div, span, passes,
+    label: t.name + (div ? ' ' + div : ''),
+    pct: next ? Math.max(0, Math.min(100, (xp - t.at) / span * 100)) : 100,
+    gateNote: next && next.gate && passes < next.gate && xp >= next.at ? `${next.name} 승급 조건: 전권 ${next.gate}독` : '' };
+}
+function studyCheckTier() {
+  const t = studyTier();
+  const key = t.index * 10 + (t.div ? ['IV', 'III', 'II', 'I'].indexOf(t.div) : 0);
+  if (studyData.tierSeen == null) studyData.tierSeen = t.index;
+  if (studyData.divSeen == null) studyData.divSeen = key;
+  if (key > studyData.divSeen) {
+    const up = t.index > studyData.tierSeen;
+    studyToast({ svg: studyTierEmblem(t.index, 64), title: up ? `승급! ${t.label}` : `${t.label} 달성`, sub: `${t.xp.toLocaleString()} XP`, big: up });
+    if (up && window.fireConfetti) fireConfetti(innerWidth / 2, 120);
+  }
+  studyData.tierSeen = Math.max(studyData.tierSeen, t.index);
+  studyData.divSeen = Math.max(studyData.divSeen, key);
+}
+let studySvgSeq = 0;
+function studyTierEmblem(index, size = 96) {
+  const t = STUDY_TIERS[index], id = 'te' + (++studySvgSeq), [d, m, l] = t.c;
+  const wings = index >= 4 ? `<path d="M22 40 C4 44 2 66 10 84 C14 70 20 62 30 58 Z M98 40 C116 44 118 66 110 84 C106 70 100 62 90 58 Z" fill="url(#${id}w)" stroke="${d}" stroke-width="1.5"/>` : '';
+  const crown = index >= 7 ? `<path d="M42 17 L46 3 L54 11 L60 1 L66 11 L74 3 L78 17 Z" fill="url(#${id}g)" stroke="${d}" stroke-width="1.5"/>` : '';
+  const rays = index >= 9 ? `<g stroke="${l}" stroke-width="2" opacity=".85">${[...Array(12)].map((_, i) => { const a = i * Math.PI / 6; return `<line x1="${60 + 50 * Math.cos(a)}" y1="${62 + 50 * Math.sin(a)}" x2="${60 + 58 * Math.cos(a)}" y2="${62 + 58 * Math.sin(a)}"/>`; }).join('')}</g>` : '';
+  return `<svg viewBox="0 0 120 124" width="${size}" height="${size}" aria-hidden="true"><defs>
+    <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${l}"/><stop offset=".45" stop-color="${m}"/><stop offset="1" stop-color="${d}"/></linearGradient>
+    <linearGradient id="${id}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${l}"/><stop offset="1" stop-color="${m}"/></linearGradient>
+    <radialGradient id="${id}j" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="${l}"/><stop offset="1" stop-color="${m}"/></radialGradient></defs>
+    ${rays}${wings}
+    <path d="M60 12 L99 28 L95 72 Q89 99 60 114 Q31 99 25 72 L21 28 Z" fill="url(#${id}g)" stroke="${d}" stroke-width="3"/>
+    <path d="M60 24 L88 36 L85 70 Q80 91 60 102 Q40 91 35 70 L32 36 Z" fill="${d}" opacity=".55"/>
+    <path d="M60 38 L78 60 L60 88 L42 60 Z" fill="url(#${id}j)" stroke="${l}" stroke-width="1.5"/>
+    <path d="M60 38 L78 60 L60 60 Z" fill="#fff" opacity=".35"/>${crown}</svg>`;
+}
+function studyBadgeMedal(b, earned, size = 64) {
+  const r = STUDY_RARITY[b.rarity], id = 'bm' + (++studySvgSeq), [d, m, l] = r.ring;
+  const ribbon = b.rarity !== 'common' ? `<path d="M34 70 L26 98 L38 92 L44 102 L50 74 Z M66 70 L74 98 L62 92 L56 102 L50 74 Z" fill="${b.rarity === 'legend' ? '#6d2fb0' : b.rarity === 'epic' ? '#b3261e' : '#2f6b52'}" opacity=".9"/>` : '';
+  return `<svg viewBox="0 0 100 104" width="${size}" height="${size}" class="${earned ? '' : 'locked'}" aria-hidden="true"><defs>
+    <linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${l}"/><stop offset=".5" stop-color="${m}"/><stop offset="1" stop-color="${d}"/></linearGradient></defs>
+    ${ribbon}<circle cx="50" cy="46" r="40" fill="url(#${id})" stroke="${d}" stroke-width="2"/>
+    <circle cx="50" cy="46" r="31" fill="#fffdf6" stroke="${d}" stroke-width="1.2" opacity=".96"/>
+    ${b.rarity === 'legend' ? `<circle cx="50" cy="46" r="35.5" fill="none" stroke="#fff" stroke-width="1" stroke-dasharray="2 4" opacity=".8"/>` : ''}
+    <text x="50" y="58" text-anchor="middle" font-size="31" font-family="Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif">${b.icon}</text></svg>`;
+}
+
+// ===== 배지 (권별 칭호 30 + 도전 과제 26) =====
+const STUDY_VOL_TITLES = [
+  ['🧬', '종양 탐험가', '종양 추적자', '종양 정복자'],
+  ['📘', '총론 수련생', '총론 학자', '총론의 현자'],
+  ['💪', '어깨 견습생', '견주관절 장인', '견주관절 마스터'],
+  ['✋', '손끝 수련생', '수부 장인', '수부의 신'],
+  ['🦴', '고관절 입문자', '고관절 수호자', '고관절 대가'],
+  ['🦵', '무릎 탐험가', '슬관절 수호자', '슬관절 대가'],
+  ['🦶', '족부 여행자', '족부 장인', '족부의 달인'],
+  ['🧍', '척추 수련생', '척추 기사', '척추 대가'],
+  ['🧸', '소아 돌봄이', '소아 수호자', '소아정형 대가'],
+  ['🚑', '외상 대원', '외상 지휘관', '외상 사령관']
+];
+function studySum(obj, f) { return Object.values(obj).reduce((s, x) => s + f(x), 0); }
+function studyTotalReads() { return studySum(studyData.reads, n => n); }
+function studyTotalCorrect() { return studySum(studyData.quiz, ch => studySum(ch, e => e[1])); }
+function studyStreaks() {
+  const days = Object.keys(studyData.days).filter(k => { const d = studyData.days[k]; return d[0] + d[1] + d[2] > 0; }).sort();
+  let best = 0, run = 0, prev = null;
+  days.forEach(k => {
+    const t = new Date(k + 'T00:00:00');
+    run = prev && (t - prev) / 864e5 === 1 ? run + 1 : 1;
+    best = Math.max(best, run); prev = t;
+  });
+  const today = studyDayKey(), y = studyDayKey(new Date(Date.now() - 864e5));
+  const last = days[days.length - 1];
+  return { best, current: last === today || last === y ? run : 0, activeDays: days.length };
+}
+function studyBestDay(i) { return Math.max(0, ...Object.values(studyData.days).map(d => d[i])); }
+function studyPerfectChapter() {
+  return Object.entries(studyData.qn).some(([num, n]) => {
+    if (n < 5) return false;
+    const es = Object.values(studyData.quiz[num] || {}).filter(e => e[4] !== -1);
+    return es.length >= n && es.every(e => e[4] === 1);
+  });
+}
+function studyGoalEnd() { const d = new Date(studyData.start + 'T00:00:00'); d.setDate(d.getDate() + STUDY_GOAL_DAYS); return d; }
+const STUDY_BADGES = [
+  ...STUDY_VOL_TITLES.flatMap(([icon, t1, t3, t5], i) => [
+    { id: `vol${i + 1}_1`, group: 'vol', vol: i, lv: 1, icon, name: t1, rarity: 'rare', desc: `Vol.${i + 1} 전 단원 1독`, test: () => studyVolPasses(i) >= 1 },
+    { id: `vol${i + 1}_3`, group: 'vol', vol: i, lv: 3, icon, name: t3, rarity: 'epic', desc: `Vol.${i + 1} 전 단원 3독`, test: () => studyVolPasses(i) >= 3 },
+    { id: `vol${i + 1}_5`, group: 'vol', vol: i, lv: 5, icon, name: t5, rarity: 'legend', desc: `Vol.${i + 1} 전 단원 5독`, test: () => studyVolPasses(i) >= 5 }
+  ]),
+  { id: 'read1', icon: '🌱', name: '첫 페이지', rarity: 'common', desc: '단원 하나를 끝까지 읽기', test: () => studyTotalReads() >= 1 },
+  { id: 'read10', icon: '🔥', name: '워밍업', rarity: 'common', desc: '단원 완독 누적 10회', test: () => studyTotalReads() >= 10 },
+  { id: 'read100', icon: '📚', name: '백 단원 돌파', rarity: 'rare', desc: '단원 완독 누적 100회', test: () => studyTotalReads() >= 100 },
+  { id: 'read500', icon: '🏔️', name: '오백 고지', rarity: 'epic', desc: '단원 완독 누적 500회', test: () => studyTotalReads() >= 500 },
+  { id: 'read1000', icon: '🛤️', name: '천 리 길', rarity: 'epic', desc: '단원 완독 누적 1,000회', test: () => studyTotalReads() >= 1000 },
+  { id: 'book1', icon: '🥉', name: '1독 완주', rarity: 'epic', desc: '전 10권 1독', test: () => studyBookPasses() >= 1 },
+  { id: 'book2', icon: '🥈', name: '2독 완주', rarity: 'epic', desc: '전 10권 2독', test: () => studyBookPasses() >= 2 },
+  { id: 'book3', icon: '🥇', name: '3독 완주', rarity: 'legend', desc: '전 10권 3독', test: () => studyBookPasses() >= 3 },
+  { id: 'book4', icon: '💎', name: '4독 완주', rarity: 'legend', desc: '전 10권 4독', test: () => studyBookPasses() >= 4 },
+  { id: 'book5', icon: '👑', name: '엘리트 5독', rarity: 'legend', desc: '전 10권 5독 · 최종 목표', test: () => studyBookPasses() >= 5 },
+  { id: 'goal5', icon: '⏱️', name: '석 달의 기적', rarity: 'legend', desc: `목표 시작일부터 ${STUDY_GOAL_DAYS}일 안에 5독`, test: () => studyBookPasses() >= 5 && new Date() <= studyGoalEnd() },
+  { id: 'q1', icon: '✅', name: '첫 정답', rarity: 'common', desc: '문제 하나 맞히기', test: () => studyTotalCorrect() >= 1 },
+  { id: 'q100', icon: '🎯', name: '백발백중', rarity: 'rare', desc: '정답 누적 100회 (문항당 하루 1회)', test: () => studyTotalCorrect() >= 100 },
+  { id: 'q1000', icon: '🏹', name: '명사수', rarity: 'epic', desc: '정답 누적 1,000회', test: () => studyTotalCorrect() >= 1000 },
+  { id: 'q3000', icon: '🧠', name: '문제 은행 털이', rarity: 'legend', desc: '정답 누적 3,000회', test: () => studyTotalCorrect() >= 3000 },
+  { id: 'fix1', icon: '🩹', name: '오답 극복', rarity: 'common', desc: '틀렸던 문제를 다시 맞히기', test: () => (studyData.stats.fixed || 0) >= 1 },
+  { id: 'fix50', icon: '🗡️', name: '오답 사냥꾼', rarity: 'rare', desc: '오답 극복 50회', test: () => (studyData.stats.fixed || 0) >= 50 },
+  { id: 'fix200', icon: '⚔️', name: '오답 킬러', rarity: 'epic', desc: '오답 극복 200회', test: () => (studyData.stats.fixed || 0) >= 200 },
+  { id: 'rhit20', icon: '🔁', name: '반복의 힘', rarity: 'rare', desc: 'R 스티커 문제를 20번 맞히기', test: () => (studyData.stats.rHit || 0) >= 20 },
+  { id: 'usolve20', icon: '💡', name: '의문 해소', rarity: 'rare', desc: '? 도장 20개 해제 (찍은 다음 날 이후)', test: () => (studyData.stats.uSolved || 0) >= 20 },
+  { id: 'perfect', icon: '🌟', name: '퍼펙트 단원', rarity: 'epic', desc: '문제 5개 이상인 단원을 첫 시도에 모두 정답', test: studyPerfectChapter },
+  { id: 'streak3', icon: '📅', name: '3일 연속', rarity: 'common', desc: '3일 연속 학습', test: () => studyStreaks().best >= 3 },
+  { id: 'streak7', icon: '🗓️', name: '일주일 개근', rarity: 'rare', desc: '7일 연속 학습', test: () => studyStreaks().best >= 7 },
+  { id: 'streak30', icon: '🏅', name: '한 달 개근', rarity: 'epic', desc: '30일 연속 학습', test: () => studyStreaks().best >= 30 },
+  { id: 'streak90', icon: '🏆', name: '90일의 약속', rarity: 'legend', desc: '90일 연속 학습', test: () => studyStreaks().best >= 90 },
+  { id: 'day10', icon: '⚡', name: '폭풍 독서', rarity: 'rare', desc: '하루에 단원 10개 완독', test: () => studyBestDay(0) >= 10 },
+  { id: 'day100', icon: '🌪️', name: '문제 폭격', rarity: 'rare', desc: '하루에 100문제 풀기', test: () => Math.max(0, ...Object.values(studyData.days).map(d => d[1] + d[2])) >= 100 },
+  { id: 'night', icon: '🦉', name: '올빼미', rarity: 'common', desc: '자정 ~ 새벽 4시에 공부', test: () => !!studyData.stats.night },
+  { id: 'dawn', icon: '🌅', name: '새벽의 전공의', rarity: 'common', desc: '새벽 5 ~ 7시에 공부', test: () => !!studyData.stats.dawn }
+];
+function studyCheckBadges(silent) {
+  const fresh = [];
+  STUDY_BADGES.forEach(b => {
+    if (studyData.badges[b.id]) return;
+    let ok = false; try { ok = b.test(); } catch (e) { ok = false; }
+    if (ok) { studyData.badges[b.id] = studyDayKey(); fresh.push(b); }
+  });
+  if (!silent) fresh.forEach(b => studyToast({ svg: studyBadgeMedal(b, true, 58), title: `배지 획득 · ${b.name}`, sub: `${STUDY_RARITY[b.rarity].label} · ${b.desc} · +${STUDY_RARITY[b.rarity].xp} XP`, big: b.rarity === 'legend' || b.rarity === 'epic' }));
+  if (!silent && fresh.some(b => b.rarity !== 'common') && window.fireConfetti) fireConfetti(innerWidth / 2, 110);
+}
+
+// ===== 토스트 =====
+const studyToastQueue = [];
+let studyToastBusy = false;
+function studyToast(t) { studyToastQueue.push(t); if (!studyToastBusy) studyNextToast(); }
+function studyNextToast() {
+  const t = studyToastQueue.shift();
+  if (!t) { studyToastBusy = false; return; }
+  studyToastBusy = true;
+  const el = document.createElement('div');
+  el.className = 'study-toast' + (t.big ? ' big' : '');
+  el.setAttribute('role', 'status');
+  el.innerHTML = `<div class="st-ico">${t.svg || `<span>${t.icon || '⭐'}</span>`}</div><div><b>${escapeHtml(t.title)}</b><small>${escapeHtml(t.sub || '')}</small></div>`;
+  el.onclick = () => { el.remove(); openTrophy(); };
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('in'));
+  setTimeout(() => { el.classList.remove('in'); setTimeout(() => { el.remove(); studyNextToast(); }, 350); }, t.big ? 4200 : 2600);
+}
+
+// ===== 사이드바 하단 버튼 =====
+function studyPaintDock() {
+  if (!studyData) return;
+  const all = studyReviewItems();
+  const el = document.getElementById('reviewCount'); if (el) el.textContent = all.length;
+  const t = studyTier();
+  const icon = document.getElementById('dockTier'); if (icon) icon.innerHTML = studyTierEmblem(t.index, 22);
+  const name = document.getElementById('dockTierName'); if (name) name.textContent = t.label;
+}
+
+// ===== 오답노트 =====
+let reviewTab = 'wrong', reviewVol = 'all';
+function studyReviewItems() {
+  const out = new Map();
+  const add = (num, q) => { const k = num + ':' + q; if (!out.has(k)) out.set(k, { num: +num, q: +q }); return out.get(k); };
+  Object.entries(studyData.quiz).forEach(([num, ch]) => Object.entries(ch).forEach(([q, e]) => {
+    if (!CHAPTERS_DATA[num]) return;
+    if (e[2] === 0) add(num, q).wrong = true;
+    if (e[0] > 0) { const it = add(num, q); it.ever = true; it.e = e; }
+  }));
+  Object.entries(studyData.marks).forEach(([num, ch]) => Object.entries(ch).forEach(([q, m]) => {
+    if (!CHAPTERS_DATA[num]) return;
+    const it = add(num, q); if (m.r) it.r = true; if (m.u) it.u = true;
+  }));
+  return [...out.values()].filter(it => it.wrong || it.r || it.u || it.ever)
+    .map(it => ({ ...it, e: it.e || (studyData.quiz[it.num] || {})[it.q], text: studyData.qtext[it.num + ':' + it.q] || '' }))
+    .filter(it => it.wrong || it.r || it.u);
+}
+function openReviewNote() {
+  let d = document.getElementById('reviewDialog');
+  if (!d) {
+    d = document.createElement('dialog'); d.id = 'reviewDialog'; d.className = 'study-dialog';
+    d.setAttribute('aria-labelledby', 'reviewTitle');
+    d.addEventListener('click', e => { if (e.target === d) d.close(); });
+    document.body.appendChild(d);
+  }
+  renderReviewNote();
+  if (!d.open) d.showModal();
+}
+function renderReviewNote() {
+  const d = document.getElementById('reviewDialog');
+  if (!d || !studyData) return;
+  const all = studyReviewItems();
+  const inVol = it => reviewVol === 'all' || studySectionOf(it.num) === Number(reviewVol);
+  const tabs = [
+    ['wrong', '✗ 오답', it => it.wrong],
+    ['r', 'R 반복', it => it.r],
+    ['u', '? 모름', it => it.u],
+    ['all', '전체', () => true]
+  ];
+  const f = tabs.find(t => t[0] === reviewTab)[2];
+  const list = all.filter(it => f(it) && inVol(it)).sort((a, b) => a.num - b.num || a.q - b.q);
+  const groups = new Map();
+  list.forEach(it => { if (!groups.has(it.num)) groups.set(it.num, []); groups.get(it.num).push(it); });
+  const volOpts = SECTIONS.map((s, i) => `<option value="${i}"${String(i) === String(reviewVol) ? ' selected' : ''}>${escapeHtml(s.name)} (${all.filter(it => f(it) && studySectionOf(it.num) === i).length})</option>`).join('');
+  d.innerHTML = `
+    <div class="sd-head"><h2 id="reviewTitle">📕 오답노트</h2><button class="sd-close" aria-label="닫기">×</button></div>
+    <div class="rv-tabs" role="tablist">${tabs.map(([k, label, fn]) => `<button role="tab" aria-selected="${k === reviewTab}" data-tab="${k}" class="${k === reviewTab ? 'on' : ''} t-${k}">${label} <b>${all.filter(it => fn(it) && inVol(it)).length}</b></button>`).join('')}</div>
+    <div class="rv-tools"><select aria-label="권 선택"><option value="all">전체 10권</option>${volOpts}</select>
+      <span class="rv-hint">문항을 누르면 해당 문제로 이동합니다</span></div>
+    <div class="rv-list">${groups.size ? [...groups.entries()].map(([num, items]) => {
+      const ch = CHAPTERS_DATA[num], c = studyChapterCounts(num);
+      return `<section><h3><span class="rv-ch">Ch${num}</span> ${escapeHtml((ch.displayTitle || ch.title).replace(/^\d+단원\s*/, ''))}
+        <span class="rv-cnt">${c.wrong ? `<i class="w">오답 ${c.wrong}</i>` : ''}${c.r ? `<i class="r">R ${c.r}</i>` : ''}${c.u ? `<i class="u">? ${c.u}</i>` : ''}</span></h3>
+        ${items.map(it => `<button class="rv-item" data-num="${num}" data-q="${it.q}">
+          <span class="rv-marks">${it.r ? '<i class="st-r">R</i>' : ''}${it.u ? '<i class="st-u">?</i>' : ''}${it.wrong ? '<i class="st-w">✗</i>' : ''}</span>
+          <span class="rv-text">${escapeHtml(it.text || `문항 ${it.q + 1}`)}</span>
+          <span class="rv-meta">${it.e && it.e[0] ? `오답 ${it.e[0]}회` : ''}${it.e && it.e[1] ? ` · 정답 ${it.e[1]}회` : ''}</span></button>`).join('')}</section>`;
+    }).join('') : `<div class="rv-empty">${reviewTab === 'wrong' ? '오답이 없습니다. 문제를 풀면 틀린 문제가 여기에 모입니다.' : reviewTab === 'r' ? '문항 번호 왼쪽의 R 을 눌러 반복할 문제를 표시하세요.' : reviewTab === 'u' ? '문항 번호 왼쪽의 ? 를 눌러 잘 모르는 문제를 표시하세요.' : '표시한 문제가 없습니다.'}</div>`}</div>`;
+  d.querySelector('.sd-close').onclick = () => d.close();
+  d.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { reviewTab = b.dataset.tab; renderReviewNote(); });
+  d.querySelector('select').onchange = e => { reviewVol = e.target.value; renderReviewNote(); };
+  d.querySelectorAll('.rv-item').forEach(b => b.onclick = () => { d.close(); studyGoToQuestion(Number(b.dataset.num), Number(b.dataset.q)); });
+}
+function studyGoToQuestion(num, q) {
+  if (currentChapter?.num !== num) loadChapter(num);
+  const root = document.getElementById('chapterContent');
+  const target = root && (root.querySelector(`.qm-host[data-q="q${q}"]`)?.parentElement || root.querySelector(`.quiz-reveal[data-q="q${q}"]`));
+  if (!target) return;
+  requestAnimationFrame(() => {
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    target.classList.remove('qm-flash'); void target.offsetWidth; target.classList.add('qm-flash');
+    setTimeout(() => target.classList.remove('qm-flash'), 2600);
+  });
+}
+
+// ===== 업적 · 티어 화면 =====
+function openTrophy() {
+  let d = document.getElementById('trophyDialog');
+  if (!d) {
+    d = document.createElement('dialog'); d.id = 'trophyDialog'; d.className = 'study-dialog trophy';
+    d.setAttribute('aria-labelledby', 'trophyTitle');
+    d.addEventListener('click', e => { if (e.target === d) d.close(); });
+    document.body.appendChild(d);
+  }
+  renderTrophy();
+  if (!d.open) d.showModal();
+}
+function renderTrophy() {
+  const d = document.getElementById('trophyDialog');
+  if (!d || !studyData) return;
+  const t = studyTier(), book = studyPassProgress(studyChapters()), streak = studyStreaks();
+  const all = studyChapters(), goalTotal = all.length * STUDY_GOAL_PASSES;
+  const goalDone = all.reduce((s, n) => s + Math.min(STUDY_GOAL_PASSES, studyData.reads[n] || 0), 0);
+  const end = studyGoalEnd(), today = new Date(studyDayKey() + 'T00:00:00');
+  const daysLeft = Math.max(0, Math.round((end - today) / 864e5));
+  const elapsed = Math.max(0, STUDY_GOAL_DAYS - daysLeft);
+  const perDay = Math.ceil((goalTotal - goalDone) / Math.max(1, daysLeft));
+  const expected = Math.round(goalTotal * Math.min(1, elapsed / STUDY_GOAL_DAYS));
+  const todayReads = (studyData.days[studyDayKey()] || [0])[0];
+  const pace = goalDone >= expected ? `<b class="ok">계획보다 ${goalDone - expected}단원 앞서 있어요</b>` : `<b class="behind">계획보다 ${expected - goalDone}단원 뒤처졌어요</b>`;
+  const earned = STUDY_BADGES.filter(b => studyData.badges[b.id]).length;
+  const ladder = STUDY_TIERS.map((x, i) => `<div class="tl-step${i === t.index ? ' cur' : ''}${i < t.index ? ' done' : ''}" title="${x.name} · ${x.at.toLocaleString()} XP${x.gate ? ` · 전권 ${x.gate}독 필요` : ''}">${studyTierEmblem(i, 34)}<span>${x.name}</span></div>`).join('');
+  const vols = SECTIONS.map((s, i) => {
+    const p = studyPassProgress(studySectionChapters(i));
+    const [icon] = STUDY_VOL_TITLES[i];
+    const medals = [1, 3, 5].map(lv => { const b = STUDY_BADGES.find(x => x.id === `vol${i + 1}_${lv}`); const got = !!studyData.badges[b.id];
+      return `<div class="bd${got ? ' got' : ''}" title="${escapeHtml(b.name)} · ${escapeHtml(b.desc)}${got ? ' · ' + studyData.badges[b.id] + ' 획득' : ''}">${studyBadgeMedal(b, got, 46)}<span>${escapeHtml(b.name)}</span></div>`; }).join('');
+    return `<div class="vol-card"><div class="vc-head"><span class="vc-ico">${icon}</span><b>${escapeHtml(s.name)}</b><span class="vc-pass">${p.done}독</span></div>
+      <div class="vc-bar"><i style="width:${p.total ? p.have / p.total * 100 : 0}%"></i></div><small>${p.next}독 진행 ${p.have}/${p.total} 단원</small><div class="vc-medals">${medals}</div></div>`;
+  }).join('');
+  const general = STUDY_BADGES.filter(b => b.group !== 'vol').map(b => { const got = !!studyData.badges[b.id];
+    return `<div class="bd${got ? ' got' : ''} r-${b.rarity}" title="${escapeHtml(b.desc)}${got ? ' · ' + studyData.badges[b.id] + ' 획득' : ''}">${studyBadgeMedal(b, got, 58)}<span>${escapeHtml(b.name)}</span><small>${escapeHtml(b.desc)}</small></div>`; }).join('');
+  d.innerHTML = `
+    <div class="sd-head"><h2 id="trophyTitle">🏆 5독 챌린지</h2><button class="sd-close" aria-label="닫기">×</button></div>
+    <div class="tr-hero" style="--t1:${t.tier.c[1]};--t2:${t.tier.c[2]}">
+      <div class="tr-emblem">${studyTierEmblem(t.index, 118)}</div>
+      <div class="tr-info"><small>${t.tier.en}</small><h3>${t.label}</h3>
+        <div class="tr-xp"><i style="width:${t.pct}%"></i></div>
+        <p>${t.xp.toLocaleString()} XP${t.next ? ` · 다음 ${t.next.name}까지 ${Math.max(0, t.next.at - t.xp).toLocaleString()} XP` : ' · 최고 티어!'}</p>
+        ${t.gateNote ? `<p class="gate">🔒 ${t.gateNote}</p>` : ''}
+        <p class="tr-how">XP: 단원 완독 +10 · 정답 +1 (문항당 하루 1회) · 오답 극복 +3 · 배지 +30~500</p></div></div>
+    <div class="tr-ladder">${ladder}</div>
+    <div class="tr-goal">
+      <div class="g-top"><b>목표: ${STUDY_GOAL_DAYS}일 안에 전 10권 5독</b><span>D-${daysLeft} · ${end.getFullYear()}.${end.getMonth() + 1}.${end.getDate()}까지</span></div>
+      <div class="g-bar"><i style="width:${goalDone / goalTotal * 100}%"></i><em style="left:${expected / goalTotal * 100}%" title="오늘까지 계획"></em></div>
+      <div class="g-nums"><span>${goalDone.toLocaleString()} / ${goalTotal.toLocaleString()} 단원·회독 (${(goalDone / goalTotal * 100).toFixed(1)}%)</span><span>현재 전권 <b>${book.done}독</b> · ${book.next}독 ${book.have}/${book.total}</span></div>
+      <div class="g-stats">
+        <div><b>${todayReads}</b><small>오늘 완독 / 권장 ${perDay}</small></div>
+        <div><b>${streak.current}일</b><small>연속 학습 (최고 ${streak.best}일)</small></div>
+        <div><b>${earned}/${STUDY_BADGES.length}</b><small>배지</small></div>
+        <div><b>${studyTotalCorrect().toLocaleString()}</b><small>누적 정답</small></div>
+      </div>
+      <p class="g-pace">${pace} · 하루 ${perDay}단원씩 읽으면 기한 안에 5독!</p>
+      <label class="g-start">목표 시작일 <input type="date" value="${studyData.start}"></label>
+    </div>
+    <h4>권별 칭호 <small>각 권을 1·3·5독 하면 칭호 배지를 받습니다</small></h4>
+    <div class="vol-grid">${vols}</div>
+    <h4>도전 과제 <small>${STUDY_BADGES.filter(b => b.group !== 'vol' && studyData.badges[b.id]).length}/${STUDY_BADGES.filter(b => b.group !== 'vol').length}</small></h4>
+    <div class="bd-grid">${general}</div>
+    <p class="tr-foot">단원 완독은 본문을 처음부터 끝까지 스크롤해 읽으면 자동으로 기록됩니다. 다음 회독은 단원 맨 위로 돌아간 뒤부터 셉니다.</p>`;
+  d.querySelector('.sd-close').onclick = () => d.close();
+  d.querySelector('.g-start input').onchange = e => { if (e.target.value) { studyData.start = e.target.value; studySave(); renderTrophy(); } };
+}
+
+document.head.insertAdjacentHTML('beforeend', `<style id="studyCss">
+.memo-toggle.dock{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:8px 10px;cursor:default}
+.memo-toggle.dock:hover{background:var(--dark)}
+.dock-btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 4px;border-radius:9px;color:#dfe9e1;font-size:11.5px;line-height:1.2;text-align:center;position:relative;min-width:0;transition:background .18s}
+.dock-btn:hover{background:#1f3a33}.dock-btn:focus-visible{outline:2px solid #7fbfa4}
+.dock-btn .icon{font-size:17px;line-height:1}
+.dock-btn .count{position:absolute;top:2px;right:6px;background:#335b46;color:#d8e9d7;font-size:9.5px;padding:1px 6px;border-radius:9px;font-weight:700}
+.dock-btn #reviewCount{background:#a8322a;color:#fff}
+.dock-btn #dockTier svg{display:block}
+#dockTierName{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;color:#f3dfa6;font-weight:700}
+.nav-list{padding-bottom:84px}
+.ch-study{display:flex;flex-wrap:wrap;gap:4px;padding-left:33px;margin-top:5px}
+.ch-study span{font:700 10px/1 system-ui,sans-serif;padding:3px 6px;border-radius:8px;background:rgba(255,255,255,.08);color:#cfe0d3}
+.ch-study .cs-wrong{background:#8f2a23;color:#fff}.ch-study .cs-r{background:#d9443a;color:#fff}.ch-study .cs-u{background:#5b47c4;color:#fff}.ch-study .cs-read{background:#6d5a26;color:#fbeab8}
+.qm-stem.qm-flag{box-shadow:inset 3px 0 0 #e0342a;padding-left:10px;border-radius:2px}
+.qm-flash{animation:qmFlash 2.4s ease}
+@keyframes qmFlash{0%,40%{background:rgba(255,214,102,.55)}100%{background:transparent}}
+.quiz-reveal:not(.shown) ~ .qself-host{display:none}
+.study-dialog{margin:auto;border:0;border-radius:18px;padding:0;width:min(860px,94vw);max-height:90vh;background:#fbfaf5;color:#243b30;box-shadow:0 30px 80px rgba(10,30,20,.35);font-family:'Times New Roman','Malgun Gothic',serif}
+.study-dialog::backdrop{background:rgba(12,28,22,.55);backdrop-filter:blur(3px)}
+.sd-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:16px 22px;background:#fbfaf5;border-bottom:1px solid #e3e8df}
+.sd-head h2{margin:0;font-size:20px}
+.sd-close{all:unset;cursor:pointer;font-size:26px;line-height:1;padding:2px 8px;border-radius:8px;color:#5a6f63}.sd-close:hover{background:#eef2ec}
+.rv-tabs{display:flex;gap:6px;padding:14px 22px 0;flex-wrap:wrap}
+.rv-tabs button{all:unset;cursor:pointer;padding:9px 14px;border-radius:20px;border:1px solid #d6e0d8;font-size:13.5px;background:#fff}
+.rv-tabs button b{margin-left:4px}
+.rv-tabs button.on{background:#2f6b52;color:#fff;border-color:#2f6b52}
+.rv-tabs .t-wrong.on{background:#b3261e;border-color:#b3261e}.rv-tabs .t-r.on{background:#d9443a;border-color:#d9443a}.rv-tabs .t-u.on{background:#5b47c4;border-color:#5b47c4}
+.rv-tools{display:flex;gap:12px;align-items:center;padding:12px 22px;flex-wrap:wrap}
+.rv-tools select{padding:7px 10px;border-radius:8px;border:1px solid #cfdad2;background:#fff;font:inherit;font-size:13px}
+.rv-hint{font-size:12px;color:#7a8b80}
+.rv-list{padding:0 22px 22px}
+.rv-list section{margin:10px 0 16px}
+.rv-list h3{font-size:15px;margin:0 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rv-ch{font-size:11px;background:#e7efe9;color:#2f6b52;padding:3px 7px;border-radius:7px}
+.rv-cnt{display:flex;gap:4px;margin-left:auto}.rv-cnt i{font-style:normal;font-size:11px;padding:3px 7px;border-radius:8px}
+.rv-cnt .w{background:#fdecea;color:#b3261e}.rv-cnt .r{background:#fde9e7;color:#c0392b}.rv-cnt .u{background:#eeeafd;color:#4b3aa8}
+.rv-item{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;width:100%;padding:11px 12px;border:1px solid #e1e8e2;border-radius:10px;background:#fff;margin-bottom:6px;font-size:13.5px;line-height:1.5}
+.rv-item:hover{border-color:#9cc3ad;background:#f6fbf7}
+.rv-marks{display:flex;gap:4px}.rv-marks i{font-style:normal;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font:800 12px/1 'Times New Roman',serif}
+.rv-marks .st-r{background:radial-gradient(circle at 32% 28%,#ff8a7a,#e0342a 58%,#a3140f);color:#fff;transform:rotate(-8deg)}
+.rv-marks .st-u{border:2px solid #5b47c4;color:#4b3aa8;background:#eeeafd;transform:rotate(12deg);font-family:system-ui}
+.rv-marks .st-w{background:#fdecea;color:#b3261e;border:1px solid #f1c0ba;font-family:system-ui}
+.rv-text{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.rv-meta{font-size:11.5px;color:#8a978e;white-space:nowrap}
+.rv-empty{padding:40px 10px;text-align:center;color:#7a8b80;line-height:1.8}
+.trophy{width:min(980px,95vw)}
+.tr-hero{display:flex;gap:22px;align-items:center;margin:18px 22px 6px;padding:20px 24px;border-radius:16px;color:#fff;background:radial-gradient(circle at 15% 30%,color-mix(in srgb,var(--t2) 35%,transparent),transparent 60%),linear-gradient(135deg,#10231d,#1f3f35 60%,color-mix(in srgb,var(--t1) 55%,#10231d))}
+.tr-emblem{filter:drop-shadow(0 8px 18px rgba(0,0,0,.45));animation:trFloat 4s ease-in-out infinite}
+@keyframes trFloat{50%{transform:translateY(-5px)}}
+.tr-info{flex:1;min-width:0}.tr-info small{letter-spacing:.25em;opacity:.7;font-size:11px}
+.tr-info h3{margin:2px 0 10px;font-size:30px;color:var(--t2)}
+.tr-xp{height:10px;border-radius:6px;background:rgba(255,255,255,.15);overflow:hidden}.tr-xp i{display:block;height:100%;background:linear-gradient(90deg,var(--t1),var(--t2));border-radius:6px}
+.tr-info p{margin:8px 0 0;font-size:13px;opacity:.92}.tr-info .gate{color:#ffd98a}.tr-info .tr-how{font-size:11.5px;opacity:.65}
+.tr-ladder{display:flex;justify-content:space-between;gap:2px;padding:10px 22px 4px;overflow-x:auto}
+.tl-step{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;color:#8a978e;opacity:.55;filter:grayscale(.35);min-width:52px}
+.tl-step.done{opacity:.85;filter:none}.tl-step.cur{opacity:1;filter:none;color:#243b30;font-weight:700;transform:scale(1.12)}
+.tr-goal{margin:12px 22px;padding:16px 18px;border-radius:14px;background:#fff;border:1px solid #e3e8df}
+.g-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px}.g-top span{color:#b3261e;font-weight:700}
+.g-bar{position:relative;height:14px;border-radius:8px;background:#eef2ec;margin:12px 0 6px;overflow:visible}
+.g-bar i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,#2f6b52,#7fbfa4,#e0b43a)}
+.g-bar em{position:absolute;top:-4px;bottom:-4px;width:2px;background:#b3261e}
+.g-nums{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;color:#5a6f63}
+.g-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.g-stats div{background:#f5f8f4;border-radius:10px;padding:10px;text-align:center}.g-stats b{display:block;font-size:20px;color:#2f6b52}.g-stats small{font-size:11px;color:#6f8276}
+.g-pace{font-size:13px;margin:12px 0 6px}.g-pace .ok{color:#2f6b52}.g-pace .behind{color:#b3261e}
+.g-start{font-size:12px;color:#6f8276}.g-start input{font:inherit;margin-left:6px;padding:3px 6px;border:1px solid #cfdad2;border-radius:6px}
+.trophy h4{margin:20px 22px 8px;font-size:16px}.trophy h4 small{font-weight:400;color:#7a8b80;font-size:12px;margin-left:6px}
+.vol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;padding:0 22px}
+.vol-card{background:#fff;border:1px solid #e3e8df;border-radius:12px;padding:12px}
+.vc-head{display:flex;align-items:center;gap:8px;font-size:13.5px}.vc-ico{font-size:18px}.vc-pass{margin-left:auto;background:#f7f1e3;color:#8a6a1f;border-radius:8px;padding:2px 8px;font-weight:700;font-size:12px}
+.vc-bar{height:6px;border-radius:4px;background:#eef2ec;margin:9px 0 4px;overflow:hidden}.vc-bar i{display:block;height:100%;background:#2f6b52}
+.vol-card small{font-size:11px;color:#7a8b80}
+.vc-medals{display:flex;justify-content:space-around;margin-top:8px}
+.bd{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;font-size:11px;color:#9aa69e}
+.bd svg.locked{filter:grayscale(1);opacity:.28}
+.bd.got{color:#243b30;font-weight:700}.bd.got svg{filter:drop-shadow(0 3px 6px rgba(120,90,20,.3))}
+.bd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:12px 8px;padding:0 22px}
+.bd-grid .bd small{font-weight:400;font-size:10.5px;color:#8a978e;line-height:1.35}
+.bd.got.r-legend svg{animation:bdGlow 2.6s ease-in-out infinite}
+@keyframes bdGlow{50%{filter:drop-shadow(0 0 10px rgba(194,107,255,.8))}}
+.tr-foot{font-size:11.5px;color:#8a978e;padding:10px 22px 22px}
+.study-toast{position:fixed;top:18px;left:50%;transform:translate(-50%,-140%);z-index:10000;display:flex;gap:12px;align-items:center;padding:12px 18px 12px 12px;border-radius:14px;background:linear-gradient(135deg,#132a23,#24473b);color:#fff;box-shadow:0 14px 40px rgba(0,0,0,.35);cursor:pointer;transition:transform .35s cubic-bezier(.2,.9,.3,1.3);max-width:92vw;font-family:'Times New Roman','Malgun Gothic',serif}
+.study-toast.in{transform:translate(-50%,0)}
+.study-toast.big{border:1px solid #e0b43a;box-shadow:0 0 0 3px rgba(224,180,58,.25),0 14px 40px rgba(0,0,0,.4)}
+.study-toast .st-ico{display:grid;place-items:center;min-width:44px;font-size:30px}
+.study-toast b{display:block;font-size:15px;color:#f3dfa6}.study-toast small{display:block;font-size:12px;opacity:.85;margin-top:3px}
+@media(max-width:640px){.g-stats{grid-template-columns:repeat(2,1fr)}.tr-hero{flex-direction:column;text-align:center}.tr-info h3{font-size:24px}.rv-item{grid-template-columns:auto 1fr}.rv-meta{grid-column:2}}
+</style>`);
 
 // ===== INIT =====
 // App initialization is now handled by initApp() after Firebase auth
