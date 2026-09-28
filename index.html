@@ -1482,7 +1482,7 @@ function initApp() {
   });
   // Enter key to add free memo
   document.getElementById('freeMemoInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
       e.preventDefault();
       addFreeMemo();
     }
@@ -5630,7 +5630,7 @@ function editInlineMemo(m, type, host) {
   form.querySelector('[data-action="bold"]').onclick=()=>toggleMemoBold(input);
   form.onkeydown=e=>{
     if(e.key==='Escape'){e.preventDefault();cancel();}
-    else if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();form.requestSubmit();}
+    else if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();form.requestSubmit();}
   };
   form.onsubmit=e=>{
     e.preventDefault();
@@ -5713,6 +5713,13 @@ function readMemoImage(file, target) {
   reader.onerror = () => alert('이미지 파일을 읽지 못했습니다.');
   reader.readAsDataURL(file);
 }
+selectionMemoElement('selectionMemoNote').addEventListener('keydown', e => {
+  // Enter saves, Shift+Enter inserts a line break (ignored while the Korean IME is composing).
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+    e.preventDefault();
+    saveSelectionMemo();
+  }
+});
 selectionMemoElement('selectionMemoNote').addEventListener('paste', e => {
   const image = Array.from(e.clipboardData?.items || []).find(item => item.type.startsWith('image/'));
   if (!image || !selectionMemoDraft) return;
