@@ -527,7 +527,9 @@ body{height:100dvh}
 .chapter-content .pdf-fig.fig-editing{outline:2px dashed #5f8a68;outline-offset:2px}
 .chapter-content .pdf-fig.fig-dragging{opacity:.45}
 .chapter-content .pdf-fig.fig-hidden{padding:6px 8px;min-height:38px;opacity:.65}
-.chapter-content .pdf-fig.fig-hidden img{display:none}
+.chapter-content .pdf-fig.fig-hidden img,.chapter-content .pdf-fig.fig-hidden .fig-frame{display:none}
+.fig-restore-bar{display:flex;align-items:center;gap:8px;margin:0 auto 14px;max-width:900px;font-size:12px;color:#6b7f70}
+.fig-restore-bar button{border:1px solid #c9d5c4;background:#fff;color:#315548;border-radius:6px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
 .chapter-content .pdf-fig.fig-moved::after{content:"교재 그림 · p." attr(data-page) " · 위치 수정됨"}
 .chapter-content .pdf-fig.fig-hidden::after,.chapter-content .pdf-fig.fig-hidden.fig-moved::after{content:"숨긴 교재 그림 · p." attr(data-page) " (✎ → 숨김 버튼으로 다시 보이기)";text-align:left}
 #figDropLine{position:fixed;height:4px;background:#e0572b;border-radius:2px;z-index:9999;pointer-events:none;box-shadow:0 0 0 3px rgba(224,87,43,.18);display:none}
@@ -7763,6 +7765,7 @@ function injectTextbookFigures(num) {
   const find = (anchor, occ) => { let seen = -1; for (let i = 0; i < els.length; i++) if (keys[i] === anchor && ++seen === occ) return els[i]; return null; };
   list.forEach(([src, w, h, anchor, occ, page]) => {
     const mv = figMoves[src];
+    if (mv && mv.del) return;   // 사용자가 삭제한 그림
     const target = (mv && mv.a != null && find(mv.a, mv.o)) || find(anchor, occ);
     if (!target) return;
     const fig = document.createElement('figure');
@@ -7780,6 +7783,7 @@ function injectTextbookFigures(num) {
     placeFigAfter(fig, target);
     if (!(mv && mv.a != null)) liftFigOutOfAnswer(fig, root);
   });
+  renderFigRestoreBar(num);
 }
 // 해설(정답 보기 전 숨김) 안에 들어간 그림은 문제를 풀 때 보이도록 문제 본문 바로 아래(보기 위)로 올림
 function liftFigOutOfAnswer(fig, root) {
@@ -7792,6 +7796,20 @@ function liftFigOutOfAnswer(fig, root) {
   if (!spot) spot = root.querySelector('.quiz-reveal[data-q="' + id + '"]');
   if (!spot || spot.closest('.quiz-answer')) return;
   spot.before(fig);
+}
+// 이 단원에서 삭제한 교재 그림 복원 막대
+function renderFigRestoreBar(num) {
+  const root = document.getElementById('chapterContent'); if (!root) return;
+  root.parentElement.querySelectorAll('.fig-restore-bar').forEach(el => el.remove());
+  const list = ((window.FIGMAP || {})[String(num)] || []).filter(x => figMoves[x[0]] && figMoves[x[0]].del);
+  if (!list.length) return;
+  const bar = document.createElement('div'); bar.className = 'fig-restore-bar';
+  bar.innerHTML = `<span>🗑 이 단원에서 삭제한 교재 그림 ${list.length}개</span><button type="button">모두 복원</button>`;
+  bar.querySelector('button').onclick = () => {
+    list.forEach(x => { const mv = { ...figMoves[x[0]] }; delete mv.del; if (Object.keys(mv).length) figMoves[x[0]] = mv; else delete figMoves[x[0]]; });
+    syncToCloud(true); injectTextbookFigures(num); renderFigRestoreBar(num);
+  };
+  root.before(bar);
 }
 function attachFigControls(fig) {
   const host = document.createElement('span');
@@ -7815,6 +7833,7 @@ function attachFigControls(fig) {
     <button class="smaller" title="작게" aria-label="작게">－</button>
     <button class="bigger" title="크게" aria-label="크게">＋</button>
     <button class="hide" title="숨기기/보이기" aria-label="숨기기">숨김</button>
+    <button class="del" title="이 그림 삭제 (단원 위 '삭제한 그림 복원'으로 되돌릴 수 있음)" aria-label="삭제" style="color:#a4483c;border-color:#e3c4bd">🗑 삭제</button>
     <button class="reset" title="처음 위치로" aria-label="처음 위치로">↺</button>
     <button class="done" title="완료" aria-label="완료">완료</button>
   </div>`;
@@ -7822,6 +7841,12 @@ function attachFigControls(fig) {
   sh.querySelector('.edit').onclick = e => { e.stopPropagation(); on(true); };
   sh.querySelector('.done').onclick = e => { e.stopPropagation(); on(false); };
   sh.querySelector('.hide').onclick = e => { e.stopPropagation(); fig.classList.toggle('fig-hidden'); saveFigMove(fig); };
+  sh.querySelector('.del').onclick = e => {
+    e.stopPropagation();
+    const src = fig.dataset.src, mv = figMoves[src] ? { ...figMoves[src] } : {};
+    mv.del = Date.now(); figMoves[src] = mv; syncToCloud(true);
+    const ch = +fig.dataset.ch; fig.remove(); renderFigRestoreBar(ch);
+  };
   sh.querySelector('.reset').onclick = e => {
     e.stopPropagation(); delete figMoves[fig.dataset.src]; syncToCloud(true);
     const src = fig.dataset.src; injectTextbookFigures(+fig.dataset.ch);
