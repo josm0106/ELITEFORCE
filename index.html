@@ -4829,6 +4829,7 @@ function loadChapter(num) {
   renderMemoAnchors(num);
   studyOnChapterLoad(num);
   injectQuizStudy(num);
+  restoreQuizPicks(num);
   mountSelectionMemoComposer(false);
   document.getElementById('readingProgress').hidden = false;
   area.scrollTop = savedProgress * Math.max(0, area.scrollHeight - area.clientHeight);
@@ -7648,6 +7649,7 @@ function resetQuiz(id){
   if(pill){ pill.classList.remove('shown'); pill.focus({preventScroll:true}); }
   const retry=root.querySelector('.quiz-retry[data-q="'+id+'"]');
   if(retry) retry.hidden=true;
+  if (typeof studySavePick === 'function' && currentChapter) studySavePick(currentChapter.num, id, null);
   removeMemoMarkerPop();
   updateReadingProgress();
 }
@@ -7674,6 +7676,7 @@ function onQuizClick(e){
     if(cset.length!==1) return;
     opt.classList.add('q-selected');opt.setAttribute('aria-checked','true');
     const mine=+opt.dataset.i;
+    if (typeof studySavePick === 'function') studySavePick(currentChapter.num, id, mine);
     const result=document.querySelector('.quiz-result[data-q="'+id+'"]');
     if(result){const label=cset.includes(mine)?'정답입니다':'오답입니다 · 해설을 확인하세요';result.dataset.result=label;result.setAttribute('aria-label',label);}
     if (typeof studyRecordAnswer === 'function') studyRecordAnswer(currentChapter.num, id, cset.includes(mine));
@@ -8111,7 +8114,7 @@ function studyDayKey(d = new Date()) {
 }
 function studyNormalize(s) {
   s = (s && typeof s === 'object' && !Array.isArray(s)) ? s : {};
-  for (const k of ['reads', 'pass', 'quiz', 'marks', 'qtext', 'qn', 'badges', 'days', 'stats'])
+  for (const k of ['reads', 'pass', 'quiz', 'marks', 'qtext', 'qn', 'badges', 'days', 'stats', 'pick'])
     if (!s[k] || typeof s[k] !== 'object' || Array.isArray(s[k])) s[k] = {};
   if (!s.start) s.start = studyDayKey();
   s.v = 1;
@@ -8296,6 +8299,31 @@ button:hover{background:#eef5ef}
 .x.on{background:#fdecea;border-color:#e6a39b;color:#b3261e}
 .o.on{background:#e3f2e8;border-color:#8fc3a2;color:#23643f}
 `;
+// ---- 선택한 보기 저장·복원: pick[ch][qN] = 보기 번호 (다시 풀기 누르면 삭제) ----
+function studySavePick(num, id, i) {
+  if (!studyData) return;
+  studyData.pick = studyData.pick || {};
+  const ch = studyData.pick[num] || (studyData.pick[num] = {});
+  if (i == null) { delete ch[id]; if (!Object.keys(ch).length) delete studyData.pick[num]; }
+  else ch[id] = i;
+  studySave();
+}
+function restoreQuizPicks(num) {
+  const root = document.getElementById('chapterContent');
+  const picks = (studyData && studyData.pick && studyData.pick[num]) || {};
+  if (!root) return;
+  Object.entries(picks).forEach(([id, i]) => {
+    const opt = root.querySelector('.q-opt[data-q="' + id + '"][data-i="' + i + '"],.q-table-opt[data-q="' + id + '"][data-i="' + i + '"]');
+    const pill = root.querySelector('.quiz-reveal[data-q="' + id + '"]');
+    if (!opt || !pill) return;
+    const cset = (pill.dataset.correct || '').split(',').filter(Boolean).map(Number);
+    opt.classList.add('q-selected'); opt.setAttribute('aria-checked', 'true');
+    if (!cset.includes(+i)) opt.classList.add('q-wrong');
+    const result = root.querySelector('.quiz-result[data-q="' + id + '"]');
+    if (result) { const label = cset.includes(+i) ? '정답입니다' : '오답입니다 · 해설을 확인하세요'; result.dataset.result = label; result.setAttribute('aria-label', label); }
+    quizRevealGroup(id, true);
+  });
+}
 function injectQuizStudy(num) {
   const root = document.getElementById('chapterContent');
   if (!root || !studyData) return;
