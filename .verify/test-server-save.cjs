@@ -19,6 +19,7 @@ w.eval(`var currentUser={uid:'test'}, firestoreReady=true, syncDebounceTimer=nul
 var serverSavePromise=null,serverSaveRequested=false,serverRetryTimer=null;
 var confirmedMemoImages=new Set(),memoImgCache=new Map(),memos=[],freeMemos=[],viewData={},highlights={},figMoves={},studyData=null;
 function idbGetImg(){return Promise.resolve(null)}
+function ukey(k){return k}
 ` + html.slice(html.indexOf('function showSync('), html.indexOf('// ===== ALLOWED EMAILS')) +
 html.slice(html.indexOf('function pendingSaveKey()'), html.indexOf('// ===== APP INIT')));
 w.eval(html.slice(html.indexOf('async function loadFromFirestore()'), html.indexOf('// ===== FIRESTORE: SAVE ALL DATA')));

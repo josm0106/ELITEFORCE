@@ -873,6 +873,13 @@ html.focus-session .main-header:hover{opacity:1}
 .fs-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11px;color:#718073}
 .fs-reset{border:0;background:#edf2e7;color:#45614b;border-radius:5px;padding:4px 9px;font-size:11px;cursor:pointer}
 @media(max-width:768px){#fontSizeBtn{padding:4px 8px}#fontSizeBtn .fs-val{display:none}.fs-panel{position:fixed;top:56px;right:12px;left:12px;width:auto}}
+
+/* Desktop sidebar collapse */
+#sidebarCollapseBtn{flex-shrink:0;width:32px;height:32px;margin-right:-6px;border:1px solid #d6e0d7;border-radius:7px;background:transparent;color:#456b57;font-size:15px;line-height:1;cursor:pointer;display:inline-grid;place-items:center;transition:background .15s,color .15s}
+#sidebarCollapseBtn:hover{background:#edf3ed;color:#21675b}
+html #headerTitle{margin-right:auto}
+html.sidebar-collapsed .sidebar{display:none}
+@media(max-width:768px){#sidebarCollapseBtn{display:none}html.sidebar-collapsed .sidebar{display:flex}}
 </style>
 </head>
 <body>
@@ -929,6 +936,7 @@ html.focus-session .main-header:hover{opacity:1}
 <!-- MAIN -->
 <div class="main">
   <div class="main-header" id="mainHeader">
+    <button id="sidebarCollapseBtn" type="button" onclick="toggleSidebarCollapse()" title="사이드바 숨기기 (Alt+B)" aria-label="사이드바 숨기기" aria-pressed="false">⟨</button>
     <span id="headerTitle" onclick="showCurrentChapterInNav()">엘리트 정형외과 단원별 열람</span>
     <div class="server-save-controls">
       <button id="timerToggle" type="button" title="집중 타이머 열기/닫기 (Alt+T)" aria-controls="focusTimer"><span class="tt-dot" aria-hidden="true"></span><span aria-hidden="true">⏱</span><span class="tt-label" id="timerToggleLabel">타이머</span></button>
@@ -1213,8 +1221,15 @@ const AUTO_SAVE_DELAY_MS = 8000;
 const ALLOWED_EMAILS = [
   'josm0106@icl75.app',
   'joosm0106@gmail.com',
-  'josm0106@elite-ortho.app'
+  'josm0106@elite-ortho.app',
+  'osdr777@elite-ortho.app'
 ];
+// Owner accounts keep the original localStorage keys; every other account gets its own suffixed copy
+// so one browser never mixes (or migrates) another account's memos/highlights/study records.
+const OWNER_EMAILS = ['josm0106@icl75.app', 'joosm0106@gmail.com', 'josm0106@elite-ortho.app'];
+function ukey(k) {
+  return (!currentUser || OWNER_EMAILS.includes(currentUser.email)) ? k : k + '__' + currentUser.uid;
+}
 
 // ===== AUTH: LOGIN =====
 function doLogin() {
@@ -1348,17 +1363,17 @@ async function loadFromFirestore() {
       freeMemos = data.freeMemos || [];
       viewData = data.viewData || {};
       highlights = data.highlights || {};
-      figMoves = data.figMoves || JSON.parse(localStorage.getItem('elite_ortho_figmoves') || '{}');
+      figMoves = data.figMoves || JSON.parse(localStorage.getItem(ukey('elite_ortho_figmoves')) || '{}');
       // study is one JSON string field: thousands of quiz results would otherwise each become an indexed Firestore field
-      { let loc = null; try { loc = JSON.parse(localStorage.getItem('elite_ortho_study') || 'null'); } catch (e) {}
+      { let loc = null; try { loc = JSON.parse(localStorage.getItem(ukey('elite_ortho_study')) || 'null'); } catch (e) {}
         const srv = data.studyJson ? JSON.parse(data.studyJson) : null;
         studyData = srv && loc ? studyMerge(srv, loc) : (srv || loc); }
     } else {
       // First login: check if localStorage has data to migrate
-      const localMemos = JSON.parse(localStorage.getItem('elite_ortho_memos') || '[]');
-      const localFreeMemos = JSON.parse(localStorage.getItem('elite_ortho_freememos') || '[]');
-      const localViews = JSON.parse(localStorage.getItem('elite_ortho_views') || '{}');
-      const localHighlights = JSON.parse(localStorage.getItem('elite_ortho_highlights') || '{}');
+      const localMemos = JSON.parse(localStorage.getItem(ukey('elite_ortho_memos')) || '[]');
+      const localFreeMemos = JSON.parse(localStorage.getItem(ukey('elite_ortho_freememos')) || '[]');
+      const localViews = JSON.parse(localStorage.getItem(ukey('elite_ortho_views')) || '{}');
+      const localHighlights = JSON.parse(localStorage.getItem(ukey('elite_ortho_highlights')) || '{}');
 
       if (localMemos.length || localFreeMemos.length || Object.keys(localViews).length || Object.keys(localHighlights).length) {
         // Migrate localStorage data to Firestore
@@ -1374,6 +1389,7 @@ async function loadFromFirestore() {
         freeMemos = [];
         viewData = {};
         highlights = {};
+        figMoves = JSON.parse(localStorage.getItem(ukey('elite_ortho_figmoves')) || '{}');
       }
     }
     const pending = JSON.parse(localStorage.getItem(pendingSaveKey()) || 'null');
@@ -1387,12 +1403,12 @@ async function loadFromFirestore() {
     console.error('Firestore load error:', err);
     showSync('error', '❌ 동기화 실패');
     // Fallback to localStorage
-    memos = JSON.parse(localStorage.getItem('elite_ortho_memos') || '[]');
-    freeMemos = JSON.parse(localStorage.getItem('elite_ortho_freememos') || '[]');
-    viewData = JSON.parse(localStorage.getItem('elite_ortho_views') || '{}');
-    highlights = JSON.parse(localStorage.getItem('elite_ortho_highlights') || '{}');
-    figMoves = JSON.parse(localStorage.getItem('elite_ortho_figmoves') || '{}');
-    studyData = JSON.parse(localStorage.getItem('elite_ortho_study') || 'null');
+    memos = JSON.parse(localStorage.getItem(ukey('elite_ortho_memos')) || '[]');
+    freeMemos = JSON.parse(localStorage.getItem(ukey('elite_ortho_freememos')) || '[]');
+    viewData = JSON.parse(localStorage.getItem(ukey('elite_ortho_views')) || '{}');
+    highlights = JSON.parse(localStorage.getItem(ukey('elite_ortho_highlights')) || '{}');
+    figMoves = JSON.parse(localStorage.getItem(ukey('elite_ortho_figmoves')) || '{}');
+    studyData = JSON.parse(localStorage.getItem(ukey('elite_ortho_study')) || 'null');
     const pending = JSON.parse(localStorage.getItem(pendingSaveKey()) || 'null');
     if (pending) {
       memos = pending.memos; freeMemos = pending.freeMemos;
@@ -1409,12 +1425,12 @@ function saveSnapshot() {
 }
 function syncToCloud(immediate = false) {
   // Always save to localStorage as backup
-  localStorage.setItem('elite_ortho_memos', JSON.stringify(memos));
-  localStorage.setItem('elite_ortho_freememos', JSON.stringify(freeMemos));
-  localStorage.setItem('elite_ortho_views', JSON.stringify(viewData));
-  localStorage.setItem('elite_ortho_highlights', JSON.stringify(highlights));
-  localStorage.setItem('elite_ortho_figmoves', JSON.stringify(figMoves));
-  if (studyData) localStorage.setItem('elite_ortho_study', JSON.stringify(studyData));
+  localStorage.setItem(ukey('elite_ortho_memos'), JSON.stringify(memos));
+  localStorage.setItem(ukey('elite_ortho_freememos'), JSON.stringify(freeMemos));
+  localStorage.setItem(ukey('elite_ortho_views'), JSON.stringify(viewData));
+  localStorage.setItem(ukey('elite_ortho_highlights'), JSON.stringify(highlights));
+  localStorage.setItem(ukey('elite_ortho_figmoves'), JSON.stringify(figMoves));
+  if (studyData) localStorage.setItem(ukey('elite_ortho_study'), JSON.stringify(studyData));
   // If logged in, also sync to Firestore
   if (!firestoreReady || !currentUser) return;
   localStorage.setItem(pendingSaveKey(), JSON.stringify(saveSnapshot()));
@@ -1433,7 +1449,7 @@ document.addEventListener('visibilitychange', async () => {
       const sj = cur.exists && cur.data().studyJson;
       if (sj) {
         studyData = studyMerge(studyData, JSON.parse(sj));
-        try { localStorage.setItem('elite_ortho_study', JSON.stringify(studyData)); } catch (e) {}
+        try { localStorage.setItem(ukey('elite_ortho_study'), JSON.stringify(studyData)); } catch (e) {}
         if (currentChapter) restoreQuizPicks(currentChapter.num);
         if (typeof studyPaintDock === 'function') studyPaintDock();
       }
@@ -1479,7 +1495,7 @@ function saveToFirestore() {
         try {   // 다른 기기가 저장한 학습 기록을 먼저 합친 뒤 저장 (덮어쓰기 방지)
           const cur = await userDoc.get({ source: 'server' });
           const sj = cur.exists && cur.data().studyJson;
-          if (sj && studyData) { studyData = studyMerge(studyData, JSON.parse(sj)); snapshot.studyJson = JSON.stringify(studyData); try { localStorage.setItem('elite_ortho_study', snapshot.studyJson); } catch (e) {} }
+          if (sj && studyData) { studyData = studyMerge(studyData, JSON.parse(sj)); snapshot.studyJson = JSON.stringify(studyData); try { localStorage.setItem(ukey('elite_ortho_study'), snapshot.studyJson); } catch (e) {} }
         } catch (e) { console.warn('학습 기록 병합 실패(그대로 저장)', e); }
         for (const imgId of new Set([...snapshot.memos, ...snapshot.freeMemos].map(m => m.imgId).filter(Boolean))) {
           const imageKey = uid + ':' + imgId;
@@ -6778,7 +6794,7 @@ document.getElementById('contentArea').addEventListener('scroll', updateReadingP
 window.addEventListener('pagehide', () => {
   if (currentChapter) {
     updateReadingProgress();
-    try { localStorage.setItem('elite_ortho_views', JSON.stringify(viewData)); } catch (e) { console.warn('진행 위치 저장 실패', e); }
+    try { localStorage.setItem(ukey('elite_ortho_views'), JSON.stringify(viewData)); } catch (e) { console.warn('진행 위치 저장 실패', e); }
   }
 });
 new ResizeObserver(updateReadingProgress).observe(document.getElementById('contentArea'));
@@ -6958,7 +6974,7 @@ function initMemoResize() {
 
 // ===== HIGHLIGHT (형광펜) SYSTEM =====
 let highlights = {};
-let figMoves = (() => { try { return JSON.parse(localStorage.getItem('elite_ortho_figmoves') || '{}'); } catch (e) { return {}; } })();
+let figMoves = (() => { try { return JSON.parse(localStorage.getItem(ukey('elite_ortho_figmoves')) || '{}'); } catch (e) { return {}; } })();
 const HL_COLORS = ['yellow','green','blue','pink','purple'];
 
 function saveHighlights() {
@@ -8168,6 +8184,23 @@ function processHeadings() {
 }
 
 // ===== MOBILE SIDEBAR =====
+// Desktop: hide/show the whole sidebar to widen the reading area (per-device preference)
+function toggleSidebarCollapse(force) {
+  const on = typeof force === 'boolean' ? force : !document.documentElement.classList.contains('sidebar-collapsed');
+  document.documentElement.classList.toggle('sidebar-collapsed', on);
+  const btn = document.getElementById('sidebarCollapseBtn');
+  if (btn) {
+    btn.textContent = on ? '☰' : '⟨';
+    btn.title = on ? '사이드바 보이기 (Alt+B)' : '사이드바 숨기기 (Alt+B)';
+    btn.setAttribute('aria-label', on ? '사이드바 보이기' : '사이드바 숨기기');
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  try { localStorage.setItem('elite_ortho_sidebar_collapsed', on ? '1' : '0'); } catch (e) {}
+}
+try { if (localStorage.getItem('elite_ortho_sidebar_collapsed') === '1') toggleSidebarCollapse(true); } catch (e) {}
+document.addEventListener('keydown', e => {
+  if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'b' || e.key === 'B' || e.code === 'KeyB')) { e.preventDefault(); toggleSidebarCollapse(); }
+});
 function toggleSidebar() {
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.getElementById('sidebarOverlay');
@@ -8211,7 +8244,7 @@ function studyVolShort(idx) { return (SECTIONS[idx]?.name || '').replace(/\s*-\s
 
 // ---- first run: credit chapters already read to the end as the 1st pass ----
 function studyInit() {
-  if (!studyData) { try { studyData = JSON.parse(localStorage.getItem(STUDY_KEY) || 'null'); } catch (e) { studyData = null; } }
+  if (!studyData) { try { studyData = JSON.parse(localStorage.getItem(ukey(STUDY_KEY)) || 'null'); } catch (e) { studyData = null; } }
   studyData = studyNormalize(studyData);
   if (!studyData.seeded) {
     studyChapters().forEach(n => {
