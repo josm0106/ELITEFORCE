@@ -875,11 +875,16 @@ html.focus-session .main-header:hover{opacity:1}
 @media(max-width:768px){#fontSizeBtn{padding:4px 8px}#fontSizeBtn .fs-val{display:none}.fs-panel{position:fixed;top:56px;right:12px;left:12px;width:auto}}
 
 /* Desktop sidebar collapse */
-#sidebarCollapseBtn{flex-shrink:0;width:32px;height:32px;margin-right:-6px;border:1px solid #d6e0d7;border-radius:7px;background:transparent;color:#456b57;font-size:15px;line-height:1;cursor:pointer;display:inline-grid;place-items:center;transition:background .15s,color .15s}
-#sidebarCollapseBtn:hover{background:#edf3ed;color:#21675b}
+#sidebarCollapseBtn{position:fixed;top:8px;left:8px;z-index:150;width:26px;height:26px;padding:0;border:none;border-radius:6px;background:transparent;color:rgba(232,239,235,.55);cursor:pointer;display:grid;place-items:center;transition:background .15s,color .15s,opacity .15s}
+#sidebarCollapseBtn svg{width:17px;height:17px;display:block}
+#sidebarCollapseBtn:hover{background:rgba(255,255,255,.10);color:#f0f4ed}
+html.sidebar-collapsed #sidebarCollapseBtn{top:16px;left:12px;color:#4f6358}
+html.sidebar-collapsed #sidebarCollapseBtn:hover{background:#e7eee8;color:#21675b}
+html.sidebar-collapsed .main-header{padding-left:50px}
+@media(min-width:769px){.sidebar-header{padding-top:40px}}
 html #headerTitle{margin-right:auto}
 html.sidebar-collapsed .sidebar{display:none}
-@media(max-width:768px){#sidebarCollapseBtn{display:none}html.sidebar-collapsed .sidebar{display:flex}}
+@media(max-width:768px){#sidebarCollapseBtn{display:none}html.sidebar-collapsed .sidebar{display:flex}html.sidebar-collapsed .main-header{padding-left:54px}}
 </style>
 </head>
 <body>
@@ -910,6 +915,7 @@ html.sidebar-collapsed .sidebar{display:none}
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <!-- SIDEBAR -->
+<button id="sidebarCollapseBtn" type="button" onclick="toggleSidebarCollapse()" title="사이드바 숨기기 (Alt+B)" aria-label="사이드바 숨기기" aria-pressed="false"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2.5"/><path d="M7.5 3.5v13"/></svg></button>
 <div class="sidebar">
   <div id="sidebarGlow" aria-hidden="true"></div>
   <div class="sidebar-header">
@@ -936,7 +942,6 @@ html.sidebar-collapsed .sidebar{display:none}
 <!-- MAIN -->
 <div class="main">
   <div class="main-header" id="mainHeader">
-    <button id="sidebarCollapseBtn" type="button" onclick="toggleSidebarCollapse()" title="사이드바 숨기기 (Alt+B)" aria-label="사이드바 숨기기" aria-pressed="false">⟨</button>
     <span id="headerTitle" onclick="showCurrentChapterInNav()">엘리트 정형외과 단원별 열람</span>
     <div class="server-save-controls">
       <button id="timerToggle" type="button" title="집중 타이머 열기/닫기 (Alt+T)" aria-controls="focusTimer"><span class="tt-dot" aria-hidden="true"></span><span aria-hidden="true">⏱</span><span class="tt-label" id="timerToggleLabel">타이머</span></button>
@@ -8190,7 +8195,6 @@ function toggleSidebarCollapse(force) {
   document.documentElement.classList.toggle('sidebar-collapsed', on);
   const btn = document.getElementById('sidebarCollapseBtn');
   if (btn) {
-    btn.textContent = on ? '☰' : '⟨';
     btn.title = on ? '사이드바 보이기 (Alt+B)' : '사이드바 숨기기 (Alt+B)';
     btn.setAttribute('aria-label', on ? '사이드바 보이기' : '사이드바 숨기기');
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
