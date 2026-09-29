@@ -5730,7 +5730,7 @@ function renderInlineMemo(m, type, marker) {
     const image = document.createElement('img'); image.alt = '메모에 첨부한 사진';
     image.onclick = () => openImgLightbox(m.imgId, m.id, type);
     card.appendChild(image);
-    loadMemoImage(m.imgId).then(url => { if (url && host.isConnected) { image.onload = () => { image.style.maxWidth = Math.round(image.naturalWidth * 1.3 / Math.min(window.devicePixelRatio || 1, 1.5)) + 'px'; updateReadingProgress(); }; image.src = url; } });
+    loadMemoImage(m.imgId).then(url => { if (url && host.isConnected) { image.onload = () => { image.style.maxWidth = Math.max(640, Math.round(image.naturalWidth * 1.3 / Math.min(window.devicePixelRatio || 1, 1.5))) + 'px'; /* 메모 사진은 최소 640px 폭까지 크게 */ updateReadingProgress(); }; image.src = url; } });
   }
   host.shadowRoot.appendChild(card);
   insertAfterMemoBlock(host, marker);
