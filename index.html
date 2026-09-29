@@ -1351,7 +1351,9 @@ async function loadFromFirestore() {
       highlights = data.highlights || {};
       figMoves = data.figMoves || JSON.parse(localStorage.getItem('elite_ortho_figmoves') || '{}');
       // study is one JSON string field: thousands of quiz results would otherwise each become an indexed Firestore field
-      studyData = data.studyJson ? JSON.parse(data.studyJson) : JSON.parse(localStorage.getItem('elite_ortho_study') || 'null');
+      { let loc = null; try { loc = JSON.parse(localStorage.getItem('elite_ortho_study') || 'null'); } catch (e) {}
+        const srv = data.studyJson ? JSON.parse(data.studyJson) : null;
+        studyData = srv && loc ? studyMerge(srv, loc) : (srv || loc); }
     } else {
       // First login: check if localStorage has data to migrate
       const localMemos = JSON.parse(localStorage.getItem('elite_ortho_memos') || '[]');
@@ -1379,7 +1381,7 @@ async function loadFromFirestore() {
     if (pending) {
       memos = pending.memos; freeMemos = pending.freeMemos;
       viewData = pending.viewData; highlights = pending.highlights; figMoves = pending.figMoves || figMoves;
-      if (pending.studyJson) studyData = JSON.parse(pending.studyJson);
+      if (pending.studyJson) studyData = studyMerge(studyData, JSON.parse(pending.studyJson));
     }
     showSync(pending ? 'syncing' : 'synced', pending ? '서버 미저장 자료 복원 중' : '동기화 완료');
   } catch(err) {
@@ -1425,7 +1427,19 @@ function syncToCloud(immediate = false) {
   }, AUTO_SAVE_DELAY_MS);
 }
 // Leaving the tab flushes a waiting save right away.
-document.addEventListener('visibilitychange', () => {
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && currentUser && firestoreReady && studyData && typeof db !== 'undefined') {
+    try {
+      const cur = await db.collection('users').doc(currentUser.uid).get({ source: 'server' });
+      const sj = cur.exists && cur.data().studyJson;
+      if (sj) {
+        studyData = studyMerge(studyData, JSON.parse(sj));
+        try { localStorage.setItem('elite_ortho_study', JSON.stringify(studyData)); } catch (e) {}
+        if (currentChapter) restoreQuizPicks(currentChapter.num);
+        if (typeof studyPaintDock === 'function') studyPaintDock();
+      }
+    } catch (e) {}
+  }
   if (document.visibilityState === 'hidden' && syncDebounceTimer) {
     clearTimeout(syncDebounceTimer);
     syncDebounceTimer = null;
@@ -1463,6 +1477,11 @@ function saveToFirestore() {
         localStorage.setItem(key, serialized);
         if (manual) showSync('syncing', '저장 중…');
         const userDoc = db.collection('users').doc(uid);
+        try {   // 다른 기기가 저장한 학습 기록을 먼저 합친 뒤 저장 (덮어쓰기 방지)
+          const cur = await userDoc.get({ source: 'server' });
+          const sj = cur.exists && cur.data().studyJson;
+          if (sj && studyData) { studyData = studyMerge(studyData, JSON.parse(sj)); snapshot.studyJson = JSON.stringify(studyData); try { localStorage.setItem('elite_ortho_study', snapshot.studyJson); } catch (e) {} }
+        } catch (e) { console.warn('학습 기록 병합 실패(그대로 저장)', e); }
         for (const imgId of new Set([...snapshot.memos, ...snapshot.freeMemos].map(m => m.imgId).filter(Boolean))) {
           const imageKey = uid + ':' + imgId;
           if (confirmedMemoImages.has(imageKey)) continue;
@@ -8331,16 +8350,72 @@ button:hover{background:#eef5ef}
 // ---- 선택한 보기 저장·복원: pick[ch][qN] = 보기 번호 (다시 풀기 누르면 삭제) ----
 function studySavePick(num, id, i) {
   if (!studyData) return;
-  studyData.pick = studyData.pick || {};
+  studyData.pick = studyData.pick || {}; studyData.pickT = studyData.pickT || {};
   const ch = studyData.pick[num] || (studyData.pick[num] = {});
-  if (i == null) { delete ch[id]; if (!Object.keys(ch).length) delete studyData.pick[num]; }
-  else ch[id] = i;
+  const tt = studyData.pickT[num] || (studyData.pickT[num] = {});
+  if (i == null) delete ch[id]; else ch[id] = i;
+  tt[id] = Date.now();            // 다른 기기와 합칠 때 더 최근 기록이 이기도록
   studySave();
+}
+// ===== 학습 기록 합치기: 기기·탭끼리 서로 덮어쓰지 않도록 서버 기록과 병합 =====
+function studyMerge(a, b) {
+  if (!a) return b; if (!b) return a;
+  const out = JSON.parse(JSON.stringify(a));
+  const obj = (o, k) => (o[k] && typeof o[k] === 'object') ? o[k] : (o[k] = {});
+  // 선택한 보기: 문제별 시각이 더 최근인 쪽
+  const pa = obj(out, 'pick'), ta = obj(out, 'pickT'), pb = b.pick || {}, tb = b.pickT || {};
+  new Set([...Object.keys(pb), ...Object.keys(tb)]).forEach(ch => {
+    const idsB = new Set([...Object.keys(pb[ch] || {}), ...Object.keys(tb[ch] || {})]);
+    idsB.forEach(id => {
+      const tA = (ta[ch] || {})[id] || 0, tB = (tb[ch] || {})[id] || 0;
+      const hasA = pa[ch] && id in pa[ch];
+      if (tB > tA || (!tA && !tB && !hasA)) {
+        if (pb[ch] && id in pb[ch]) (pa[ch] || (pa[ch] = {}))[id] = pb[ch][id];
+        else if (pa[ch]) delete pa[ch][id];
+        if (tB) (ta[ch] || (ta[ch] = {}))[id] = tB;
+      }
+    });
+  });
+  // 문제 통계 [오답수, 정답일수, 최근, 최근정답일, 첫시도]: 더 많이 푼 쪽
+  const qa = obj(out, 'quiz');
+  Object.entries(b.quiz || {}).forEach(([ch, qs]) => Object.entries(qs).forEach(([q, eb]) => {
+    const c = qa[ch] || (qa[ch] = {}), ea = c[q];
+    if (!ea || (eb[0] + eb[1]) > (ea[0] + ea[1]) || ((eb[0] + eb[1]) === (ea[0] + ea[1]) && String(eb[3]) > String(ea[3]))) c[q] = eb;
+  }));
+  const ra = obj(out, 'reads'); Object.entries(b.reads || {}).forEach(([k, v]) => { ra[k] = Math.max(ra[k] || 0, v); });
+  const da = obj(out, 'days'); Object.entries(b.days || {}).forEach(([k, v]) => { const x = da[k] || [0, 0, 0]; da[k] = v.map((n, i) => Math.max(n, x[i] || 0)); });
+  const ba = obj(out, 'badges'); Object.entries(b.badges || {}).forEach(([k, v]) => { if (!ba[k]) ba[k] = v; });
+  const ma = obj(out, 'marks'); Object.entries(b.marks || {}).forEach(([ch, qs]) => Object.entries(qs).forEach(([q, m]) => {
+    const c = ma[ch] || (ma[ch] = {}); c[q] = Object.assign({}, m, c[q] || {});
+  }));
+  ['qtext', 'qn'].forEach(k => { const o = obj(out, k); Object.entries(b[k] || {}).forEach(([x, v]) => { if (!(x in o)) o[x] = v; }); });
+  const sa = obj(out, 'stats'); Object.entries(b.stats || {}).forEach(([k, v]) => { if (typeof v === 'number') sa[k] = Math.max(sa[k] || 0, v); else if (!(k in sa)) sa[k] = v; });
+  const pp = obj(out, 'pass'); Object.entries(b.pass || {}).forEach(([k, v]) => { if (!pp[k]) pp[k] = v; });
+  if ((b.startSet || 0) > (out.startSet || 0)) { out.start = b.start; out.startSet = b.startSet; } else if (!out.startSet && !b.startSet && b.start && (!out.start || b.start < out.start)) out.start = b.start;
+  ['tierSeen', 'divSeen'].forEach(k => { if (b[k] != null) out[k] = Math.max(out[k] || 0, b[k]); });
+  if (b.seeded) out.seeded = 1;
+  return out;
 }
 function restoreQuizPicks(num) {
   const root = document.getElementById('chapterContent');
-  const picks = (studyData && studyData.pick && studyData.pick[num]) || {};
+  const picks = Object.assign({}, (studyData && studyData.pick && studyData.pick[num]) || {});
   if (!root) return;
+  // 보기 기록 없이 결과만 남은 예전 풀이 : 정답이면 정답 보기, 오답이면 해설과 함께 오답 표시
+  const qstat = (studyData && studyData.quiz && studyData.quiz[num]) || {};
+  const tomb = (studyData && studyData.pickT && studyData.pickT[num]) || {};
+  Object.entries(qstat).forEach(([q, e]) => {
+    const id = 'q' + q;
+    if (id in picks || tomb[id] || !e || e[2] === -1) return;
+    const pill = root.querySelector('.quiz-reveal[data-q="' + id + '"]');
+    if (!pill || root.querySelector('.q-cont[data-qc="' + id + '"].answered')) return;
+    const cset = (pill.dataset.correct || '').split(',').filter(Boolean).map(Number);
+    if (e[2] === 1 && cset.length === 1) picks[id] = cset[0];
+    else if (e[2] === 0) {
+      const result = root.querySelector('.quiz-result[data-q="' + id + '"]');
+      if (result) { result.dataset.result = '오답이었던 문제 · 해설을 확인하세요'; result.setAttribute('aria-label', result.dataset.result); }
+      quizRevealGroup(id, true);
+    }
+  });
   Object.entries(picks).forEach(([id, i]) => {
     const opt = root.querySelector('.q-opt[data-q="' + id + '"][data-i="' + i + '"],.q-table-opt[data-q="' + id + '"][data-i="' + i + '"]');
     const pill = root.querySelector('.quiz-reveal[data-q="' + id + '"]');
@@ -8918,7 +8993,7 @@ function renderTrophy() {
     <div class="bd-grid">${general}</div>
     <p class="tr-foot">단원 완독은 본문을 처음부터 끝까지 스크롤해 읽으면 자동으로 기록됩니다. 다음 회독은 단원 맨 위로 돌아간 뒤부터 셉니다.</p>`;
   d.querySelector('.sd-close').onclick = () => d.close();
-  d.querySelector('.g-start input').onchange = e => { if (e.target.value) { studyData.start = e.target.value; studySave(); renderTrophy(); } };
+  d.querySelector('.g-start input').onchange = e => { if (e.target.value) { studyData.start = e.target.value; studyData.startSet = Date.now(); studySave(); renderTrophy(); } };
 }
 
 document.head.insertAdjacentHTML('beforeend', `<style id="studyCss">
