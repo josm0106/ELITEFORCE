@@ -701,6 +701,21 @@ html[data-motion="off"] #sidebarGlow,html[data-motion="off"] #confettiLayer{disp
 .welcome h2{font-size:38px;line-height:1.35;letter-spacing:-1.2px}
 .hero-accent{background:linear-gradient(100deg,var(--teal),#4f9a80,var(--gold),#4f9a80,var(--teal));background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:text-shine 7s linear infinite}
 .hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px;animation:study-reveal .65s ease-out .12s both}
+.hero-goal{margin:22px auto 6px;max-width:520px;text-align:left;padding:16px 20px;border:1px solid #cddbd0;border-radius:16px;background:linear-gradient(135deg,#fffefa,#eef5ec);box-shadow:0 6px 20px rgba(49,94,75,.08);color:#2f5646}
+.hero-goal[hidden]{display:none}
+.hero-goal .hg-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#6b7f70}
+.hero-goal .hg-label{font-weight:800;letter-spacing:.5px;color:#315e4b}
+.hero-goal .hg-d{font-variant-numeric:tabular-nums}
+.hero-goal .hg-main{display:flex;align-items:baseline;gap:6px;margin:6px 0 8px}
+.hero-goal .hg-big{font-size:44px;font-weight:900;line-height:1;color:#315e4b;font-variant-numeric:tabular-nums}
+.hero-goal .hg-unit{font-size:16px;font-weight:700}
+.hero-goal .hg-sub{margin-left:auto;font-size:13px;color:#5d7064}
+.hero-goal .hg-bar{height:10px;border-radius:999px;background:#dfe9dd;overflow:hidden}
+.hero-goal .hg-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#5f8a68,#b69c65);transition:width .6s ease}
+.hero-goal .hg-msg{margin:10px 0 6px;font-size:14px;color:#2f5646}
+.hero-goal .hg-foot{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;font-size:11.5px;color:#7a8b7f}
+.hero-goal .hg-next{border:1px solid #315e4b;background:#315e4b;color:#fff;border-radius:999px;padding:7px 14px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.hero-goal .hg-next:hover{background:#264b3c}
 .hero-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:999px;border:1px solid #cddbd0;background:#fffefa;color:#2f5646;font:inherit;font-size:14px;cursor:pointer;transition:transform .2s var(--ease-out),box-shadow .2s,background .2s}
 .hero-btn:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(33,103,91,.14)}
 .hero-btn.primary{background:linear-gradient(120deg,#21675b,#2f7f6a);color:#fff;border-color:transparent;box-shadow:0 8px 22px rgba(33,103,91,.25)}
@@ -953,6 +968,7 @@ html.focus-session .main-header:hover{opacity:1}
         <button class="hero-btn primary" type="button" onclick="focusTimerQuickStart(25)">⏱ 25분 집중 시작</button>
         <button class="hero-btn" type="button" id="heroResumeBtn" hidden onclick="heroResumeChapter()">↺ 이어 읽기</button>
       </div>
+      <div class="hero-goal" id="heroGoal" hidden aria-live="polite"></div>
       <div class="stats">
         <div><div class="stat-num" id="statSections">0</div><div class="stat-label">섹션</div></div>
         <div><div class="stat-num" id="statChapters">0</div><div class="stat-label">단원</div></div>
@@ -8432,6 +8448,7 @@ function studyPaintChapterItem(num) {
 function studyPaintAllChapters() { studyChapters().forEach(studyPaintChapterItem); }
 
 function studyAfterChange(num, q) {
+  if (typeof renderHeroGoal === 'function') try { renderHeroGoal(); } catch (e) {}
   if (q != null) studyPaintQuestion(num, q);
   if (currentChapter?.num === num) studyPaintChapterMeta(num);
   studyPaintChapterItem(num);
@@ -9197,6 +9214,43 @@ function latestViewedChapter() {
   } catch (_) {}
   return best;
 }
+// ===== 오늘의 5독 목표 (메인 화면, 실시간) =====
+// 오늘 해야 할 단원 = (오늘 시작 시점에 남은 단원·회독) ÷ (오늘 포함 남은 날수), 올림
+function studyTodayPlan() {
+  if (!studyData || !studyReady) return null;
+  const all = studyChapters(), goalTotal = all.length * STUDY_GOAL_PASSES;
+  const goalDone = all.reduce((s, n) => s + Math.min(STUDY_GOAL_PASSES, studyData.reads[n] || 0), 0);
+  const todayReads = (studyData.days[studyDayKey()] || [0])[0];
+  const end = studyGoalEnd(), today = new Date(studyDayKey() + 'T00:00:00');
+  const daysIncl = Math.max(1, Math.round((end - today) / 864e5));
+  const remainStart = Math.max(0, goalTotal - Math.max(0, goalDone - todayReads));
+  const target = Math.ceil(remainStart / daysIncl);
+  const left = Math.max(0, target - todayReads);
+  const book = studyPassProgress(all);
+  const next = book.done >= STUDY_GOAL_PASSES ? null : all.find(n => (studyData.reads[n] || 0) < book.next);
+  return { goalTotal, goalDone, todayReads, target, left, daysIncl, end, book, next, over: end < today };
+}
+function renderHeroGoal() {
+  const el = document.getElementById('heroGoal');
+  if (!el || !el.isConnected) return;
+  const p = studyTodayPlan();
+  if (!p) { el.hidden = true; return; }
+  el.hidden = false;
+  const pct = p.target ? Math.min(100, p.todayReads / p.target * 100) : 100;
+  const endTxt = `${p.end.getFullYear()}.${p.end.getMonth() + 1}.${p.end.getDate()}`;
+  const allDone = p.goalDone >= p.goalTotal;
+  const msg = allDone ? '🎉 5독 완주! 목표를 모두 달성했어요'
+    : p.left === 0 ? `✅ 오늘 목표 달성! (${p.todayReads}단원 완독) 더 읽으면 내일이 가벼워져요`
+    : `오늘 <b>${p.left}단원</b> 더 읽으면 오늘 목표 달성`;
+  el.innerHTML = `
+    <div class="hg-top"><span class="hg-label">오늘의 5독 목표</span><span class="hg-d">${p.over ? '기한 지남' : 'D-' + p.daysIncl} · ${endTxt}까지</span></div>
+    <div class="hg-main"><span class="hg-big">${p.target}</span><span class="hg-unit">단원</span>
+      <span class="hg-sub">오늘 완독 <b>${p.todayReads}</b> / ${p.target}</span></div>
+    <div class="hg-bar"><i style="width:${pct}%"></i></div>
+    <p class="hg-msg">${msg}</p>
+    <div class="hg-foot"><span>전체 ${p.goalDone.toLocaleString()} / ${p.goalTotal.toLocaleString()} 단원·회독 · 현재 ${p.book.done}독 · ${p.book.next}독 ${p.book.have}/${p.book.total}</span>
+      ${p.next ? `<button type="button" class="hg-next" onclick="loadChapter(${p.next})">▶ 다음 읽을 단원 · ${escapeHtml(chLabel(p.next))}</button>` : ''}</div>`;
+}
 function heroResumeChapter() { const n = latestViewedChapter(); if (n) loadChapter(n); }
 let heroResumeTimer = null;
 function refreshHeroResume() {
@@ -9206,6 +9260,7 @@ function refreshHeroResume() {
   const n = latestViewedChapter();
   btn.hidden = !n;
   if (n) btn.textContent = '↺ 이어 읽기 · ' + chLabel(n);
+  try { renderHeroGoal(); } catch (e) {}
   heroResumeTimer = setTimeout(refreshHeroResume, 3000);
 }
 refreshHeroResume();
