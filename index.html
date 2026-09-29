@@ -1157,7 +1157,7 @@ html.focus-session .main-header:hover{opacity:1}
 </section>
 
 <!-- Firebase SDK -->
-<script src="images/figmap.js?v=12"></script>
+<script src="images/figmap.js?v=13"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -7751,7 +7751,20 @@ function injectTextbookFigures(num) {
     applyFigView(fig, mv);
     attachFigControls(fig);
     placeFigAfter(fig, target);
+    if (!(mv && mv.a != null)) liftFigOutOfAnswer(fig, root);
   });
+}
+// 해설(정답 보기 전 숨김) 안에 들어간 그림은 문제를 풀 때 보이도록 문제 본문 바로 아래(보기 위)로 올림
+function liftFigOutOfAnswer(fig, root) {
+  const ans = fig.parentElement && fig.parentElement.closest('.quiz-answer');
+  if (!ans || !ans.dataset.q) return;
+  const id = ans.dataset.q;
+  const opt = root.querySelector('.q-opt[data-q="' + id + '"],.q-table-opt[data-q="' + id + '"]');
+  let spot = root.querySelector('.q-cont[data-qc="' + id + '"]');
+  if (!spot && opt) spot = opt.closest('ul,ol,table,.table-scroll') || opt;
+  if (!spot) spot = root.querySelector('.quiz-reveal[data-q="' + id + '"]');
+  if (!spot || spot.closest('.quiz-answer')) return;
+  spot.before(fig);
 }
 function attachFigControls(fig) {
   const host = document.createElement('span');
