@@ -604,11 +604,10 @@ body{height:100dvh}
 @media(max-width:768px){#studyExplanationDialog{padding:23px;font-size:15px}#studyExplanationDialog h2{font-size:22px}}
 #selectionMemoComposer{flex-shrink:0;max-height:65dvh;overflow-y:auto}#selectionMemoComposer[hidden]{display:none}
 .memo-marker-pop{max-height:calc(100dvh - 24px);overflow-y:auto}
-.memo-annotated-block{background:#edf4df!important;border-radius:6px;box-shadow:0 0 0 5px #edf4df}
-.memo-annotated-block{position:relative}
-.memo-anchor-marker{position:absolute;top:-7px;right:calc(-7px + var(--mk-i,0) * 19px);z-index:2;font-size:9px;line-height:1;background:#e3eed9;border:1px solid #b3cba5;border-radius:4px;padding:2px;margin:0;color:#456438;box-shadow:0 1px 3px rgba(40,70,45,.18)}
+::highlight(memo-range){background-color:#f3f9ea}
+.memo-anchor-marker{position:relative;top:-.55em;display:inline-block;vertical-align:baseline;z-index:2;font-size:9px;line-height:1;background:#eef5e6;border:1px solid #c6d9ba;border-radius:4px;padding:1px 2px;margin:0 1px 0 1px;color:#456438;box-shadow:0 1px 3px rgba(40,70,45,.18)}
 .memo-anchor-marker::after{content:'📝';font-size:9px}
-.memo-anchor-marker.mk-inline{position:static;display:inline-block;margin:0 3px;vertical-align:middle}
+
 .inline-memo-card,.inline-memo-composer{display:block;max-width:100%}
 .inline-memo-stack{display:flex;flex-direction:column;gap:8px;margin:14px 0 20px;max-width:100%;clear:both}
 .inline-memo-stack:empty{display:none}
@@ -6653,9 +6652,13 @@ function renderMemoAnchors(chNum) {
   memos.forEach(m => { if (Number(m.chapterNum) === Number(chNum)) { const offset = resolveMemoOffset(m, contentEl, 'hl'); if (offset != null) anchored.push({ m, type: 'hl', offset }); } });
   freeMemos.forEach(m => { if (Number(m.chapterNum) === Number(chNum)) { const offset = resolveMemoOffset(m, contentEl, 'free'); if (offset != null) anchored.push({ m, type: 'free', offset }); } });
   // 뒤쪽 오프셋부터 삽입해야 앞쪽 삽입이 뒤 오프셋 위치를 흐트러뜨리지 않음
-  anchored.sort((a, b) => b.offset - a.offset);
-  anchored.forEach(({ m, type, offset }) => {
-    const r = offsetToRange(contentEl, offset);
+  // 아이콘은 선택한 문구의 끝(바로 오른쪽 위)에 붙임
+  anchored.forEach(a => { a.end = a.offset + ((a.m.anchorText || '').length || 0); });
+  anchored.sort((a, b) => b.end - a.end);
+  anchored.forEach(({ m, type, offset, end }) => {
+    let r;
+    if (end > offset) { r = offsetToRange(contentEl, end - 1); if (r) { r.setStart(r.startContainer, r.startOffset + 1); r.collapse(true); } }
+    else r = offsetToRange(contentEl, offset);
     if (!r) return;
     const span = document.createElement('span');
     span.className = 'memo-anchor-marker';
@@ -6672,25 +6675,21 @@ function renderMemoAnchors(chNum) {
     });
     try {
       r.insertNode(span);
-      const block = span.closest('p,li,h1,h2,h3,h4,h5,h6,td,th,blockquote');
-      if (block) {
-        block.classList.add('memo-annotated-block');
-        // 아이콘은 블록 오른쪽 위 모서리에 작게, 같은 블록에 여러 개면 왼쪽으로 나란히
-        span.style.setProperty('--mk-i', block.querySelectorAll('.memo-anchor-marker').length - 1);
-      } else span.classList.add('mk-inline');
-      if (m.anchorText) {
-        const first = offsetToRange(contentEl, offset);
-        const last = offsetToRange(contentEl, offset + m.anchorText.length - 1);
-        if (first && last) {
-          first.setEnd(last.startContainer, last.startOffset + 1);
-          contentEl.querySelectorAll('p,li,h1,h2,h3,h4,h5,h6,td,th,blockquote').forEach(el => {
-            if (first.intersectsNode(el)) el.classList.add('memo-annotated-block');
-          });
-        }
-      }
       renderInlineMemo(m, type, span);
     } catch (e) { console.warn('본문 메모 표시 실패', e); }
   });
+  // 선택했던 문구만 아주 연한 연두색 (DOM을 바꾸지 않는 CSS Highlight)
+  try {
+    if (window.CSS && CSS.highlights && typeof Highlight !== 'undefined') {
+      const ranges = [];
+      anchored.forEach(({ m, offset }) => {
+        if (!m.anchorText) return;
+        const first = offsetToRange(contentEl, offset), last = offsetToRange(contentEl, offset + m.anchorText.length - 1);
+        if (first && last) { first.setEnd(last.startContainer, last.startOffset + 1); ranges.push(first); }
+      });
+      CSS.highlights.set('memo-range', new Highlight(...ranges));
+    }
+  } catch (e) { console.warn('메모 구절 표시 실패', e); }
 }
 function removeMemoMarkerPop() {
   const p = document.getElementById('memoMarkerPop');
