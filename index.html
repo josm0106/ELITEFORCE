@@ -1006,7 +1006,7 @@ html.focus-session .main-header:hover{opacity:1}
     <div class="memo-tab-content active" id="memoTabHighlight">
       <section id="selectionMemoComposer" hidden style="padding:16px;border-bottom:1px solid var(--border)">
         <strong style="font-size:13px">선택한 문구에 메모 추가</strong>
-        <blockquote id="selectionMemoQuote" style="margin:10px 0;padding:10px;border-left:3px solid var(--accent);font-size:13px;max-height:110px;overflow:auto;word-break:keep-all"></blockquote>
+        <blockquote id="selectionMemoQuote" hidden style="margin:10px 0;padding:10px;border-left:3px solid var(--accent);font-size:13px;max-height:110px;overflow:auto;word-break:keep-all"></blockquote>
         <textarea id="selectionMemoNote" class="free-memo-input" placeholder="메모를 쓰거나 스크린샷을 붙여넣으세요 (Ctrl+V)" aria-label="선택한 문구의 메모" style="width:100%;min-height:85px"></textarea>
         <img id="selectionMemoPreview" alt="첨부할 사진" hidden style="max-width:100%;max-height:180px;margin-top:10px;border-radius:6px">
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
@@ -5718,7 +5718,7 @@ function renderInlineMemo(m, type, marker) {
   host.dataset.memoId = m.id;
   host.dataset.memoType = type;
   const card = document.createElement('div'); card.className = 'card';
-  card.innerHTML = `<div class="memo-toolbar"><small>${timeAgo(m.id)}</small><button type="button" class="memo-tool" data-action="add" aria-label="같은 위치에 메모 추가" title="메모 추가">+</button><button type="button" class="memo-tool" data-action="edit" aria-label="이 메모 수정" title="메모 수정">✎</button><button type="button" class="memo-tool" data-action="delete" aria-label="이 메모 삭제" title="메모 삭제">×</button></div>${m.note ? `<blockquote>${memoFmt(m.text)}</blockquote><p>${memoFmt(m.note)}</p>` : m.text ? `<p>${memoFmt(m.text)}</p>` : ''}`;
+  card.innerHTML = `<div class="memo-toolbar"><small>${timeAgo(m.id)}</small><button type="button" class="memo-tool" data-action="add" aria-label="같은 위치에 메모 추가" title="메모 추가">+</button><button type="button" class="memo-tool" data-action="edit" aria-label="이 메모 수정" title="메모 수정">✎</button><button type="button" class="memo-tool" data-action="delete" aria-label="이 메모 삭제" title="메모 삭제">×</button></div>${m.note ? `<p>${memoFmt(m.note)}</p>` : m.text ? `<p>${memoFmt(m.text)}</p>` : ''}`;
   card.querySelector('[data-action="add"]').onclick = () => {
     const content=document.getElementById('chapterContent');
     const offset=resolveMemoOffset(m,content,type);
