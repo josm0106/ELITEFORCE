@@ -980,9 +980,7 @@ html.focus-session .main-header:hover{opacity:1}
         <div class="hero-feature" style="--i:2"><div class="hf-icon">📋</div><b>암기노트</b><span>선택 문구·자유 메모와 스크린샷 저장</span></div>
         <div class="hero-feature" style="--i:3"><div class="hf-icon">✅</div><b>연습문제</b><span>보기를 눌러 바로 채점하고 풀이 확인</span></div>
       </div>
-      <div class="reset-views">
-        <button onclick="resetViews()">🔄 조회수 초기화</button>
-      </div>
+
     </div>
   </div>
 </div>
@@ -1054,7 +1052,7 @@ html.focus-session .main-header:hover{opacity:1}
   </div>
   <div class="memo-export">
     <button onclick="exportMemos()">📥 노트 내보내기 (텍스트)</button>
-    <button class="btn-secondary" onclick="clearAllMemos()">🗑 현재 탭 노트 삭제</button>
+
   </div>
 </div>
 
@@ -4508,6 +4506,13 @@ function timeAgo(ts) {
 }
 
 // ===== VIEW COUNT =====
+let viewVisit = { num: null, armed: false, counted: false };
+// 이번 방문에서 위쪽(90% 미만)을 한 번이라도 거친 뒤 97% 이상 내려가면 조회수 1회
+function trackViewCount(num, ratio, fits) {
+  if (viewVisit.num !== num || viewVisit.counted) return;
+  if (fits || ratio < 0.9) viewVisit.armed = true;
+  if (viewVisit.armed && ratio >= 0.97) { viewVisit.counted = true; recordView(num); refreshChapterMeta(num); }
+}
 function recordView(chNum) {
   if (!viewData[chNum]) viewData[chNum] = { count: 0, lastViewed: 0 };
   viewData[chNum].count++;
@@ -4528,6 +4533,7 @@ function updateViewBadge(chNum) {
 }
 
 function resetViews() {
+  return;   // 전체 초기화는 사용하지 않음 (데이터 보호)
   if (!confirm('모든 조회수를 초기화하시겠습니까?')) return;
   Object.values(viewData).forEach(record=>{record.count=0;record.lastViewed=0;});
   syncToCloud();
@@ -4809,7 +4815,7 @@ function loadChapter(num) {
   const savedProgress = Number(viewData[num]?.scrollProgress) || 0;
 
   currentChapter = ch;
-  recordView(num);
+  viewVisit = { num, armed: false, counted: false };   // 조회수는 끝까지 스크롤해야 +1
   closeSidebar();
 
   document.querySelectorAll('.chapter-item').forEach(el => el.classList.remove('active'));
@@ -6035,6 +6041,7 @@ function renderFreeMemos() {
 
 // --- Clear & Export (enhanced) ---
 function clearAllMemos() {
+  return;   // 노트 일괄 삭제는 사용하지 않음 (하나씩만 삭제 가능)
   if (currentMemoTab === 'highlight') {
     const target = currentMemoFilter === 'all' ? memos : memos.filter(m => getSectionForChapter(m.chapterNum) === currentMemoFilter);
     if (target.length === 0) { alert('삭제할 노트가 없습니다.'); return; }
@@ -6756,6 +6763,7 @@ function updateReadingProgress() {
   const changed = record.scrollProgress !== ratio;
   record.scrollProgress = ratio;
   studyTrackReading(num, ratio, area);
+  trackViewCount(num, ratio, max <= 0);
   const percent = Math.round(ratio * 100);
   document.getElementById('readingProgressPercent').textContent = `${percent}%`;
   document.getElementById('readingProgressBar').value = percent;
@@ -8755,7 +8763,7 @@ function studyNextCelebrate() {
       <button type="button" class="cb-ok" disabled>확인${left ? ` <small>(다음 ${left}개)</small>` : ''}</button>
       <div class="cb-hint">확인을 눌러야 계속 진행돼요</div>
     </div>`;
-  document.body.appendChild(ov);
+  (document.querySelector('dialog[open]') || document.body).appendChild(ov);
   const ok = ov.querySelector('.cb-ok');
   let closed = false;
   const trap = e => {
@@ -8958,16 +8966,16 @@ function renderTrophy() {
     const p = studyPassProgress(studySectionChapters(i));
     const [icon] = STUDY_VOL_TITLES[i];
     const medals = [1, 3, 5].map(lv => { const b = STUDY_BADGES.find(x => x.id === `vol${i + 1}_${lv}`); const got = !!studyData.badges[b.id];
-      return `<div class="bd${got ? ' got' : ''}" title="${escapeHtml(b.name)} · ${escapeHtml(b.desc)}${got ? ' · ' + studyData.badges[b.id] + ' 획득' : ''}">${studyBadgeMedal(b, got, 46)}<span>${escapeHtml(b.name)}</span></div>`; }).join('');
+      return `<div class="bd${got ? ' got' : ''}" data-badge="${b.id}" title="${escapeHtml(b.name)} · ${escapeHtml(b.desc)}${got ? ' · ' + studyData.badges[b.id] + ' 획득' : ''}">${studyBadgeMedal(b, got, 46)}<span>${escapeHtml(b.name)}</span></div>`; }).join('');
     return `<div class="vol-card"><div class="vc-head"><span class="vc-ico">${icon}</span><b>${escapeHtml(s.name)}</b><span class="vc-pass">${p.done}독</span></div>
       <div class="vc-bar"><i style="width:${p.total ? p.have / p.total * 100 : 0}%"></i></div><small>${p.next}독 진행 ${p.have}/${p.total} 단원</small><div class="vc-medals">${medals}</div></div>`;
   }).join('');
   const general = STUDY_BADGES.filter(b => b.group !== 'vol').map(b => { const got = !!studyData.badges[b.id];
-    return `<div class="bd${got ? ' got' : ''} r-${b.rarity}" title="${escapeHtml(b.desc)}${got ? ' · ' + studyData.badges[b.id] + ' 획득' : ''}">${studyBadgeMedal(b, got, 58)}<span>${escapeHtml(b.name)}</span><small>${escapeHtml(b.desc)}</small></div>`; }).join('');
+    return `<div class="bd${got ? ' got' : ''} r-${b.rarity}" data-badge="${b.id}" title="${escapeHtml(b.desc)}${got ? ' · ' + studyData.badges[b.id] + ' 획득' : ''}">${studyBadgeMedal(b, got, 58)}<span>${escapeHtml(b.name)}</span><small>${escapeHtml(b.desc)}</small></div>`; }).join('');
   d.innerHTML = `
     <div class="sd-head"><h2 id="trophyTitle">🏆 5독 챌린지</h2><button class="sd-close" aria-label="닫기">×</button></div>
     <div class="tr-hero" style="--t1:${t.tier.c[1]};--t2:${t.tier.c[2]}">
-      <div class="tr-emblem">${studyTierEmblem(t.index, 118)}</div>
+      <div class="tr-emblem" data-replay-tier="1" title="눌러서 승급 장면 다시 보기">${studyTierEmblem(t.index, 118)}</div>
       <div class="tr-info"><small>${t.tier.en}</small><h3>${t.label}</h3>
         <div class="tr-xp"><i style="width:${t.pct}%"></i></div>
         <p>${t.xp.toLocaleString()} XP${t.next ? ` · 다음 ${t.next.name}까지 ${Math.max(0, t.next.at - t.xp).toLocaleString()} XP` : ' · 최고 티어!'}</p>
@@ -8993,6 +9001,31 @@ function renderTrophy() {
     <div class="bd-grid">${general}</div>
     <p class="tr-foot">단원 완독은 본문을 처음부터 끝까지 스크롤해 읽으면 자동으로 기록됩니다. 다음 회독은 단원 맨 위로 돌아간 뒤부터 셉니다.</p>`;
   d.querySelector('.sd-close').onclick = () => d.close();
+  // 획득한 배지·현재 티어를 누르면 그때의 축하 모션을 다시 재생
+  d.querySelectorAll('.bd.got[data-badge]').forEach(el => {
+    el.style.cursor = 'pointer'; el.title += ' · 눌러서 다시 보기';
+    el.onclick = () => {
+      const b = STUDY_BADGES.find(x => x.id === el.dataset.badge); if (!b) return;
+      studyCelebrate({ kind: 'badge', rarity: b.rarity, colors: STUDY_RARITY[b.rarity].ring, svg: studyBadgeMedal(b, true, 170),
+        kicker: `${studyData.badges[b.id]} 획득 · ${STUDY_RARITY[b.rarity].label} 배지`, title: b.name, en: '', sub: `${b.desc} · +${STUDY_RARITY[b.rarity].xp} XP` });
+    };
+  });
+  d.querySelectorAll('[data-replay-tier]').forEach(el => {
+    el.style.cursor = 'pointer';
+    el.onclick = () => {
+      const tt = studyTier(); const fromIdx = Math.max(0, tt.index - 1);
+      studyCelebrate({ kind: 'tier', colors: tt.tier.c, fromSvg: tt.index > 0 ? studyTierEmblem(fromIdx, 150) : null, svg: studyTierEmblem(tt.index, 170),
+        kicker: '현재 티어', title: tt.label, en: tt.tier.en, sub: `${tt.xp.toLocaleString()} XP` + (tt.next ? ` · 다음 ${tt.next.name}까지 ${Math.max(0, tt.next.at - tt.xp).toLocaleString()} XP` : ' · 최고 티어!') });
+    };
+  });
+  d.querySelectorAll('.tl-step.done, .tl-step.cur').forEach((el, i) => {
+    el.style.cursor = 'pointer';
+    el.onclick = () => {
+      const x = STUDY_TIERS[i];
+      studyCelebrate({ kind: 'tier', colors: x.c, fromSvg: i > 0 ? studyTierEmblem(i - 1, 150) : null, svg: studyTierEmblem(i, 170),
+        kicker: 'PROMOTED · 티어 승급', title: x.name, en: x.en, sub: `${x.at.toLocaleString()} XP 달성` });
+    };
+  });
   d.querySelector('.g-start input').onchange = e => { if (e.target.value) { studyData.start = e.target.value; studyData.startSet = Date.now(); studySave(); renderTrophy(); } };
 }
 
