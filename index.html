@@ -603,13 +603,12 @@ body{height:100dvh}
 #selectionMemoComposer{flex-shrink:0;max-height:65dvh;overflow-y:auto}#selectionMemoComposer[hidden]{display:none}
 .memo-marker-pop{max-height:calc(100dvh - 24px);overflow-y:auto}
 .memo-annotated-block{background:#edf4df!important;border-radius:6px;box-shadow:0 0 0 5px #edf4df}
-.memo-anchor-marker{float:right;font-size:10px;line-height:1;background:#e3eed9;border:1px solid #b3cba5;border-radius:4px;padding:2px 3px;margin:4px 0 0 8px;color:#456438}
-.memo-anchor-marker::after{content:'📝';font-size:10px}
-td .memo-anchor-marker,li .memo-anchor-marker{margin-top:2px}
+.memo-annotated-block{position:relative}
+.memo-anchor-marker{position:absolute;top:-7px;right:calc(-7px + var(--mk-i,0) * 19px);z-index:2;font-size:9px;line-height:1;background:#e3eed9;border:1px solid #b3cba5;border-radius:4px;padding:2px;margin:0;color:#456438;box-shadow:0 1px 3px rgba(40,70,45,.18)}
+.memo-anchor-marker::after{content:'📝';font-size:9px}
+.memo-anchor-marker.mk-inline{position:static;display:inline-block;margin:0 3px;vertical-align:middle}
 .inline-memo-card,.inline-memo-composer{display:block;max-width:100%}
-.inline-memo-stack{display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin:14px 0 20px auto;width:88%;max-width:100%;clear:both}
-.inline-memo-stack>.inline-memo-card,.inline-memo-stack>.inline-memo-composer{width:100%}
-@media(max-width:768px){.inline-memo-stack{width:94%}}
+.inline-memo-stack{display:flex;flex-direction:column;gap:8px;margin:14px 0 20px;max-width:100%;clear:both}
 .inline-memo-stack:empty{display:none}
 .inline-memo-stack>.inline-memo-card,.inline-memo-stack>.inline-memo-composer{margin:0}
 .q-cont:not(.answered) .q-opt.q-selected,.q-cont:not(.answered) .q-table-opt.q-selected td{background:#e5eefb!important;outline:2px solid #6a91be;outline-offset:-2px}
@@ -1142,7 +1141,7 @@ html.focus-session .main-header:hover{opacity:1}
 </section>
 
 <!-- Firebase SDK -->
-<script src="images/figmap.js?v=2"></script>
+<script src="images/figmap.js?v=3"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -5630,7 +5629,7 @@ function newInlineMemoHost(className) {
 const inlineMemoStacks = new WeakMap();
 function insertAfterMemoBlock(host, node) {
   const content = document.getElementById('chapterContent');
-  const block = node.closest('p,li,h2,h3,h4,h5,td,blockquote') || node;
+  const block = node.closest('p,li,h1,h2,h3,h4,h5,h6,td,th,blockquote') || node;
   const answer = node.closest('.quiz-answer');
   const anchor=answer||block;
   let stack=inlineMemoStacks.get(anchor);
@@ -6628,14 +6627,18 @@ function renderMemoAnchors(chNum) {
     });
     try {
       r.insertNode(span);
-      const block = span.closest('p,li,h2,h3,h4,h5,td,blockquote');
-      if (block) block.classList.add('memo-annotated-block');
+      const block = span.closest('p,li,h1,h2,h3,h4,h5,h6,td,th,blockquote');
+      if (block) {
+        block.classList.add('memo-annotated-block');
+        // 아이콘은 블록 오른쪽 위 모서리에 작게, 같은 블록에 여러 개면 왼쪽으로 나란히
+        span.style.setProperty('--mk-i', block.querySelectorAll('.memo-anchor-marker').length - 1);
+      } else span.classList.add('mk-inline');
       if (m.anchorText) {
         const first = offsetToRange(contentEl, offset);
         const last = offsetToRange(contentEl, offset + m.anchorText.length - 1);
         if (first && last) {
           first.setEnd(last.startContainer, last.startOffset + 1);
-          contentEl.querySelectorAll('p,li,h2,h3,h4,h5,td,blockquote').forEach(el => {
+          contentEl.querySelectorAll('p,li,h1,h2,h3,h4,h5,h6,td,th,blockquote').forEach(el => {
             if (first.intersectsNode(el)) el.classList.add('memo-annotated-block');
           });
         }
