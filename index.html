@@ -881,10 +881,20 @@ html.focus-session .main-header:hover{opacity:1}
 html.sidebar-collapsed #sidebarCollapseBtn{top:16px;left:12px;color:#4f6358}
 html.sidebar-collapsed #sidebarCollapseBtn:hover{background:#e7eee8;color:#21675b}
 html.sidebar-collapsed .main-header{padding-left:50px}
-@media(min-width:769px){.sidebar-header{padding-top:40px}}
+.sidebar-header{padding-top:40px}
 html #headerTitle{margin-right:auto}
 html.sidebar-collapsed .sidebar{display:none}
-@media(max-width:768px){#sidebarCollapseBtn{display:none}html.sidebar-collapsed .sidebar{display:flex}html.sidebar-collapsed .main-header{padding-left:54px}}
+@media(max-width:768px){
+  /* Mobile: the same panel icon replaces the ☰ button and opens/closes the drawer */
+  .hamburger{display:none!important}
+  #sidebarCollapseBtn,html.sidebar-collapsed #sidebarCollapseBtn{top:15px;left:12px;width:30px;height:30px;color:#4f6358}
+  #sidebarCollapseBtn svg{width:19px;height:19px}
+  #sidebarCollapseBtn:hover,html.sidebar-collapsed #sidebarCollapseBtn:hover{background:#e7eee8;color:#21675b}
+  .sidebar-overlay.open ~ #sidebarCollapseBtn{top:8px;left:8px;color:rgba(232,239,235,.75)}
+  .sidebar-overlay.open ~ #sidebarCollapseBtn:hover{background:rgba(255,255,255,.10);color:#f0f4ed}
+  html.sidebar-collapsed .sidebar{display:flex}
+  html.sidebar-collapsed .main-header{padding-left:54px}
+}
 </style>
 </head>
 <body>
@@ -8191,6 +8201,7 @@ function processHeadings() {
 // ===== MOBILE SIDEBAR =====
 // Desktop: hide/show the whole sidebar to widen the reading area (per-device preference)
 function toggleSidebarCollapse(force) {
+  if (window.matchMedia('(max-width:768px)').matches) { toggleSidebar(); return; }  // mobile: drawer
   const on = typeof force === 'boolean' ? force : !document.documentElement.classList.contains('sidebar-collapsed');
   document.documentElement.classList.toggle('sidebar-collapsed', on);
   const btn = document.getElementById('sidebarCollapseBtn');
@@ -8202,6 +8213,7 @@ function toggleSidebarCollapse(force) {
   try { localStorage.setItem('elite_ortho_sidebar_collapsed', on ? '1' : '0'); } catch (e) {}
 }
 try { if (localStorage.getItem('elite_ortho_sidebar_collapsed') === '1') toggleSidebarCollapse(true); } catch (e) {}
+syncDrawerBtn();
 document.addEventListener('keydown', e => {
   if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'b' || e.key === 'B' || e.code === 'KeyB')) { e.preventDefault(); toggleSidebarCollapse(); }
 });
@@ -8210,12 +8222,21 @@ function toggleSidebar() {
   const overlay = document.getElementById('sidebarOverlay');
   sidebar.classList.toggle('open');
   overlay.classList.toggle('open');
+  syncDrawerBtn();
+}
+function syncDrawerBtn() {
+  const btn = document.getElementById('sidebarCollapseBtn');
+  if (!btn || !window.matchMedia('(max-width:768px)').matches) return;
+  const open = document.querySelector('.sidebar').classList.contains('open');
+  btn.title = open ? '사이드바 숨기기' : '사이드바 보이기';
+  btn.setAttribute('aria-label', btn.title);
 }
 function closeSidebar() {
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.getElementById('sidebarOverlay');
   sidebar.classList.remove('open');
   overlay.classList.remove('open');
+  syncDrawerBtn();
 }
 
 // ===== 오답노트 · 문항 스티커(R / ?) · 5독 배지 · 티어 =====
