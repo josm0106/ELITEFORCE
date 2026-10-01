@@ -666,6 +666,22 @@ html[data-motion="off"] #sidebarGlow,html[data-motion="off"] #confettiLayer{disp
 #motionToggle:hover,#timerToggle:hover,#serverSaveBtn:hover{background:#eef4ea;border-color:#a9c2ad;box-shadow:0 3px 10px rgba(33,103,91,.10)}
 #motionToggle:active,#timerToggle:active{transform:scale(.96)}
 #timerToggle{display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+#xpChip{position:relative;display:inline-flex;align-items:center;gap:7px;border:1px solid #d5dfd3;border-radius:999px;background:#fbfdf8;color:#40614f;font:inherit;font-size:11.5px;padding:3px 11px 3px 5px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums;transition:background .2s,border-color .2s,box-shadow .2s}
+#xpChip:hover{background:#eef4ea;border-color:#a9c2ad;box-shadow:0 3px 10px rgba(33,103,91,.10)}
+#xpChip .xc-ico svg{display:block}
+#xpChip .xc-body{display:flex;flex-direction:column;gap:3px;min-width:118px}
+#xpChip .xc-top{display:flex;align-items:baseline;gap:5px;line-height:1.1}
+#xpChip .xc-top b{color:#21675b;font-size:12.5px}
+#xpChip .xc-next{color:#7a8f80;font-size:10.5px}
+#xpChip .xc-need{margin-left:auto;color:#795a22;font-size:10.5px;font-weight:600}
+#xpChip .xc-bar{display:block;height:5px;border-radius:99px;background:#e3eadf;overflow:hidden}
+#xpChip .xc-bar i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,var(--xc1,#4fb3a8),var(--xc2,#d4a52c));transition:width .6s ease-out}
+#xpChip .xc-gain{position:absolute;right:8px;top:-4px;color:#2f7f6a;font-weight:800;font-size:11px;opacity:0;pointer-events:none}
+#xpChip.bump{border-color:#d4a52c;box-shadow:0 0 0 3px rgba(212,165,44,.22)}
+#xpChip.bump .xc-gain{animation:xc-gain 1.4s ease-out}
+@keyframes xc-gain{0%{opacity:0;transform:translateY(6px)}20%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+@media(prefers-reduced-motion:reduce){#xpChip.bump .xc-gain{animation:none}#xpChip .xc-bar i{transition:none}}
+@media(max-width:768px){#xpChip{padding:2px 7px 2px 3px;gap:4px;font-size:10.5px}#xpChip .xc-ico svg{width:18px;height:18px}#xpChip .xc-body{min-width:34px;gap:2px}#xpChip .xc-top b{font-size:11px}#xpChip .xc-bar{height:4px}#xpChip .xc-next,#xpChip .xc-need{display:none}}
 #timerToggle.running{background:linear-gradient(120deg,#21675b,#2f7f6a);color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(33,103,91,.30)}
 #timerToggle.running .tt-dot{display:inline-block}
 #timerToggle .tt-dot{display:none;width:7px;height:7px;border-radius:50%;background:#f1dfb5;animation:dot-pulse 1.6s ease-in-out infinite}
@@ -954,6 +970,7 @@ html.sidebar-collapsed .sidebar{display:none}
   <div class="main-header" id="mainHeader">
     <span id="headerTitle" onclick="showCurrentChapterInNav()">엘리트 정형외과 단원별 열람</span>
     <div class="server-save-controls">
+      <button id="xpChip" type="button" onclick="openTrophy()" title="경험치 · 다음 단계까지 진행률"><span class="xc-ico" id="xpChipIco" aria-hidden="true"></span><span class="xc-body"><span class="xc-top"><b id="xpChipPct">0%</b><span class="xc-next" id="xpChipNext"></span><span class="xc-need" id="xpChipNeed"></span></span><span class="xc-bar"><i id="xpChipFill"></i></span></span><span class="xc-gain" id="xpChipGain" aria-hidden="true"></span></button>
       <button id="timerToggle" type="button" title="집중 타이머 열기/닫기 (Alt+T)" aria-controls="focusTimer"><span class="tt-dot" aria-hidden="true"></span><span aria-hidden="true">⏱</span><span class="tt-label" id="timerToggleLabel">타이머</span></button>
       <span class="fs-wrap"><button id="fontSizeBtn" type="button" title="본문 글자 크기 (Alt+ + / Alt+ −)" aria-haspopup="true" aria-expanded="false" onclick="toggleFontSizePanel(event)"><span class="fs-a1">가</span><span class="fs-a2">가</span><span id="fontSizeLabel" class="fs-val">100%</span></button>
         <div id="fontSizePanel" class="fs-panel" hidden role="dialog" aria-label="본문 글자 크기">
@@ -8726,7 +8743,7 @@ function studyBadgeMedal(b, earned, size = 64) {
     <text x="50" y="58" text-anchor="middle" font-size="31" font-family="Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif">${b.icon}</text></svg>`;
 }
 
-// ===== 배지 (권별 칭호 30 + 도전 과제 26) =====
+// ===== 배지 (권별 칭호 30 + 도전 과제 49) =====
 const STUDY_VOL_TITLES = [
   ['🧬', '종양 탐험가', '종양 추적자', '종양 정복자'],
   ['📘', '총론 수련생', '총론 학자', '총론의 현자'],
@@ -8762,6 +8779,26 @@ function studyPerfectChapter() {
     return es.length >= n && es.every(e => e[4] === 1);
   });
 }
+function studyPerfectCount() {
+  return Object.entries(studyData.qn).filter(([num, n]) => {
+    if (n < 5) return false;
+    const es = Object.values(studyData.quiz[num] || {}).filter(e => e[4] !== -1);
+    return es.length >= n && es.every(e => e[4] === 1);
+  }).length;
+}
+function studyUniqueCorrect() { return studySum(studyData.quiz, ch => Object.values(ch).filter(e => e[1] >= 1).length); }
+function studyFirstTryAcc(min) {
+  const es = Object.values(studyData.quiz).flatMap(ch => Object.values(ch)).filter(e => e[4] !== -1);
+  return es.length >= min && es.filter(e => e[4] === 1).length / es.length >= 0.9;
+}
+function studyAllVolsTouched() { return SECTIONS.every((s, i) => studySectionChapters(i).some(n => (studyData.reads[n] || 0) >= 1)); }
+function studyWeekend() {
+  const act = k => { const d = studyData.days[k]; return d && d[0] + d[1] + d[2] > 0; };
+  return Object.keys(studyData.days).some(k => {
+    const t = new Date(k + 'T00:00:00'); if (t.getDay() !== 6 || !act(k)) return false;
+    t.setDate(t.getDate() + 1); return act(studyDayKey(t));
+  });
+}
 function studyGoalEnd() { const d = new Date(studyData.start + 'T00:00:00'); d.setDate(d.getDate() + STUDY_GOAL_DAYS); return d; }
 const STUDY_BADGES = [
   ...STUDY_VOL_TITLES.flatMap(([icon, t1, t3, t5], i) => [
@@ -8771,9 +8808,12 @@ const STUDY_BADGES = [
   ]),
   { id: 'read1', icon: '🌱', name: '첫 페이지', rarity: 'common', desc: '단원 하나를 끝까지 읽기', test: () => studyTotalReads() >= 1 },
   { id: 'read10', icon: '🔥', name: '워밍업', rarity: 'common', desc: '단원 완독 누적 10회', test: () => studyTotalReads() >= 10 },
+  { id: 'read50', icon: '📖', name: '반백 단원', rarity: 'common', desc: '단원 완독 누적 50회', test: () => studyTotalReads() >= 50 },
   { id: 'read100', icon: '📚', name: '백 단원 돌파', rarity: 'rare', desc: '단원 완독 누적 100회', test: () => studyTotalReads() >= 100 },
   { id: 'read500', icon: '🏔️', name: '오백 고지', rarity: 'epic', desc: '단원 완독 누적 500회', test: () => studyTotalReads() >= 500 },
   { id: 'read1000', icon: '🛤️', name: '천 리 길', rarity: 'epic', desc: '단원 완독 누적 1,000회', test: () => studyTotalReads() >= 1000 },
+  { id: 'read1500', icon: '🗻', name: '천오백 고지', rarity: 'legend', desc: '단원 완독 누적 1,500회', test: () => studyTotalReads() >= 1500 },
+  { id: 'allvols', icon: '🧭', name: '전권 탐방', rarity: 'common', desc: '10권 모두 단원 하나 이상 완독', test: studyAllVolsTouched },
   { id: 'book1', icon: '🥉', name: '1독 완주', rarity: 'epic', desc: '전 10권 1독', test: () => studyBookPasses() >= 1 },
   { id: 'book2', icon: '🥈', name: '2독 완주', rarity: 'epic', desc: '전 10권 2독', test: () => studyBookPasses() >= 2 },
   { id: 'book3', icon: '🥇', name: '3독 완주', rarity: 'legend', desc: '전 10권 3독', test: () => studyBookPasses() >= 3 },
@@ -8781,21 +8821,38 @@ const STUDY_BADGES = [
   { id: 'book5', icon: '👑', name: '엘리트 5독', rarity: 'legend', desc: '전 10권 5독 · 최종 목표', test: () => studyBookPasses() >= 5 },
   { id: 'goal5', icon: '⏱️', name: '석 달의 기적', rarity: 'legend', desc: `목표 시작일부터 ${STUDY_GOAL_DAYS}일 안에 5독`, test: () => studyBookPasses() >= 5 && new Date() <= studyGoalEnd() },
   { id: 'q1', icon: '✅', name: '첫 정답', rarity: 'common', desc: '문제 하나 맞히기', test: () => studyTotalCorrect() >= 1 },
+  { id: 'q50', icon: '✏️', name: '오십 문제', rarity: 'common', desc: '정답 누적 50회', test: () => studyTotalCorrect() >= 50 },
   { id: 'q100', icon: '🎯', name: '백발백중', rarity: 'rare', desc: '정답 누적 100회 (문항당 하루 1회)', test: () => studyTotalCorrect() >= 100 },
+  { id: 'q500', icon: '🎳', name: '오백 정답', rarity: 'rare', desc: '정답 누적 500회', test: () => studyTotalCorrect() >= 500 },
   { id: 'q1000', icon: '🏹', name: '명사수', rarity: 'epic', desc: '정답 누적 1,000회', test: () => studyTotalCorrect() >= 1000 },
+  { id: 'q2000', icon: '🚀', name: '이천 정답', rarity: 'epic', desc: '정답 누적 2,000회', test: () => studyTotalCorrect() >= 2000 },
   { id: 'q3000', icon: '🧠', name: '문제 은행 털이', rarity: 'legend', desc: '정답 누적 3,000회', test: () => studyTotalCorrect() >= 3000 },
+  { id: 'uniq1000', icon: '🗂️', name: '천 문항 정복', rarity: 'epic', desc: '서로 다른 문항 1,000개 정답', test: () => studyUniqueCorrect() >= 1000 },
+  { id: 'uniq4400', icon: '🏛️', name: '문제 은행 완전 정복', rarity: 'legend', desc: '서로 다른 문항 4,400개 정답 (거의 전 문항)', test: () => studyUniqueCorrect() >= 4400 },
+  { id: 'acc90', icon: '🎖️', name: '정밀 사격', rarity: 'epic', desc: '첫 시도 300문항 이상 · 첫 시도 정답률 90% 이상', test: () => studyFirstTryAcc(300) },
   { id: 'fix1', icon: '🩹', name: '오답 극복', rarity: 'common', desc: '틀렸던 문제를 다시 맞히기', test: () => (studyData.stats.fixed || 0) >= 1 },
+  { id: 'fix10', icon: '🧹', name: '오답 청소부', rarity: 'common', desc: '오답 극복 10회', test: () => (studyData.stats.fixed || 0) >= 10 },
   { id: 'fix50', icon: '🗡️', name: '오답 사냥꾼', rarity: 'rare', desc: '오답 극복 50회', test: () => (studyData.stats.fixed || 0) >= 50 },
   { id: 'fix200', icon: '⚔️', name: '오답 킬러', rarity: 'epic', desc: '오답 극복 200회', test: () => (studyData.stats.fixed || 0) >= 200 },
+  { id: 'fix500', icon: '🐉', name: '오답 드래곤 슬레이어', rarity: 'legend', desc: '오답 극복 500회', test: () => (studyData.stats.fixed || 0) >= 500 },
   { id: 'rhit20', icon: '🔁', name: '반복의 힘', rarity: 'rare', desc: 'R 스티커 문제를 20번 맞히기', test: () => (studyData.stats.rHit || 0) >= 20 },
+  { id: 'rhit100', icon: '♻️', name: '반복 장인', rarity: 'epic', desc: 'R 스티커 문제를 100번 맞히기', test: () => (studyData.stats.rHit || 0) >= 100 },
   { id: 'usolve20', icon: '💡', name: '의문 해소', rarity: 'rare', desc: '? 도장 20개 해제 (찍은 다음 날 이후)', test: () => (studyData.stats.uSolved || 0) >= 20 },
+  { id: 'usolve100', icon: '🔦', name: '의문 박멸', rarity: 'epic', desc: '? 도장 100개 해제', test: () => (studyData.stats.uSolved || 0) >= 100 },
   { id: 'perfect', icon: '🌟', name: '퍼펙트 단원', rarity: 'epic', desc: '문제 5개 이상인 단원을 첫 시도에 모두 정답', test: studyPerfectChapter },
+  { id: 'perfect5', icon: '✨', name: '퍼펙트 메이커', rarity: 'legend', desc: '퍼펙트 단원 5개 달성', test: () => studyPerfectCount() >= 5 },
   { id: 'streak3', icon: '📅', name: '3일 연속', rarity: 'common', desc: '3일 연속 학습', test: () => studyStreaks().best >= 3 },
   { id: 'streak7', icon: '🗓️', name: '일주일 개근', rarity: 'rare', desc: '7일 연속 학습', test: () => studyStreaks().best >= 7 },
+  { id: 'streak14', icon: '📆', name: '2주 개근', rarity: 'rare', desc: '14일 연속 학습', test: () => studyStreaks().best >= 14 },
   { id: 'streak30', icon: '🏅', name: '한 달 개근', rarity: 'epic', desc: '30일 연속 학습', test: () => studyStreaks().best >= 30 },
+  { id: 'streak60', icon: '🎗️', name: '두 달 개근', rarity: 'epic', desc: '60일 연속 학습', test: () => studyStreaks().best >= 60 },
   { id: 'streak90', icon: '🏆', name: '90일의 약속', rarity: 'legend', desc: '90일 연속 학습', test: () => studyStreaks().best >= 90 },
+  { id: 'active30', icon: '🗳️', name: '출석 30일', rarity: 'rare', desc: '공부한 날 누적 30일 (연속 아니어도 OK)', test: () => studyStreaks().activeDays >= 30 },
+  { id: 'weekend', icon: '🏖️', name: '주말 전사', rarity: 'common', desc: '토요일 · 일요일 이틀 연속 공부', test: studyWeekend },
   { id: 'day10', icon: '⚡', name: '폭풍 독서', rarity: 'rare', desc: '하루에 단원 10개 완독', test: () => studyBestDay(0) >= 10 },
+  { id: 'day20', icon: '☄️', name: '독서 폭주', rarity: 'epic', desc: '하루에 단원 20개 완독', test: () => studyBestDay(0) >= 20 },
   { id: 'day100', icon: '🌪️', name: '문제 폭격', rarity: 'rare', desc: '하루에 100문제 풀기', test: () => Math.max(0, ...Object.values(studyData.days).map(d => d[1] + d[2])) >= 100 },
+  { id: 'day200', icon: '🌋', name: '문제 융단 폭격', rarity: 'epic', desc: '하루에 200문제 풀기', test: () => Math.max(0, ...Object.values(studyData.days).map(d => d[1] + d[2])) >= 200 },
   { id: 'night', icon: '🦉', name: '올빼미', rarity: 'common', desc: '자정 ~ 새벽 4시에 공부', test: () => !!studyData.stats.night },
   { id: 'dawn', icon: '🌅', name: '새벽의 전공의', rarity: 'common', desc: '새벽 5 ~ 7시에 공부', test: () => !!studyData.stats.dawn }
 ];
@@ -8939,6 +8996,40 @@ function studyPaintDock() {
   const t = studyTier();
   const icon = document.getElementById('dockTier'); if (icon) icon.innerHTML = studyTierEmblem(t.index, 22);
   const name = document.getElementById('dockTierName'); if (name) name.textContent = t.label;
+  studyPaintXpChip(t);
+}
+// ---- header XP chip: progress to the next level (division IV→I, then the next tier) ----
+let studyXpShown = null;
+function studyNextLevel(t) {
+  const DIVS = ['IV', 'III', 'II', 'I'];
+  if (t.div) {
+    const d = DIVS.indexOf(t.div), step = t.span / 4, from = t.tier.at + d * step;
+    if (d < 3) return { from, to: from + step, label: t.tier.name + ' ' + DIVS[d + 1] };
+  }
+  if (!t.next) return null;
+  const from = t.div ? t.tier.at + 3 * t.span / 4 : t.tier.at;
+  return { from, to: t.next.at, label: t.next.name + (STUDY_TIERS.indexOf(t.next) <= 6 ? ' IV' : ''), gate: t.next.gate };
+}
+function studyPaintXpChip(t) {
+  const chip = document.getElementById('xpChip'); if (!chip) return;
+  t = t || studyTier();
+  const lv = studyNextLevel(t);
+  const pct = lv ? Math.max(0, Math.min(100, (t.xp - lv.from) / (lv.to - lv.from) * 100)) : 100;
+  const need = lv ? Math.max(0, Math.ceil(lv.to - t.xp)) : 0;
+  const locked = lv && lv.gate && need === 0 && t.passes < lv.gate;
+  document.getElementById('xpChipIco').innerHTML = studyTierEmblem(t.index, 24);
+  document.getElementById('xpChipPct').textContent = lv ? Math.floor(pct) + '%' : 'MAX';
+  document.getElementById('xpChipNext').textContent = lv ? '→ ' + lv.label : t.label;
+  document.getElementById('xpChipNeed').textContent = !lv ? t.xp.toLocaleString() + ' XP' : locked ? `🔒 전권 ${lv.gate}독` : need.toLocaleString() + ' XP 남음';
+  document.getElementById('xpChipFill').style.width = pct + '%';
+  chip.style.setProperty('--xc1', t.tier.c[1]); chip.style.setProperty('--xc2', t.tier.c[2]);
+  chip.title = `${t.label} · ${t.xp.toLocaleString()} XP` + (lv ? `\n다음 단계 ${lv.label}까지 ${pct.toFixed(1)}% · ${need.toLocaleString()} XP 더 필요` + (locked ? ` (전권 ${lv.gate}독 필요)` : '') : '\n최고 티어!') + '\n클릭: 5독 챌린지 열기';
+  if (studyXpShown != null && t.xp > studyXpShown) {
+    document.getElementById('xpChipGain').textContent = '+' + (t.xp - studyXpShown) + ' XP';
+    chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump');
+    clearTimeout(studyPaintXpChip.tm); studyPaintXpChip.tm = setTimeout(() => chip.classList.remove('bump'), 1500);
+  }
+  studyXpShown = t.xp;
 }
 
 // ===== 오답노트 =====
