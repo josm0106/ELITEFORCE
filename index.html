@@ -5808,17 +5808,33 @@ function mountSelectionMemoComposer(scroll = true) {
 // 블록 선택한 원문(인용)은 표시하지 않고 메모 내용만 보여줌 — 메모·사진이 없을 때만 원문
 // 본문 메모 카드의 사진 도구 — 교재 그림처럼 사진 오른쪽 위 ✎ → 자르기·회전·바꾸기·크기·삭제·완료
 let memoImgEditingId = null; // 다시 그려도(회전·자르기 저장 후) 편집 막대를 열어 둠
+// 사진 수정(✎) 중일 때 Ctrl+V로 붙여넣은 사진으로 바꿀 대상: {kind:'memo',id,type} | {kind:'fig',fig}
+let photoPasteTarget = null;
+document.addEventListener('paste', e => {
+  const t = photoPasteTarget;
+  if (!t || e.defaultPrevented) return;
+  if (t.kind === 'fig' && !(t.fig.isConnected && t.fig.classList.contains('fig-editing'))) { photoPasteTarget = null; return; }
+  if (t.kind === 'memo' && !(memoImgEditingId === t.id && document.querySelector(`.inline-memo-card[data-memo-id="${t.id}"]`))) { photoPasteTarget = null; return; }
+  const item = Array.from(e.clipboardData?.items || []).find(it => it.type && it.type.startsWith('image/'));
+  const file = item && item.getAsFile();
+  if (!file) return;
+  e.preventDefault();
+  const rd = new FileReader();
+  rd.onload = () => openImgEditor(rd.result, url => t.kind === 'fig' ? replaceFigImage(t.fig, url) : attachEditedImage(url, { mode: 'memo', id: t.id, type: t.type }));
+  rd.readAsDataURL(file);
+});
 function memoImgTools(m, type, wrap) {
   const ctl = document.createElement('div'); ctl.className = 'img-ctl';
   ctl.innerHTML = '<button type="button" class="pen" title="사진 수정" aria-label="사진 수정">✎</button>'
     + '<div class="bar"><button type="button" data-act="crop" title="회전/자르기 편집" aria-label="자르기">✂ 자르기</button>'
     + '<button type="button" data-act="rotl" title="왼쪽으로 90° 회전" aria-label="왼쪽으로 회전">⟲ 90°</button>'
     + '<button type="button" data-act="rotr" title="오른쪽으로 90° 회전" aria-label="오른쪽으로 회전">⟳ 90°</button>'
-    + '<button type="button" data-act="replace" title="다른 사진으로 바꾸기" aria-label="다른 사진으로 바꾸기">🖼️</button>'
+    + '<button type="button" data-act="replace" title="다른 사진으로 바꾸기 (Ctrl+V로 붙여넣기도 가능)" aria-label="다른 사진으로 바꾸기">🖼️</button>'
     + '<span class="sz"><button type="button" data-act="minus" title="작게 (1%씩, Shift 5%)" aria-label="사진 작게">－</button><input type="range" min="20" max="100" step="1" aria-label="사진 크기" title="끌어서 크기 미세조정"><button type="button" data-act="plus" title="크게 (1%씩, Shift 5%)" aria-label="사진 크게">＋</button><b></b></span>'
     + '<button type="button" data-act="del" class="del" title="이 사진 삭제" aria-label="사진 삭제">🗑 삭제</button>'
     + '<button type="button" data-act="done" title="완료" aria-label="완료">완료</button></div>';
-  const on = v => { ctl.classList.toggle('on', v); wrap.classList.toggle('editing', v); memoImgEditingId = v ? m.id : (memoImgEditingId === m.id ? null : memoImgEditingId); };
+  const on = v => { ctl.classList.toggle('on', v); wrap.classList.toggle('editing', v); memoImgEditingId = v ? m.id : (memoImgEditingId === m.id ? null : memoImgEditingId);
+    if (v) photoPasteTarget = { kind: 'memo', id: m.id, type }; else if (photoPasteTarget && photoPasteTarget.id === m.id) photoPasteTarget = null; };
   const act = (name, fn) => { ctl.querySelector(`[data-act="${name}"]`).onclick = e => { e.stopPropagation(); fn(e); }; };
   ctl.querySelector('.pen').onclick = e => { e.stopPropagation(); on(true); };
   act('done', () => on(false));
@@ -8001,14 +8017,15 @@ function attachFigControls(fig) {
     <button class="crop" title="보이는 범위 자르기" aria-label="자르기">✂ 자르기</button>
     <button class="rotl" title="왼쪽으로 90° 회전" aria-label="왼쪽으로 회전">⟲ 90°</button>
     <button class="rotr" title="오른쪽으로 90° 회전" aria-label="오른쪽으로 회전">⟳ 90°</button>
-    <button class="swap" title="다른 사진으로 바꾸기 (↺ 누르면 원래 그림)" aria-label="다른 사진으로 바꾸기">🖼️</button>
+    <button class="swap" title="다른 사진으로 바꾸기 (Ctrl+V로 붙여넣기도 가능, ↺ 누르면 원래 그림)" aria-label="다른 사진으로 바꾸기">🖼️</button>
     <span class="sz"><button class="smaller" title="작게 (1%씩, Shift 누르면 5%)" aria-label="작게">－</button><input class="szr" type="range" min="20" max="300" step="1" title="끌어서 크기 미세조정 (100% 이상은 확대)" aria-label="사진 크기"><button class="bigger" title="크게 (1%씩, Shift 누르면 5%)" aria-label="크게">＋</button><b class="szv"></b></span>
     <button class="hide" title="숨기기/보이기" aria-label="숨기기">숨김</button>
     <button class="del" title="이 그림 삭제 (단원 위 '삭제한 그림 복원'으로 되돌릴 수 있음)" aria-label="삭제" style="color:#a4483c;border-color:#e3c4bd">🗑 삭제</button>
     <button class="reset" title="처음 위치로" aria-label="처음 위치로">↺</button>
     <button class="done" title="완료" aria-label="완료">완료</button>
   </div>`;
-  const on = v => { host.classList.toggle('on', v); fig.classList.toggle('fig-editing', v); };
+  const on = v => { host.classList.toggle('on', v); fig.classList.toggle('fig-editing', v);
+    if (v) photoPasteTarget = { kind: 'fig', fig }; else if (photoPasteTarget && photoPasteTarget.fig === fig) photoPasteTarget = null; };
   sh.querySelector('.edit').onclick = e => { e.stopPropagation(); on(true); };
   sh.querySelector('.done').onclick = e => { e.stopPropagation(); on(false); };
   sh.querySelector('.hide').onclick = e => { e.stopPropagation(); fig.classList.toggle('fig-hidden'); saveFigMove(fig); };
