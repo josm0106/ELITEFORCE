@@ -5760,12 +5760,14 @@ function mountSelectionMemoComposer(scroll = true) {
     selectionMemoElement('selectionMemoNote').focus({preventScroll:true});
   }
 }
+// 블록 선택한 원문(인용)은 표시하지 않고 메모 내용만 보여줌 — 메모·사진이 없을 때만 원문
+function memoShownText(m, type) { return type === 'free' ? (m.text || '') : (m.note || (m.imgId ? '' : (m.text || ''))); }
 function renderInlineMemo(m, type, marker) {
   const host = newInlineMemoHost('inline-memo-card');
   host.dataset.memoId = m.id;
   host.dataset.memoType = type;
   const card = document.createElement('div'); card.className = 'card';
-  card.innerHTML = `<div class="memo-toolbar"><small>${timeAgo(m.id)}</small><button type="button" class="memo-tool" data-action="add" aria-label="같은 위치에 메모 추가" title="메모 추가">+</button><button type="button" class="memo-tool" data-action="edit" aria-label="이 메모 수정" title="메모 수정">✎</button><button type="button" class="memo-tool" data-action="delete" aria-label="이 메모 삭제" title="메모 삭제">×</button></div>${m.note ? `<p>${memoFmt(m.note)}</p>` : m.text ? `<p>${memoFmt(m.text)}</p>` : ''}`;
+  card.innerHTML = `<div class="memo-toolbar"><small>${timeAgo(m.id)}</small><button type="button" class="memo-tool" data-action="add" aria-label="같은 위치에 메모 추가" title="메모 추가">+</button><button type="button" class="memo-tool" data-action="edit" aria-label="이 메모 수정" title="메모 수정">✎</button><button type="button" class="memo-tool" data-action="delete" aria-label="이 메모 삭제" title="메모 삭제">×</button></div>${memoShownText(m, type) ? `<p>${memoFmt(memoShownText(m, type))}</p>` : ''}`;
   card.querySelector('[data-action="add"]').onclick = () => {
     const content=document.getElementById('chapterContent');
     const offset=resolveMemoOffset(m,content,type);
@@ -5794,7 +5796,7 @@ function editInlineMemo(m, type, host) {
   const form=document.createElement('form');
   form.innerHTML='<textarea aria-label="메모 내용 수정"></textarea><div class="actions"><button type="button" data-action="bold" title="굵게 (Ctrl+B)"><b>B</b></button><button type="submit" class="free-memo-add">저장</button><button type="button" data-action="cancel">취소</button></div>';
   const input=form.querySelector('textarea');
-  input.value=m.note || m.text || '';
+  input.value=type==='free' ? (m.text || '') : (m.note || (m.anchorText ? '' : (m.text || '')));
   const cancel=()=>{form.remove();display.forEach(el=>el.hidden=false);card.querySelector('[data-action="edit"]').focus();};
   form.querySelector('[data-action="cancel"]').onclick=cancel;
   form.querySelector('[data-action="bold"]').onmousedown=e=>e.preventDefault();
@@ -5963,8 +5965,7 @@ function renderMemos() {
     const secLabel = secIdx >= 0 ? getSectionShortName(secIdx) + ' · ' : '';
     div.innerHTML = `
       <div class="memo-chapter">${secLabel}Ch${chLocalNum(m.chapterNum)}. ${escapeHtml(m.chapterTitle)}${canGo ? '<span class="memo-goto-hint">📍 위치로 이동</span>' : ''}</div>
-      <div class="memo-text">${memoFmt(m.text)}</div>
-      ${m.note ? `<div class="memo-text" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">${memoFmt(m.note)}</div>` : ''}
+      ${memoShownText(m) ? `<div class="memo-text">${memoFmt(memoShownText(m))}</div>` : ''}
       ${memoImgHtml(m, 'hl')}
       <span class="memo-photo-btn" title="스크린샷/이미지 첨부" onclick="event.stopPropagation();pickMemoImage('memo',${m.id},'hl')">📷</span>
       <span class="memo-del" onclick="event.stopPropagation();deleteMemo(${m.id})">&times;</span>
@@ -6712,7 +6713,7 @@ function renderMemoAnchors(chNum) {
     span.className = 'memo-anchor-marker';
     span.setAttribute('data-memo-id', m.id);
     span.setAttribute('data-memo-type', type);
-    span.title = m.note || m.text || '메모 보기';
+    span.title = memoShownText(m, type) || '메모 보기';
     span.tabIndex = 0;
     span.setAttribute('role', 'button');
     span.setAttribute('aria-label', m.imgId ? '사진이 첨부된 메모 보기' : '메모 보기');
@@ -6936,7 +6937,7 @@ function renderSidebarMemoPreviews() {
     const listEl = preview.querySelector('.smp-list');
     listEl.innerHTML = '';
     const allItems = [];
-    hlMemos.forEach(m => allItems.push({ type:'hl', text: m.text, id: m.id }));
+    hlMemos.forEach(m => allItems.push({ type:'hl', text: memoShownText(m) || '📷 사진 메모', id: m.id }));
     frMemos.forEach(m => allItems.push({ type:'free', text: m.text, id: m.id }));
     const maxShow = 5;
     allItems.slice(0, maxShow).forEach(item => {
@@ -7870,6 +7871,10 @@ function attachFigControls(fig) {
     :host(.on) .bar{display:flex} :host(.on) .edit{display:none}
     .drag{cursor:grab;background:#315548;color:#fff;border-color:#315548}
     .edit{opacity:.6} .edit:hover{opacity:1}
+    .sz{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.94);border:1px solid #c9d5c4;border-radius:6px;padding:2px 6px 2px 2px}
+    .sz button{border:0;background:transparent;padding:6px 8px}
+    .szr{width:110px;accent-color:#315548;cursor:pointer;margin:0}
+    .szv{font:600 11px/1 system-ui,sans-serif;color:#315548;min-width:34px;text-align:right}
   </style>
   <button class="edit" title="위치 수정" aria-label="사진 위치 수정">✎</button>
   <div class="bar">
@@ -7877,8 +7882,7 @@ function attachFigControls(fig) {
     <button class="up" title="한 줄 위로" aria-label="한 줄 위로">▲</button>
     <button class="down" title="한 줄 아래로" aria-label="한 줄 아래로">▼</button>
     <button class="crop" title="보이는 범위 자르기" aria-label="자르기">✂ 자르기</button>
-    <button class="smaller" title="작게" aria-label="작게">－</button>
-    <button class="bigger" title="크게" aria-label="크게">＋</button>
+    <span class="sz"><button class="smaller" title="작게 (1%씩, Shift 누르면 5%)" aria-label="작게">－</button><input class="szr" type="range" min="20" max="100" step="1" title="끌어서 크기 미세조정" aria-label="사진 크기"><button class="bigger" title="크게 (1%씩, Shift 누르면 5%)" aria-label="크게">＋</button><b class="szv"></b></span>
     <button class="hide" title="숨기기/보이기" aria-label="숨기기">숨김</button>
     <button class="del" title="이 그림 삭제 (단원 위 '삭제한 그림 복원'으로 되돌릴 수 있음)" aria-label="삭제" style="color:#a4483c;border-color:#e3c4bd">🗑 삭제</button>
     <button class="reset" title="처음 위치로" aria-label="처음 위치로">↺</button>
@@ -7909,13 +7913,23 @@ function attachFigControls(fig) {
   sh.querySelector('.up').onclick = e => { e.stopPropagation(); step(-1); };
   sh.querySelector('.down').onclick = e => { e.stopPropagation(); step(1); };
   sh.querySelector('.drag').addEventListener('pointerdown', e => startFigDrag(e, fig));
-  const resize = d => {
-    const mv = figMoves[fig.dataset.src] || {};
-    const cur = mv.size || 100, next = Math.max(30, Math.min(100, cur + d));
-    setFigProp(fig, 'size', next === 100 ? undefined : next);
+  const szr = sh.querySelector('.szr'), szv = sh.querySelector('.szv');
+  const showSize = v => { szr.value = v; szv.textContent = v + '%'; };
+  const setSize = (v, save) => {
+    v = Math.max(20, Math.min(100, Math.round(v)));
+    showSize(v);
+    if (save) setFigProp(fig, 'size', v === 100 ? undefined : v);
+    else applyFigView(fig, { ...(figMoves[fig.dataset.src] || {}), size: v });
   };
-  sh.querySelector('.smaller').onclick = e => { e.stopPropagation(); resize(-10); };
-  sh.querySelector('.bigger').onclick = e => { e.stopPropagation(); resize(10); };
+  showSize((figMoves[fig.dataset.src] || {}).size || 100);
+  const resize = (e, d) => { e.stopPropagation(); setSize(+szr.value + (e.shiftKey ? d * 5 : d), true); };
+  sh.querySelector('.smaller').onclick = e => resize(e, -1);
+  sh.querySelector('.bigger').onclick = e => resize(e, 1);
+  // 슬라이더: 끄는 동안은 화면에만 반영, 놓을 때 저장
+  szr.addEventListener('pointerdown', e => e.stopPropagation());
+  szr.addEventListener('click', e => e.stopPropagation());
+  szr.addEventListener('input', () => setSize(+szr.value, false));
+  szr.addEventListener('change', () => setSize(+szr.value, true));
   sh.querySelector('.crop').onclick = e => { e.stopPropagation(); startFigCrop(fig); };
   fig.appendChild(host);
 }
