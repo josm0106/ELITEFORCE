@@ -531,6 +531,7 @@ body{height:100dvh}
 .fig-restore-bar{display:flex;align-items:center;gap:8px;margin:0 auto 14px;max-width:900px;font-size:12px;color:#6b7f70}
 .fig-restore-bar button{border:1px solid #c9d5c4;background:#fff;color:#315548;border-radius:6px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
 .chapter-content .pdf-fig.fig-moved::after{content:"교재 그림 · p." attr(data-page) " · 위치 수정됨"}
+.chapter-content .pdf-fig.fig-swapped::after{content:"바꾼 사진 · 원래 교재 그림 p." attr(data-page)}
 .chapter-content .pdf-fig.fig-hidden::after,.chapter-content .pdf-fig.fig-hidden.fig-moved::after{content:"숨긴 교재 그림 · p." attr(data-page) " (✎ → 숨김 버튼으로 다시 보이기)";text-align:left}
 #figDropLine{position:fixed;height:4px;background:#e0572b;border-radius:2px;z-index:9999;pointer-events:none;box-shadow:0 0 0 3px rgba(224,87,43,.18);display:none}
 .chapter-content .pdf-fig img{max-width:100%;height:auto;max-height:520px;width:auto;cursor:zoom-in;border-radius:4px}
@@ -1564,7 +1565,8 @@ function saveToFirestore() {
           const sj = cur.exists && cur.data().studyJson;
           if (sj && studyData) { studyData = studyMerge(studyData, JSON.parse(sj)); snapshot.studyJson = JSON.stringify(studyData); try { localStorage.setItem(ukey('elite_ortho_study'), snapshot.studyJson); } catch (e) {} }
         } catch (e) { console.warn('학습 기록 병합 실패(그대로 저장)', e); }
-        for (const imgId of new Set([...snapshot.memos, ...snapshot.freeMemos].map(m => m.imgId).filter(Boolean))) {
+        const figImgs = Object.values(snapshot.figMoves || {}).map(mv => mv && mv.img); // 교재 그림을 바꾼 사진
+        for (const imgId of new Set([...[...snapshot.memos, ...snapshot.freeMemos].map(m => m.imgId), ...figImgs].filter(Boolean))) {
           const imageKey = uid + ':' + imgId;
           if (confirmedMemoImages.has(imageKey)) continue;
           const data = memoImgCache.get(imgId) || await idbGetImg(imgId).catch(() => null);
@@ -5740,7 +5742,7 @@ button{font:inherit;font-size:12px;cursor:pointer;color:#406950;background:#fffe
 .memo-tool{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:0;border-radius:5px;background:transparent;font:20px/1 'Times New Roman',serif;color:#6b8676}
 .memo-tool:hover{background:#dae9df;color:#2d5841}.memo-tool[data-action="delete"]:hover{background:#f4e1dc;color:#a4483c}
 .card p{margin:4px 0 8px}.card img:last-child{margin-bottom:0}
-.img-tools{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:-2px;opacity:.55;transition:opacity .15s}.card:hover .img-tools,.img-tools:focus-within{opacity:1}
+.img-tools{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:-2px}
 .img-tools button{font-size:11.5px;padding:4px 8px}.img-tools .sz{display:flex;align-items:center;gap:3px;margin-left:auto}
 .img-tools .sz button{width:26px;padding:4px 0}.img-tools input{width:120px;accent-color:#397b61;margin:0;cursor:pointer}.img-tools b{font:600 11px/1 system-ui,sans-serif;min-width:34px;text-align:right;color:#406950}
 @media(max-width:600px){.card,section{padding:12px!important}:host{font-size:13px}header{flex-wrap:wrap}}
@@ -5802,7 +5804,8 @@ function mountSelectionMemoComposer(scroll = true) {
 // 본문 메모 카드의 사진 도구: 회전/자르기 · 사진 바꾸기 · 크기 미세조정(20~100%)
 function memoImgTools(m, type, image) {
   const bar = document.createElement('div'); bar.className = 'img-tools';
-  bar.innerHTML = '<button type="button" data-act="edit" title="사진 회전/자르기">✂ 편집</button><button type="button" data-act="replace" title="다른 사진으로 바꾸기">📷 바꾸기</button>'
+  bar.hidden = true; // ✎(메모 수정)을 눌렀을 때만 보임
+  bar.innerHTML = '<button type="button" data-act="edit" title="사진 회전/자르기">✂ 편집</button><button type="button" data-act="replace" title="다른 사진으로 바꾸기" aria-label="다른 사진으로 바꾸기">🖼️</button>'
     + '<span class="sz"><button type="button" data-act="minus" title="작게 (1%씩, Shift 5%)" aria-label="사진 작게">－</button><input type="range" min="20" max="100" step="1" aria-label="사진 크기" title="끌어서 크기 미세조정"><button type="button" data-act="plus" title="크게 (1%씩, Shift 5%)" aria-label="사진 크게">＋</button><b></b></span>';
   const range = bar.querySelector('input'), label = bar.querySelector('b');
   const show = v => { range.value = v; label.textContent = v + '%'; image.style.width = v + '%'; };
@@ -5856,13 +5859,15 @@ function renderInlineMemo(m, type, marker) {
 function editInlineMemo(m, type, host) {
   const card=host.shadowRoot.querySelector('.card');
   if(card.querySelector('form'))return;
-  const display=[...card.children].filter(el=>el.tagName!=='IMG');
+  const tools=card.querySelector('.img-tools');
+  const display=[...card.children].filter(el=>el.tagName!=='IMG'&&el!==tools);
   display.forEach(el=>el.hidden=true);
+  if(tools)tools.hidden=false; // 사진 편집·바꾸기·크기 도구는 수정 중에만 보임
   const form=document.createElement('form');
   form.innerHTML='<textarea aria-label="메모 내용 수정"></textarea><div class="actions"><button type="button" data-action="bold" title="굵게 (Ctrl+B)"><b>B</b></button><button type="submit" class="free-memo-add">저장</button><button type="button" data-action="cancel">취소</button></div>';
   const input=form.querySelector('textarea');
   input.value=type==='free' ? (m.text || '') : (m.note || (m.anchorText ? '' : (m.text || '')));
-  const cancel=()=>{form.remove();display.forEach(el=>el.hidden=false);card.querySelector('[data-action="edit"]').focus();};
+  const cancel=()=>{form.remove();display.forEach(el=>el.hidden=false);if(tools)tools.hidden=true;card.querySelector('[data-action="edit"]').focus();};
   form.querySelector('[data-action="cancel"]').onclick=cancel;
   form.querySelector('[data-action="bold"]').onmousedown=e=>e.preventDefault();
   form.querySelector('[data-action="bold"]').onclick=()=>toggleMemoBold(input);
@@ -7882,12 +7887,24 @@ function injectTextbookFigures(num) {
     fig.className = 'pdf-fig' + (mv && mv.hide ? ' fig-hidden' : '') + (mv && mv.a != null ? ' fig-moved' : '');
     fig.dataset.page = page; fig.dataset.src = src; fig.dataset.ch = num;
     const img = document.createElement('img');
-    img.loading = 'lazy'; img.decoding = 'async'; img.src = src + FIG_VER; img.width = w; img.height = h;
+    const swapped = mv && mv.img && mv.iw && mv.ih; // 사용자가 다른 사진으로 바꾼 그림
+    img.loading = 'lazy'; img.decoding = 'async';
+    if (!swapped) img.src = src + FIG_VER;
+    img.width = swapped ? mv.iw : w; img.height = swapped ? mv.ih : h;
     img.alt = '교재 그림 p.' + page;
-    img.addEventListener('click', () => { if (!fig.classList.contains('fig-editing')) openFigViewer(src); });
+    img.addEventListener('click', () => { if (!fig.classList.contains('fig-editing')) openFigViewer(img.src.startsWith('data:') ? img.src : src); });
     const frame = document.createElement('div'); frame.className = 'fig-frame';
     frame.appendChild(img); fig.appendChild(frame);
-    fig.dataset.w = w; fig.dataset.h = h;
+    fig.dataset.w = swapped ? mv.iw : w; fig.dataset.h = swapped ? mv.ih : h;
+    if (swapped) {
+      fig.classList.add('fig-swapped');
+      loadMemoImage(mv.img).then(url => {
+        if (url) { img.src = url; return; }
+        // 바꾼 사진을 이 기기에서 못 찾으면 원래 교재 그림으로 표시
+        fig.dataset.w = w; fig.dataset.h = h; img.width = w; img.height = h; img.src = src + FIG_VER;
+        fig.classList.remove('fig-swapped'); applyFigView(fig, { ...mv, crop: undefined });
+      });
+    }
     applyFigView(fig, mv);
     attachFigControls(fig);
     placeFigAfter(fig, target);
@@ -7946,6 +7963,7 @@ function attachFigControls(fig) {
     <button class="crop" title="보이는 범위 자르기" aria-label="자르기">✂ 자르기</button>
     <button class="rotl" title="왼쪽으로 90° 회전" aria-label="왼쪽으로 회전">⟲ 90°</button>
     <button class="rotr" title="오른쪽으로 90° 회전" aria-label="오른쪽으로 회전">⟳ 90°</button>
+    <button class="swap" title="다른 사진으로 바꾸기 (↺ 누르면 원래 그림)" aria-label="다른 사진으로 바꾸기">🖼️</button>
     <span class="sz"><button class="smaller" title="작게 (1%씩, Shift 누르면 5%)" aria-label="작게">－</button><input class="szr" type="range" min="20" max="300" step="1" title="끌어서 크기 미세조정 (100% 이상은 확대)" aria-label="사진 크기"><button class="bigger" title="크게 (1%씩, Shift 누르면 5%)" aria-label="크게">＋</button><b class="szv"></b></span>
     <button class="hide" title="숨기기/보이기" aria-label="숨기기">숨김</button>
     <button class="del" title="이 그림 삭제 (단원 위 '삭제한 그림 복원'으로 되돌릴 수 있음)" aria-label="삭제" style="color:#a4483c;border-color:#e3c4bd">🗑 삭제</button>
@@ -7963,7 +7981,9 @@ function attachFigControls(fig) {
     const ch = +fig.dataset.ch; fig.remove(); renderFigRestoreBar(ch);
   };
   sh.querySelector('.reset').onclick = e => {
-    e.stopPropagation(); delete figMoves[fig.dataset.src]; syncToCloud(true);
+    e.stopPropagation();
+    const old = figMoves[fig.dataset.src]; if (old && old.img) deleteMemoImage(old.img);
+    delete figMoves[fig.dataset.src]; syncToCloud(true);
     const src = fig.dataset.src; injectTextbookFigures(+fig.dataset.ch);
     const again = document.querySelector('.pdf-fig[data-src="' + src + '"]'); if (again) again.scrollIntoView({ block: 'center' });
   };
@@ -7998,7 +8018,36 @@ function attachFigControls(fig) {
   const turn = d => { const r = (((figMoves[fig.dataset.src] || {}).rot || 0) + d + 4) % 4; setFigProp(fig, 'rot', r || undefined); };
   sh.querySelector('.rotl').onclick = e => { e.stopPropagation(); turn(-1); };
   sh.querySelector('.rotr').onclick = e => { e.stopPropagation(); turn(1); };
+  sh.querySelector('.swap').onclick = e => {
+    e.stopPropagation();
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = () => {
+      const f = inp.files && inp.files[0];
+      if (!f || !f.type.startsWith('image/')) return;
+      const rd = new FileReader();
+      rd.onload = () => openImgEditor(rd.result, url => replaceFigImage(fig, url));
+      rd.readAsDataURL(f);
+    };
+    inp.click();
+  };
   fig.appendChild(host);
+}
+// 교재 그림을 사용자가 고른 사진으로 교체 (사진은 메모 사진과 같은 저장소: IndexedDB + Firestore memoImages)
+function replaceFigImage(fig, url) {
+  const im = new Image();
+  im.onload = () => {
+    const src = fig.dataset.src, mv = figMoves[src] ? { ...figMoves[src] } : {};
+    if (mv.img) deleteMemoImage(mv.img);
+    mv.img = 'fig_' + Date.now(); mv.iw = im.naturalWidth; mv.ih = im.naturalHeight;
+    delete mv.crop; delete mv.rot; // 자르기·회전은 새 사진 기준으로 다시
+    saveMemoImage(mv.img, url);
+    figMoves[src] = mv;
+    const img = fig.querySelector('.fig-frame img');
+    fig.dataset.w = mv.iw; fig.dataset.h = mv.ih; img.width = mv.iw; img.height = mv.ih; img.src = url;
+    fig.classList.add('fig-swapped');
+    applyFigView(fig, mv); syncToCloud(true);
+  };
+  im.src = url;
 }
 function figCurrentBlock(fig, els) {
   // the block this figure currently follows
@@ -8134,7 +8183,7 @@ function openFigViewer(src) {
     v.innerHTML = '<img alt="">'; v.addEventListener('click', () => { v.style.display = 'none'; });
     document.body.appendChild(v);
   }
-  v.querySelector('img').src = src + FIG_VER; v.style.display = 'flex';
+  v.querySelector('img').src = src.startsWith('data:') ? src : src + FIG_VER; v.style.display = 'flex';
 }
 function markKoreanSummaries() {
   // "▸ 한글 요약" lines under long English passages: box the Korean part, mute the English source
