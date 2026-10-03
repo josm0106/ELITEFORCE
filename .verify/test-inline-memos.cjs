@@ -24,12 +24,20 @@ assert.deepEqual(hosts().map(h=>h.dataset.memoId),['100','200','300']);
 assert.equal(content.querySelectorAll('.inline-memo-stack').length,1);
 assert.equal(content.textContent,original,'shadow cards preserve source text offsets');
 for(const host of hosts()){
- const shadow=host.shadowRoot;assert.equal(shadow.querySelectorAll('button').length,3);
+ const shadow=host.shadowRoot;assert.equal(shadow.querySelectorAll('.memo-toolbar button').length,3);
  assert.equal(shadow.querySelector('[data-action="edit"]').textContent,'✎');
  assert.equal(shadow.querySelector('[data-action="add"]').textContent,'+');
  assert.equal(shadow.querySelector('[data-action="delete"]').textContent,'×');
  assert(!shadow.querySelector('[data-action="photo"],[data-action="panel"],header'));
 }
+// photo tools: only on photo memos; size slider saves imgSize and resizes the image
+{const ph=hosts()[1].shadowRoot;assert(ph.querySelector('.img-tools'));assert(!hosts()[0].shadowRoot.querySelector('.img-tools'));
+ const r=ph.querySelector('.img-tools input');assert.equal(r.value,'100');r.value='63';r.dispatchEvent(new w.Event('input'));
+ assert.equal(ph.querySelector('img').style.width,'63%');assert.equal(w.memos.find(m=>m.id===200).imgSize,undefined);
+ r.dispatchEvent(new w.Event('change'));assert.equal(w.memos.find(m=>m.id===200).imgSize,63);
+ ph.querySelector('[data-act="minus"]').click();assert.equal(w.memos.find(m=>m.id===200).imgSize,62);
+ w.renderMemoAnchors(1);assert.equal(hosts()[1].shadowRoot.querySelector('img').style.width,'62%');
+ delete w.memos.find(m=>m.id===200).imgSize;w.renderMemoAnchors(1);}
 hosts()[0].shadowRoot.querySelector('[data-action="add"]').click();
 assert.deepEqual(Array.from(w.addCall),['First',1,'Test',0,5]);
 const editor=w.newInlineMemoHost('inline-memo-composer');w.insertAfterMemoBlock(editor,content.querySelector('p'));

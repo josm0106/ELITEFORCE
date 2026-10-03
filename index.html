@@ -535,8 +535,13 @@ body{height:100dvh}
 #figDropLine{position:fixed;height:4px;background:#e0572b;border-radius:2px;z-index:9999;pointer-events:none;box-shadow:0 0 0 3px rgba(224,87,43,.18);display:none}
 .chapter-content .pdf-fig img{max-width:100%;height:auto;max-height:520px;width:auto;cursor:zoom-in;border-radius:4px}
 /*figcrop*/.chapter-content .pdf-fig.fig-cropping .fig-ctl-host{display:none}
-.chapter-content .pdf-fig .fig-frame{position:relative;margin:0 auto;width:min(var(--sz,100%),calc(520px * var(--ar,1)),var(--nw,100%));max-width:100%;aspect-ratio:var(--ar,1)}
+.chapter-content .pdf-fig .fig-frame{position:relative;margin:0 auto;width:min(100%,calc(min(100%,calc(520px * var(--ar,1)),var(--nw,100%)) * var(--k,1)));max-width:100%;aspect-ratio:var(--ar,1)}
 .chapter-content .pdf-fig .fig-frame img{display:block;width:100%;height:auto;max-height:none;border-radius:4px}
+.chapter-content .pdf-fig .fig-rot{position:relative;width:100%;aspect-ratio:var(--ar0,1)}
+.chapter-content .pdf-fig .fig-frame.cropped .fig-rot{overflow:hidden;border-radius:4px}
+.chapter-content .pdf-fig .fig-frame.rot2 .fig-rot{transform:rotate(180deg)}
+.chapter-content .pdf-fig .fig-frame.rot1 .fig-rot,.chapter-content .pdf-fig .fig-frame.rot3 .fig-rot{position:absolute;left:50%;top:50%;width:calc(var(--ar0,1) * 100%);transform:translate(-50%,-50%) rotate(90deg)}
+.chapter-content .pdf-fig .fig-frame.rot3 .fig-rot{transform:translate(-50%,-50%) rotate(-90deg)}
 .chapter-content .pdf-fig .fig-frame.cropped{overflow:hidden;border-radius:4px}
 .chapter-content .pdf-fig .fig-frame.cropped img{position:absolute;max-width:none;border-radius:0}
 .chapter-content .pdf-fig.fig-cropping .fig-frame{overflow:visible}
@@ -668,6 +673,34 @@ html[data-motion="off"] #sidebarGlow,html[data-motion="off"] #confettiLayer{disp
 #timerToggle{display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
 #xpChip{position:relative;display:inline-flex;align-items:center;gap:7px;border:1px solid #d5dfd3;border-radius:999px;background:#fbfdf8;color:#40614f;font:inherit;font-size:11.5px;padding:3px 11px 3px 5px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums;transition:background .2s,border-color .2s,box-shadow .2s}
 #xpChip:hover{background:#eef4ea;border-color:#a9c2ad;box-shadow:0 3px 10px rgba(33,103,91,.10)}
+.goal-wrap{position:relative;display:inline-flex}
+#goalChip{display:inline-flex;align-items:center;gap:6px;border:1px dashed #b9cbb8;border-radius:999px;background:#fbfdf8;color:#40614f;font:inherit;font-size:11.5px;padding:4px 11px 4px 8px;cursor:pointer;white-space:nowrap}
+#goalChip:hover,#goalChip[aria-expanded="true"]{background:#eef4ea;border-color:#a9c2ad}
+#goalChip.set{border-style:solid;border-color:#d5dfd3}#goalChip.ok{border-color:#d4a52c;background:#fff8e3;color:#795a22}
+#goalChip .gc-body{display:flex;flex-direction:column;gap:3px;min-width:44px}#goalChip .gc-body b{font-size:11.5px;line-height:1.1;font-variant-numeric:tabular-nums}
+#goalChip .gc-bar{display:none;height:4px;border-radius:99px;background:#e3eadf;overflow:hidden}#goalChip.set .gc-bar{display:block}
+#goalChip .gc-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4fb3a8,#d9404f);border-radius:inherit;transition:width .5s}
+#goalChip.ok .gc-bar i{background:#d4a52c}
+.goal-panel{position:absolute;top:calc(100% + 8px);right:0;z-index:3000;width:330px;max-height:min(70vh,560px);overflow:auto;padding:14px;background:#fffef9;border:1px solid #d5dfd3;border-radius:12px;box-shadow:0 12px 32px rgba(20,50,35,.18);color:#304337;font-size:12.5px}
+.goal-panel[hidden]{display:none}
+.gp-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px}.gp-head b{font-size:14px}.gp-head small{color:#718073;font-size:11px}
+.gp-label{font-size:11px;color:#718073;margin-bottom:5px}
+.gp-quick{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.gp-quick button{padding:6px 0;border:1px solid #dbe3d6;border-radius:6px;background:#fff;color:#4a6555;font-size:12px;cursor:pointer;font-variant-numeric:tabular-nums}
+.gp-quick button:hover{background:#eef4ea}.gp-quick button[aria-pressed="true"]{background:#397b61;border-color:#397b61;color:#fff;font-weight:700}
+.gp-bar{height:6px;border-radius:99px;background:#e3eadf;overflow:hidden;margin:12px 0 4px}.gp-bar i{display:block;height:100%;background:linear-gradient(90deg,#4fb3a8,#d9404f);border-radius:inherit}
+.gp-sum{font-size:11.5px;color:#45614b;font-weight:600}
+.gp-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:3px}
+.gp-list li{display:flex;align-items:center;gap:6px;padding:3px 4px;border-radius:6px}.gp-list li:hover{background:#f1f6ee}
+.gp-chk{flex:none;width:17px;height:17px;border:1.5px solid #b9cbb8;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff}
+.gp-list li.done .gp-chk{background:#397b61;border-color:#397b61}.gp-list li.done .gp-go{color:#8a978c;text-decoration:line-through}
+.gp-go{flex:1;min-width:0;text-align:left;border:0;background:none;color:#304337;font:inherit;font-size:12px;cursor:pointer;padding:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gp-go b{color:#21675b}
+.gp-x{flex:none;border:0;background:none;color:#9aa89c;font-size:15px;cursor:pointer;padding:0 4px}.gp-x:hover{color:#a4483c}
+.gp-empty{margin:12px 0 4px;color:#6b7f70;font-size:11.5px;line-height:1.6}
+.gp-foot{display:flex;justify-content:space-between;gap:6px;margin-top:10px}
+.gp-foot button{border:0;background:#edf2e7;color:#45614b;border-radius:6px;padding:5px 10px;font-size:11.5px;cursor:pointer}.gp-foot button:hover{background:#dcecdf}
+.gp-note{margin:8px 0 0;font-size:10.5px;color:#8a978c}
+@media(max-width:768px){#goalChip{padding:3px 8px 3px 6px;gap:4px}#goalChip .gc-body{min-width:28px}.goal-panel{position:fixed;top:56px;right:12px;left:12px;width:auto}}
 #xpChip .xc-ico svg{display:block}
 #xpChip .xc-body{display:flex;flex-direction:column;gap:3px;min-width:118px}
 #xpChip .xc-top{display:flex;align-items:baseline;gap:5px;line-height:1.1}
@@ -970,6 +1003,8 @@ html.sidebar-collapsed .sidebar{display:none}
   <div class="main-header" id="mainHeader">
     <span id="headerTitle" onclick="showCurrentChapterInNav()">엘리트 정형외과 단원별 열람</span>
     <div class="server-save-controls">
+      <span class="goal-wrap"><button id="goalChip" type="button" onclick="toggleGoalPanel(event)" aria-haspopup="true" aria-expanded="false" title="오늘의 목표 단원"><span aria-hidden="true">🎯</span><span class="gc-body"><b id="goalChipTxt">오늘 목표</b><span class="gc-bar"><i id="goalChipFill"></i></span></span></button>
+        <div id="goalPanel" class="goal-panel" hidden role="dialog" aria-label="오늘의 목표 단원"></div></span>
       <button id="xpChip" type="button" onclick="openTrophy()" title="경험치 · 다음 단계까지 진행률"><span class="xc-ico" id="xpChipIco" aria-hidden="true"></span><span class="xc-body"><span class="xc-top"><b id="xpChipPct">0%</b><span class="xc-next" id="xpChipNext"></span><span class="xc-need" id="xpChipNeed"></span></span><span class="xc-bar"><i id="xpChipFill"></i></span></span><span class="xc-gain" id="xpChipGain" aria-hidden="true"></span></button>
       <button id="timerToggle" type="button" title="집중 타이머 열기/닫기 (Alt+T)" aria-controls="focusTimer"><span class="tt-dot" aria-hidden="true"></span><span aria-hidden="true">⏱</span><span class="tt-label" id="timerToggleLabel">타이머</span></button>
       <span class="fs-wrap"><button id="fontSizeBtn" type="button" title="본문 글자 크기 (Alt+ + / Alt+ −)" aria-haspopup="true" aria-expanded="false" onclick="toggleFontSizePanel(event)"><span class="fs-a1">가</span><span class="fs-a2">가</span><span id="fontSizeLabel" class="fs-val">100%</span></button>
@@ -5705,6 +5740,9 @@ button{font:inherit;font-size:12px;cursor:pointer;color:#406950;background:#fffe
 .memo-tool{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:0;border-radius:5px;background:transparent;font:20px/1 'Times New Roman',serif;color:#6b8676}
 .memo-tool:hover{background:#dae9df;color:#2d5841}.memo-tool[data-action="delete"]:hover{background:#f4e1dc;color:#a4483c}
 .card p{margin:4px 0 8px}.card img:last-child{margin-bottom:0}
+.img-tools{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:-2px;opacity:.55;transition:opacity .15s}.card:hover .img-tools,.img-tools:focus-within{opacity:1}
+.img-tools button{font-size:11.5px;padding:4px 8px}.img-tools .sz{display:flex;align-items:center;gap:3px;margin-left:auto}
+.img-tools .sz button{width:26px;padding:4px 0}.img-tools input{width:120px;accent-color:#397b61;margin:0;cursor:pointer}.img-tools b{font:600 11px/1 system-ui,sans-serif;min-width:34px;text-align:right;color:#406950}
 @media(max-width:600px){.card,section{padding:12px!important}:host{font-size:13px}header{flex-wrap:wrap}}
 `;
 function newInlineMemoHost(className) {
@@ -5761,6 +5799,31 @@ function mountSelectionMemoComposer(scroll = true) {
   }
 }
 // 블록 선택한 원문(인용)은 표시하지 않고 메모 내용만 보여줌 — 메모·사진이 없을 때만 원문
+// 본문 메모 카드의 사진 도구: 회전/자르기 · 사진 바꾸기 · 크기 미세조정(20~100%)
+function memoImgTools(m, type, image) {
+  const bar = document.createElement('div'); bar.className = 'img-tools';
+  bar.innerHTML = '<button type="button" data-act="edit" title="사진 회전/자르기">✂ 편집</button><button type="button" data-act="replace" title="다른 사진으로 바꾸기">📷 바꾸기</button>'
+    + '<span class="sz"><button type="button" data-act="minus" title="작게 (1%씩, Shift 5%)" aria-label="사진 작게">－</button><input type="range" min="20" max="100" step="1" aria-label="사진 크기" title="끌어서 크기 미세조정"><button type="button" data-act="plus" title="크게 (1%씩, Shift 5%)" aria-label="사진 크게">＋</button><b></b></span>';
+  const range = bar.querySelector('input'), label = bar.querySelector('b');
+  const show = v => { range.value = v; label.textContent = v + '%'; image.style.width = v + '%'; };
+  const save = v => {
+    v = Math.max(20, Math.min(100, Math.round(v))); show(v);
+    const rec = (type === 'free' ? freeMemos : memos).find(x => x.id === m.id);
+    if (!rec) return;
+    if (v === 100) delete rec.imgSize; else rec.imgSize = v;
+    m.imgSize = rec.imgSize;
+    if (type === 'free') { saveFreeMemos(); renderFreeMemos(); } else { saveMemos(); renderMemos(); }
+    updateReadingProgress();
+  };
+  show(m.imgSize || 100);
+  range.oninput = () => show(+range.value);
+  range.onchange = () => save(+range.value);
+  bar.querySelector('[data-act="minus"]').onclick = e => save(+range.value - (e.shiftKey ? 5 : 1));
+  bar.querySelector('[data-act="plus"]').onclick = e => save(+range.value + (e.shiftKey ? 5 : 1));
+  bar.querySelector('[data-act="edit"]').onclick = () => editMemoImage(m.id, type);
+  bar.querySelector('[data-act="replace"]').onclick = () => pickMemoImage('memo', m.id, type);
+  return bar;
+}
 function memoShownText(m, type) { return type === 'free' ? (m.text || '') : (m.note || (m.imgId ? '' : (m.text || ''))); }
 function renderInlineMemo(m, type, marker) {
   const host = newInlineMemoHost('inline-memo-card');
@@ -5780,7 +5843,9 @@ function renderInlineMemo(m, type, marker) {
   if (m.imgId) {
     const image = document.createElement('img'); image.alt = '메모에 첨부한 사진';
     image.onclick = () => openImgLightbox(m.imgId, m.id, type);
+    if (m.imgSize) image.style.width = m.imgSize + '%';
     card.appendChild(image);
+    card.appendChild(memoImgTools(m, type, image));
     loadMemoImage(m.imgId).then(url => { if (url && host.isConnected) { image.onload = () => { image.style.maxWidth = Math.max(640, Math.round(image.naturalWidth * 1.3 / Math.min(window.devicePixelRatio || 1, 1.5))) + 'px'; /* 메모 사진은 최소 640px 폭까지 크게 */ updateReadingProgress(); }; image.src = url; } });
   }
   host.shadowRoot.appendChild(card);
@@ -6262,7 +6327,7 @@ function hydrateMemoImg(div, m) {
   const img = div.querySelector('.memo-img');
   if (!img) return;
   loadMemoImage(m.imgId).then(d => {
-    if (d) { img.src = d; img.style.display = 'block'; }
+    if (d) { img.src = d; img.style.display = 'block'; if (m.imgSize) img.style.width = m.imgSize + '%'; }
     else {
       const wrap = img.closest('.memo-img-wrap');
       if (wrap) wrap.innerHTML = '<div class="memo-img-missing">📷 이미지를 이 기기에서 불러올 수 없습니다</div>';
@@ -6598,20 +6663,16 @@ function closeImgLightbox() {
 function lightboxEdit() {
   if (!lightboxCtx) return;
   const ctx = lightboxCtx;
-  loadMemoImage(ctx.imgId).then(d => {
-    if (!d) return;
-    closeImgLightbox();
-    openImgEditor(d, (url) => {
-      const arr = ctx.type === 'free' ? freeMemos : memos;
-      const m = arr.find(x => x.id === ctx.memoId);
-      if (!m) return;
-      const oldId = m.imgId;
-      m.imgId = 'img_' + Date.now();
-      saveMemoImage(m.imgId, url);
-      if (oldId) deleteMemoImage(oldId);
-      if (ctx.type === 'free') { saveFreeMemos(); renderFreeMemos(); }
-      else { saveMemos(); renderMemos(); }
-    });
+  closeImgLightbox();
+  editMemoImage(ctx.memoId, ctx.type);
+}
+// 메모 사진 회전/자르기 → 저장 후 암기노트·본문 카드 모두 갱신
+function editMemoImage(memoId, type) {
+  const m = (type === 'free' ? freeMemos : memos).find(x => x.id === memoId);
+  if (!m || !m.imgId) return;
+  loadMemoImage(m.imgId).then(d => {
+    if (!d) { alert('이 기기에서 사진을 불러올 수 없습니다'); return; }
+    openImgEditor(d, url => attachEditedImage(url, { mode: 'memo', id: memoId, type }));
   });
 }
 function lightboxRemoveImg() {
@@ -6623,9 +6684,10 @@ function lightboxRemoveImg() {
   closeImgLightbox();
   if (!m) return;
   if (m.imgId) deleteMemoImage(m.imgId);
-  m.imgId = null;
+  m.imgId = null; delete m.imgSize;
   if (ctx.type === 'free') { saveFreeMemos(); renderFreeMemos(); }
   else { saveMemos(); renderMemos(); }
+  if (currentChapter && Number(currentChapter.num) === Number(m.chapterNum)) { renderMemoAnchors(currentChapter.num); updateReadingProgress(); }
 }
 
 // ===== 위치 앵커 (저장 시점 본문 위치 기록/이동) =====
@@ -7867,7 +7929,7 @@ function attachFigControls(fig) {
     :host{position:absolute;top:6px;right:6px;z-index:3}
     button{font:600 12px/1 system-ui,sans-serif;border:1px solid #c9d5c4;background:rgba(255,255,255,.94);color:#315548;border-radius:6px;padding:7px 9px;cursor:pointer;touch-action:none}
     button:hover{background:#eef4ea}
-    .bar{display:none;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:280px}
+    .bar{display:none;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:300px}
     :host(.on) .bar{display:flex} :host(.on) .edit{display:none}
     .drag{cursor:grab;background:#315548;color:#fff;border-color:#315548}
     .edit{opacity:.6} .edit:hover{opacity:1}
@@ -7882,7 +7944,9 @@ function attachFigControls(fig) {
     <button class="up" title="한 줄 위로" aria-label="한 줄 위로">▲</button>
     <button class="down" title="한 줄 아래로" aria-label="한 줄 아래로">▼</button>
     <button class="crop" title="보이는 범위 자르기" aria-label="자르기">✂ 자르기</button>
-    <span class="sz"><button class="smaller" title="작게 (1%씩, Shift 누르면 5%)" aria-label="작게">－</button><input class="szr" type="range" min="20" max="100" step="1" title="끌어서 크기 미세조정" aria-label="사진 크기"><button class="bigger" title="크게 (1%씩, Shift 누르면 5%)" aria-label="크게">＋</button><b class="szv"></b></span>
+    <button class="rotl" title="왼쪽으로 90° 회전" aria-label="왼쪽으로 회전">⟲ 90°</button>
+    <button class="rotr" title="오른쪽으로 90° 회전" aria-label="오른쪽으로 회전">⟳ 90°</button>
+    <span class="sz"><button class="smaller" title="작게 (1%씩, Shift 누르면 5%)" aria-label="작게">－</button><input class="szr" type="range" min="20" max="300" step="1" title="끌어서 크기 미세조정 (100% 이상은 확대)" aria-label="사진 크기"><button class="bigger" title="크게 (1%씩, Shift 누르면 5%)" aria-label="크게">＋</button><b class="szv"></b></span>
     <button class="hide" title="숨기기/보이기" aria-label="숨기기">숨김</button>
     <button class="del" title="이 그림 삭제 (단원 위 '삭제한 그림 복원'으로 되돌릴 수 있음)" aria-label="삭제" style="color:#a4483c;border-color:#e3c4bd">🗑 삭제</button>
     <button class="reset" title="처음 위치로" aria-label="처음 위치로">↺</button>
@@ -7916,7 +7980,7 @@ function attachFigControls(fig) {
   const szr = sh.querySelector('.szr'), szv = sh.querySelector('.szv');
   const showSize = v => { szr.value = v; szv.textContent = v + '%'; };
   const setSize = (v, save) => {
-    v = Math.max(20, Math.min(100, Math.round(v)));
+    v = Math.max(20, Math.min(300, Math.round(v)));
     showSize(v);
     if (save) setFigProp(fig, 'size', v === 100 ? undefined : v);
     else applyFigView(fig, { ...(figMoves[fig.dataset.src] || {}), size: v });
@@ -7931,6 +7995,9 @@ function attachFigControls(fig) {
   szr.addEventListener('input', () => setSize(+szr.value, false));
   szr.addEventListener('change', () => setSize(+szr.value, true));
   sh.querySelector('.crop').onclick = e => { e.stopPropagation(); startFigCrop(fig); };
+  const turn = d => { const r = (((figMoves[fig.dataset.src] || {}).rot || 0) + d + 4) % 4; setFigProp(fig, 'rot', r || undefined); };
+  sh.querySelector('.rotl').onclick = e => { e.stopPropagation(); turn(-1); };
+  sh.querySelector('.rotr').onclick = e => { e.stopPropagation(); turn(1); };
   fig.appendChild(host);
 }
 function figCurrentBlock(fig, els) {
@@ -7993,10 +8060,17 @@ function applyFigView(fig, mv) {
   mv = mv || figMoves[fig.dataset.src] || {};
   const w = +fig.dataset.w, h = +fig.dataset.h, frame = fig.querySelector('.fig-frame'), img = frame.querySelector('img');
   const [cx, cy, cw, ch] = mv.crop || [0, 0, 1, 1];
-  frame.style.setProperty('--ar', (w * cw) / (h * ch));
-  frame.style.setProperty('--sz', (mv.size || 100) + '%');
-  // 원본 해상도 이상으로 과하게 늘리지 않음 (최대 1.3배, 고해상도 화면은 그만큼 덜)
-  frame.style.setProperty('--nw', Math.round(w * cw * 1.3 / Math.min(window.devicePixelRatio || 1, 1.5)) + 'px');
+  // 회전용 래퍼 (frame > .fig-rot > img)
+  let rot = frame.querySelector('.fig-rot');
+  if (!rot) { rot = document.createElement('div'); rot.className = 'fig-rot'; frame.insertBefore(rot, img); rot.appendChild(img); }
+  const q = ((mv.rot || 0) % 4 + 4) % 4, odd = q % 2 === 1, ar0 = (w * cw) / (h * ch);
+  rot.style.setProperty('--ar0', ar0);
+  frame.style.setProperty('--ar', odd ? 1 / ar0 : ar0);
+  // 크기 20~300%: 기본 표시 크기의 배수 (화면 폭을 넘지는 않음)
+  frame.style.setProperty('--k', (mv.size || 100) / 100);
+  // 원본 해상도 이상으로 과하게 늘리지 않음 (최대 1.3배, 고해상도 화면은 그만큼 덜) — 확대(--k)하면 그만큼 허용
+  frame.style.setProperty('--nw', Math.round((odd ? h * ch : w * cw) * 1.3 / Math.min(window.devicePixelRatio || 1, 1.5)) + 'px');
+  [1, 2, 3].forEach(n => frame.classList.toggle('rot' + n, q === n));
   frame.classList.toggle('cropped', !!mv.crop);
   if (mv.crop) {
     Object.assign(img.style, { width: (100 / cw) + '%', left: (-cx / cw * 100) + '%', top: (-cy / ch * 100) + '%' });
@@ -8013,7 +8087,7 @@ function startFigCrop(fig) {
   const src = fig.dataset.src, mv = figMoves[src] || {};
   const frame = fig.querySelector('.fig-frame');
   // show the whole image while choosing the crop
-  applyFigView(fig, { ...mv, crop: undefined });
+  applyFigView(fig, { ...mv, crop: undefined, rot: undefined });
   fig.classList.add('fig-cropping');
   let [x, y, w, h] = mv.crop || [0.05, 0.05, 0.9, 0.9];
   const box = document.createElement('div'); box.className = 'fig-cropbox';
@@ -8283,7 +8357,7 @@ function studyDayKey(d = new Date()) {
 }
 function studyNormalize(s) {
   s = (s && typeof s === 'object' && !Array.isArray(s)) ? s : {};
-  for (const k of ['reads', 'pass', 'quiz', 'marks', 'qtext', 'qn', 'badges', 'days', 'stats', 'pick'])
+  for (const k of ['reads', 'pass', 'quiz', 'marks', 'qtext', 'qn', 'badges', 'days', 'stats', 'pick', 'gread', 'goalLog'])
     if (!s[k] || typeof s[k] !== 'object' || Array.isArray(s[k])) s[k] = {};
   if (!s.start) s.start = studyDayKey();
   s.v = 1;
@@ -8349,6 +8423,7 @@ function studyCompletePass(num) {
   studyData.reads[num] = (studyData.reads[num] || 0) + 1;
   studyDayAdd(0);
   studyToast({ icon: '📖', title: `${chLabel(num)} ${studyData.reads[num]}독 완료`, sub: '+10 XP · ' + studyPassSummaryText() });
+  studyGoalMarkRead(num);
   studyAfterChange(num);
 }
 function studyMinReads(nums) { return nums.length ? Math.min(...nums.map(n => studyData.reads[n] || 0)) : 0; }
@@ -8515,6 +8590,12 @@ function studyMerge(a, b) {
   if ((b.startSet || 0) > (out.startSet || 0)) { out.start = b.start; out.startSet = b.startSet; } else if (!out.startSet && !b.startSet && b.start && (!out.start || b.start < out.start)) out.start = b.start;
   ['tierSeen', 'divSeen'].forEach(k => { if (b[k] != null) out[k] = Math.max(out[k] || 0, b[k]); });
   if (b.seeded) out.seeded = 1;
+  // 오늘의 목표: 계획은 더 최근에 정한 쪽, 그날 완독 단원은 합집합, 달성 기록은 더 많이 한 쪽
+  if (b.goal && (!out.goal || (b.goal.t || 0) > (out.goal.t || 0))) out.goal = b.goal;
+  const gr = obj(out, 'gread'); Object.entries(b.gread || {}).forEach(([k, v]) => { gr[k] = [...new Set([...(gr[k] || []), ...v])]; });
+  const gl = obj(out, 'goalLog'); Object.entries(b.goalLog || {}).forEach(([k, v]) => {
+    const x = gl[k]; if (!x || v[1] > x[1]) gl[k] = v.slice(); if (x && (x[2] || v[2])) gl[k][2] = 1;
+  });
   return out;
 }
 function restoreQuizPicks(num) {
@@ -8868,7 +8949,22 @@ const STUDY_BADGES = [
   { id: 'day100', icon: '🌪️', name: '문제 폭격', rarity: 'rare', desc: '하루에 100문제 풀기', test: () => Math.max(0, ...Object.values(studyData.days).map(d => d[1] + d[2])) >= 100 },
   { id: 'day200', icon: '🌋', name: '문제 융단 폭격', rarity: 'epic', desc: '하루에 200문제 풀기', test: () => Math.max(0, ...Object.values(studyData.days).map(d => d[1] + d[2])) >= 200 },
   { id: 'night', icon: '🦉', name: '올빼미', rarity: 'common', desc: '자정 ~ 새벽 4시에 공부', test: () => !!studyData.stats.night },
-  { id: 'dawn', icon: '🌅', name: '새벽의 전공의', rarity: 'common', desc: '새벽 5 ~ 7시에 공부', test: () => !!studyData.stats.dawn }
+  { id: 'dawn', icon: '🌅', name: '새벽의 전공의', rarity: 'common', desc: '새벽 5 ~ 7시에 공부', test: () => !!studyData.stats.dawn },
+  // 오늘의 목표 단원 달성
+  { id: 'goal1', group: 'goal', icon: '🎯', name: '첫 과녁', rarity: 'common', desc: '오늘의 목표 단원 처음 달성', test: () => studyGoalWins() >= 1 },
+  { id: 'goal3', group: 'goal', icon: '🪃', name: '세 번의 약속', rarity: 'common', desc: '오늘의 목표 누적 3회 달성', test: () => studyGoalWins() >= 3 },
+  { id: 'goal7', group: 'goal', icon: '📌', name: '일곱 번의 명중', rarity: 'rare', desc: '오늘의 목표 누적 7회 달성', test: () => studyGoalWins() >= 7 },
+  { id: 'goal15', group: 'goal', icon: '🧱', name: '보름의 성실', rarity: 'rare', desc: '오늘의 목표 누적 15회 달성', test: () => studyGoalWins() >= 15 },
+  { id: 'goal30', group: 'goal', icon: '🏗️', name: '한 달의 설계자', rarity: 'epic', desc: '오늘의 목표 누적 30회 달성', test: () => studyGoalWins() >= 30 },
+  { id: 'goal50', group: 'goal', icon: '🗿', name: '오십 번의 다짐', rarity: 'epic', desc: '오늘의 목표 누적 50회 달성', test: () => studyGoalWins() >= 50 },
+  { id: 'goal100', group: 'goal', icon: '🏰', name: '백 번의 약속', rarity: 'legend', desc: '오늘의 목표 누적 100회 달성', test: () => studyGoalWins() >= 100 },
+  { id: 'gstreak3', group: 'goal', icon: '🔗', name: '사흘 연속 명중', rarity: 'rare', desc: '3일 연속 오늘의 목표 달성', test: () => studyGoalStreaks().best >= 3 },
+  { id: 'gstreak7', group: 'goal', icon: '⛓️', name: '일주일 연속 명중', rarity: 'epic', desc: '7일 연속 오늘의 목표 달성', test: () => studyGoalStreaks().best >= 7 },
+  { id: 'gstreak14', group: 'goal', icon: '🛡️', name: '2주 연속 명중', rarity: 'epic', desc: '14일 연속 오늘의 목표 달성', test: () => studyGoalStreaks().best >= 14 },
+  { id: 'gstreak30', group: 'goal', icon: '🌠', name: '한 달 연속 명중', rarity: 'legend', desc: '30일 연속 오늘의 목표 달성', test: () => studyGoalStreaks().best >= 30 },
+  { id: 'gbig5', group: 'goal', icon: '💪', name: '다섯 단원 돌파', rarity: 'rare', desc: '목표 5단원 이상인 날 달성', test: () => studyGoalBest() >= 5 },
+  { id: 'gbig10', group: 'goal', icon: '🦾', name: '열 단원 돌파', rarity: 'epic', desc: '목표 10단원 이상인 날 달성', test: () => studyGoalBest() >= 10 },
+  { id: 'gover', group: 'goal', icon: '⏩', name: '초과 달성', rarity: 'rare', desc: '목표(2단원 이상)를 달성한 날 그 2배 이상 완독', test: studyGoalOver }
 ];
 function studyCheckBadges(silent) {
   const fresh = [];
@@ -8884,6 +8980,100 @@ function studyCheckBadges(silent) {
     title: b.name, en: '', sub: `${b.desc} · +${STUDY_RARITY[b.rarity].xp} XP`
   }));
 }
+
+// ===== 오늘의 목표 단원 =====
+// goal = {d: 날짜, chs: [단원], t: 정한 시각} · gread[날짜] = 그날 완독한 단원 · goalLog[날짜] = [목표 수, 완료 수, 달성 1/0]
+function studyGoalToday() { const g = studyData && studyData.goal; return g && g.d === studyDayKey() && Array.isArray(g.chs) ? g : null; }
+function studyGoalReadToday() { return (studyData && studyData.gread[studyDayKey()]) || []; }
+function studyGoalState() {
+  const g = studyGoalToday(); if (!g || !g.chs.length) return null;
+  const read = studyGoalReadToday(), done = g.chs.filter(n => read.includes(n)).length;
+  return { g, done, total: g.chs.length, ok: done >= g.chs.length };
+}
+function studyGoalWins() { return Object.values(studyData.goalLog || {}).filter(v => v[2]).length; }
+function studyGoalBest() { return Math.max(0, ...Object.values(studyData.goalLog || {}).filter(v => v[2]).map(v => v[0])); }
+function studyGoalOver() { return Object.entries(studyData.goalLog || {}).some(([k, v]) => v[2] && v[0] >= 2 && ((studyData.days[k] || [])[0] || 0) >= 2 * v[0]); }
+function studyGoalStreaks() {
+  const days = Object.keys(studyData.goalLog || {}).filter(k => studyData.goalLog[k][2]).sort();
+  let best = 0, run = 0, prev = null;
+  days.forEach(k => { const t = new Date(k + 'T00:00:00'); run = prev && Math.round((t - prev) / 864e5) === 1 ? run + 1 : 1; best = Math.max(best, run); prev = t; });
+  const last = days[days.length - 1], today = studyDayKey(), y = studyDayKey(new Date(Date.now() - 864e5));
+  return { best, current: last === today || last === y ? run : 0 };
+}
+// 진행 상황을 기록하고, 이번에 처음 달성했으면 축하
+function studyGoalSync(celebrate) {
+  const st = studyGoalState(), k = studyDayKey();
+  if (st) {
+    const prev = studyData.goalLog[k], was = !!(prev && prev[2]);
+    studyData.goalLog[k] = [st.total, st.done, was || st.ok ? 1 : 0];
+    if (st.ok && !was && celebrate) {
+      const wins = studyGoalWins(), sk = studyGoalStreaks().current;
+      studyCelebrate({ kind: 'badge', rarity: 'rare', colors: ['#1e5f5a', '#4fb3a8', '#c9f5ee'],
+        svg: '<svg viewBox="0 0 170 170" width="170" height="170" aria-hidden="true"><circle cx="85" cy="85" r="78" fill="#e8f6f1" stroke="#4fb3a8" stroke-width="6"/><circle cx="85" cy="85" r="54" fill="none" stroke="#d9404f" stroke-width="10"/><circle cx="85" cy="85" r="30" fill="none" stroke="#d9404f" stroke-width="10"/><circle cx="85" cy="85" r="9" fill="#d9404f"/></svg>',
+        kicker: 'TODAY · 오늘의 목표 달성', title: `목표 ${st.total}단원 완료!`, en: '',
+        sub: `목표 달성 누적 ${wins}회` + (sk > 1 ? ` · ${sk}일 연속` : '') });
+    }
+  } else if (studyData.goalLog[k] && !studyData.goalLog[k][2]) delete studyData.goalLog[k];
+  studyPaintGoalChip();
+}
+function studyGoalMarkRead(num) {
+  const k = studyDayKey(), r = studyData.gread[k] || (studyData.gread[k] = []);
+  if (!r.includes(num)) r.push(num);
+  const cut = studyDayKey(new Date(Date.now() - 14 * 864e5));
+  Object.keys(studyData.gread).forEach(d => { if (d < cut) delete studyData.gread[d]; });
+  studyGoalSync(true);
+}
+function studyGoalSet(chs) {
+  chs = [...new Set(chs.map(Number))].filter(n => CHAPTERS_DATA[n]);
+  studyData.goal = { d: studyDayKey(), chs, t: Date.now() };
+  studyGoalSync(true);
+  studyCheckBadges(false); studyCheckTier(); studyPaintDock();
+  renderGoalPanel(); studySave();
+}
+function studyGoalFrom(count) {
+  const all = studyChapters(), read = studyGoalReadToday();
+  let i = currentChapter ? all.indexOf(Number(currentChapter.num)) : -1;
+  if (i < 0) { const min = studyMinReads(all); i = Math.max(0, all.findIndex(n => (studyData.reads[n] || 0) === min)); }
+  if (read.includes(all[i]) && i + 1 < all.length) i++;
+  studyGoalSet(all.slice(i, i + count));
+}
+function studyPaintGoalChip() {
+  const chip = document.getElementById('goalChip'); if (!chip || !studyData) return;
+  const st = studyGoalState();
+  chip.classList.toggle('set', !!st); chip.classList.toggle('ok', !!(st && st.ok));
+  document.getElementById('goalChipTxt').textContent = st ? (st.ok ? '달성!' : `${st.done}/${st.total}`) : '오늘 목표';
+  document.getElementById('goalChipFill').style.width = st ? (st.done / st.total * 100) + '%' : '0%';
+  chip.title = st ? `오늘의 목표 ${st.done}/${st.total}단원 · 누적 달성 ${studyGoalWins()}회` : '오늘의 목표 단원 정하기';
+  if (!document.getElementById('goalPanel').hidden) renderGoalPanel();
+}
+function toggleGoalPanel(e, force) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('goalPanel'), btn = document.getElementById('goalChip');
+  const open = force != null ? force : panel.hidden;
+  panel.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+  if (open) renderGoalPanel();
+}
+function renderGoalPanel() {
+  const panel = document.getElementById('goalPanel'); if (!panel || panel.hidden || !studyData) return;
+  const st = studyGoalState(), read = studyGoalReadToday(), sk = studyGoalStreaks();
+  const cur = currentChapter ? Number(currentChapter.num) : null;
+  const title = n => { const c = CHAPTERS_DATA[n] || {}; return String(c.displayTitle || c.title || '').replace(/^\d+단원\s*/, ''); };
+  const rows = st ? st.g.chs.map(n => `<li class="${read.includes(n) ? 'done' : ''}"><span class="gp-chk" aria-hidden="true">${read.includes(n) ? '✓' : ''}</span><button type="button" class="gp-go" data-go="${n}" title="이 단원으로 이동"><b>${chLabel(n)}</b> ${escapeHtml(title(n))}</button><button type="button" class="gp-x" data-rm="${n}" aria-label="목표에서 빼기" title="목표에서 빼기">×</button></li>`).join('') : '';
+  panel.innerHTML = `<div class="gp-head"><b>🎯 오늘의 목표 단원</b><small>누적 달성 ${studyGoalWins()}회${sk.current ? ` · ${sk.current}일 연속` : ''}</small></div>
+    <div class="gp-label">${cur ? '지금 단원부터' : '덜 읽은 단원부터'} 몇 단원?</div>
+    <div class="gp-quick">${[1, 2, 3, 4, 5, 6, 8, 10].map(n => `<button type="button" data-n="${n}"${st && st.total === n && st.g.chs[0] === cur ? ' aria-pressed="true"' : ''}>${n}</button>`).join('')}</div>
+    ${st ? `<div class="gp-bar"><i style="width:${st.done / st.total * 100}%"></i></div><div class="gp-sum">${st.ok ? '🎉 오늘 목표 달성!' : `${st.done} / ${st.total} 단원 완독`}</div><ol class="gp-list">${rows}</ol>`
+         : '<p class="gp-empty">목표를 정하면 상단에 진행률이 표시되고, 다 읽으면 달성으로 기록돼 배지를 받습니다.</p>'}
+    <div class="gp-foot">${cur && !(st && st.g.chs.includes(cur)) ? '<button type="button" class="gp-add">＋ 지금 단원 추가</button>' : '<span></span>'}${st ? '<button type="button" class="gp-clear">목표 지우기</button>' : ''}</div>
+    <p class="gp-note">단원을 처음부터 끝까지 스크롤해 읽으면 완독으로 체크됩니다.</p>`;
+  panel.querySelectorAll('[data-n]').forEach(b => b.onclick = e => { e.stopPropagation(); studyGoalFrom(+b.dataset.n); });
+  panel.querySelectorAll('[data-go]').forEach(b => b.onclick = e => { e.stopPropagation(); toggleGoalPanel(null, false); loadChapter(+b.dataset.go); });
+  panel.querySelectorAll('[data-rm]').forEach(b => b.onclick = e => { e.stopPropagation(); studyGoalSet(st.g.chs.filter(n => n !== +b.dataset.rm)); });
+  const add = panel.querySelector('.gp-add'); if (add) add.onclick = e => { e.stopPropagation(); studyGoalSet([...(st ? st.g.chs : []), cur]); };
+  const clr = panel.querySelector('.gp-clear'); if (clr) clr.onclick = e => { e.stopPropagation(); studyGoalSet([]); };
+}
+document.addEventListener('click', e => { const p = document.getElementById('goalPanel'); if (p && !p.hidden && !e.target.closest('.goal-wrap')) toggleGoalPanel(null, false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { const p = document.getElementById('goalPanel'); if (p && !p.hidden) toggleGoalPanel(null, false); } });
 
 // ===== 배지 · 티어 축하 연출 (확인을 눌러야 다음으로 진행) =====
 const studyCelebrateQueue = [];
@@ -9011,6 +9201,7 @@ function studyPaintDock() {
   const icon = document.getElementById('dockTier'); if (icon) icon.innerHTML = studyTierEmblem(t.index, 22);
   const name = document.getElementById('dockTierName'); if (name) name.textContent = t.label;
   studyPaintXpChip(t);
+  studyPaintGoalChip();
 }
 // ---- header XP chip: progress to the next level (division IV→I, then the next tier) ----
 let studyXpShown = null;
@@ -9157,7 +9348,10 @@ function renderTrophy() {
     return `<div class="vol-card"><div class="vc-head"><span class="vc-ico">${icon}</span><b>${escapeHtml(s.name)}</b><span class="vc-pass">${p.done}독</span></div>
       <div class="vc-bar"><i style="width:${p.total ? p.have / p.total * 100 : 0}%"></i></div><small>${p.next}독 진행 ${p.have}/${p.total} 단원</small><div class="vc-medals">${medals}</div></div>`;
   }).join('');
-  const general = STUDY_BADGES.filter(b => b.group !== 'vol').map(b => { const got = !!studyData.badges[b.id];
+  const goalBadges = STUDY_BADGES.filter(b => b.group === 'goal');
+  const goalHtml = goalBadges.map(b => { const got = !!studyData.badges[b.id];
+    return `<div class="bd${got ? ' got' : ''} r-${b.rarity}" data-badge="${b.id}" title="${escapeHtml(b.desc)}${got ? ' · ' + studyData.badges[b.id] + ' 획득' : ''}">${studyBadgeMedal(b, got, 58)}<span>${escapeHtml(b.name)}</span><small>${escapeHtml(b.desc)}</small></div>`; }).join('');
+  const general = STUDY_BADGES.filter(b => b.group !== 'vol' && b.group !== 'goal').map(b => { const got = !!studyData.badges[b.id];
     return `<div class="bd${got ? ' got' : ''} r-${b.rarity}" data-badge="${b.id}" title="${escapeHtml(b.desc)}${got ? ' · ' + studyData.badges[b.id] + ' 획득' : ''}">${studyBadgeMedal(b, got, 58)}<span>${escapeHtml(b.name)}</span><small>${escapeHtml(b.desc)}</small></div>`; }).join('');
   d.innerHTML = `
     <div class="sd-head"><h2 id="trophyTitle">🏆 5독 챌린지</h2><button class="sd-close" aria-label="닫기">×</button></div>
@@ -9184,7 +9378,9 @@ function renderTrophy() {
     </div>
     <h4>권별 칭호 <small>각 권을 1·3·5독 하면 칭호 배지를 받습니다</small></h4>
     <div class="vol-grid">${vols}</div>
-    <h4>도전 과제 <small>${STUDY_BADGES.filter(b => b.group !== 'vol' && studyData.badges[b.id]).length}/${STUDY_BADGES.filter(b => b.group !== 'vol').length}</small></h4>
+    <h4>🎯 오늘의 목표 <small>달성 ${studyGoalWins()}회 · 연속 최고 ${studyGoalStreaks().best}일 · 배지 ${goalBadges.filter(b => studyData.badges[b.id]).length}/${goalBadges.length}</small></h4>
+    <div class="bd-grid">${goalHtml}</div>
+    <h4>도전 과제 <small>${STUDY_BADGES.filter(b => !b.group && studyData.badges[b.id]).length}/${STUDY_BADGES.filter(b => !b.group).length}</small></h4>
     <div class="bd-grid">${general}</div>
     <p class="tr-foot">단원 완독은 본문을 처음부터 끝까지 스크롤해 읽으면 자동으로 기록됩니다. 다음 회독은 단원 맨 위로 돌아간 뒤부터 셉니다.</p>`;
   d.querySelector('.sd-close').onclick = () => d.close();
