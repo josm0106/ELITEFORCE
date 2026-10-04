@@ -212,7 +212,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;bac
 .free-memo-section{padding:10px 12px;border-bottom:1px solid var(--border);background:var(--dark)}
 .free-memo-section select{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--dark2);color:var(--text);font-size:12px;font-family:inherit;margin-bottom:8px}
 .free-memo-input-row{display:flex;gap:6px}
-.free-memo-input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--dark2);color:var(--text);font-size:12.5px;font-family:inherit;resize:none;outline:none;min-height:36px;max-height:100px;line-height:1.4}
+.free-memo-input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--dark2);color:var(--text);font-size:12.5px;font-family:inherit;resize:none;outline:none;min-height:36px;max-height:220px;line-height:1.5;font-size:calc(16px * var(--fsk,1) * var(--msk,1))}
 .free-memo-input:focus{border-color:var(--accent)}
 .free-memo-input::placeholder{color:var(--text3)}
 .free-memo-add{padding:8px 14px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-size:12.5px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;transition:background .15s}
@@ -596,9 +596,9 @@ body{height:100dvh}
 .memo-panel-header{padding:20px}.memo-close:hover{color:#21675b}
 .memo-tabs{background:#f2f5ed}.memo-tab-btn{padding:13px 6px;font-size:12px}
 .memo-item{background:#fff;border:1px solid #dde5d6;border-radius:7px;padding:15px;margin-bottom:12px;box-shadow:none}
-.memo-item:hover{border-color:#9cb595;box-shadow:none}.memo-item .memo-text{font-size:14px;line-height:1.85;word-break:keep-all;overflow-wrap:anywhere}
+.memo-item:hover{border-color:#9cb595;box-shadow:none}.memo-item .memo-text{font-size:calc(16px * var(--fsk,1) * var(--msk,1));line-height:1.85;word-break:keep-all;overflow-wrap:anywhere}
 .memo-chapter{line-height:1.8}.memo-goto-hint{display:block;margin:4px 0 0}
-.free-memo-input{background:#fff;color:#34483b}
+.free-memo-input{background:#fff;color:#34483b;font-size:calc(16px * var(--fsk,1) * var(--msk,1))}
 .welcome{max-width:740px;margin:6vh auto 0;padding:42px 24px;text-align:left;border-top:2px solid #315e4b}
 .welcome h2{font-size:32px;letter-spacing:-1px;font-weight:700;margin-bottom:18px}
 .welcome p{font-size:15px;color:#718073;line-height:1.9;word-break:keep-all}
@@ -933,6 +933,7 @@ html.focus-session .main-header:hover{opacity:1}
 .fs-presets button{padding:5px 0;border:1px solid #dbe3d6;border-radius:6px;background:#fff;color:#4a6555;font-size:11px;cursor:pointer;font-variant-numeric:tabular-nums}
 .fs-presets button[aria-pressed="true"]{background:#397b61;border-color:#397b61;color:#fff;font-weight:700}
 .fs-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11px;color:#718073}
+.fs-sub{margin:14px 0 8px;padding-top:12px;border-top:1px solid #e3eadf;font-size:12px;font-weight:700;color:#315548}.fs-sub span{font-weight:400;color:#8a978c;font-size:11px}
 .fs-reset{border:0;background:#edf2e7;color:#45614b;border-radius:5px;padding:4px 9px;font-size:11px;cursor:pointer}
 @media(max-width:768px){#fontSizeBtn{padding:4px 8px}#fontSizeBtn .fs-val{display:none}.fs-panel{position:fixed;top:56px;right:12px;left:12px;width:auto}}
 
@@ -1020,11 +1021,14 @@ html.sidebar-collapsed .sidebar{display:none}
         <div id="goalPanel" class="goal-panel" hidden role="dialog" aria-label="오늘의 목표 단원"></div></span>
       <button id="xpChip" type="button" onclick="openTrophy()" title="경험치 · 다음 단계까지 진행률"><span class="xc-ico" id="xpChipIco" aria-hidden="true"></span><span class="xc-body"><span class="xc-top"><b id="xpChipPct">0%</b><span class="xc-next" id="xpChipNext"></span><span class="xc-need" id="xpChipNeed"></span></span><span class="xc-bar"><i id="xpChipFill"></i></span></span><span class="xc-gain" id="xpChipGain" aria-hidden="true"></span></button>
       <button id="timerToggle" type="button" title="집중 타이머 열기/닫기 (Alt+T)" aria-controls="focusTimer"><span class="tt-dot" aria-hidden="true"></span><span aria-hidden="true">⏱</span><span class="tt-label" id="timerToggleLabel">타이머</span></button>
-      <span class="fs-wrap"><button id="fontSizeBtn" type="button" title="본문 글자 크기 (Alt+ + / Alt+ −)" aria-haspopup="true" aria-expanded="false" onclick="toggleFontSizePanel(event)"><span class="fs-a1">가</span><span class="fs-a2">가</span><span id="fontSizeLabel" class="fs-val">100%</span></button>
+      <span class="fs-wrap"><button id="fontSizeBtn" type="button" title="본문·메모 글자 크기 (Alt+ + / Alt+ −)" aria-haspopup="true" aria-expanded="false" onclick="toggleFontSizePanel(event)"><span class="fs-a1">가</span><span class="fs-a2">가</span><span id="fontSizeLabel" class="fs-val">100%</span></button>
         <div id="fontSizePanel" class="fs-panel" hidden role="dialog" aria-label="본문 글자 크기">
-          <div class="fs-row"><button type="button" class="fs-step" onclick="stepFontSize(-1)" aria-label="글자 작게">A−</button><input type="range" id="fontSizeRange" min="80" max="170" step="5" value="100" aria-label="글자 크기 퍼센트" oninput="setFontSize(this.value)"><button type="button" class="fs-step big" onclick="stepFontSize(1)" aria-label="글자 크게">A+</button></div>
+          <div class="fs-row"><button type="button" class="fs-step" onclick="stepFontSize(-1)" aria-label="글자 작게">A−</button><input type="range" id="fontSizeRange" min="80" max="170" step="1" value="100" aria-label="글자 크기 퍼센트" oninput="setFontSize(this.value)"><button type="button" class="fs-step big" onclick="stepFontSize(1)" aria-label="글자 크게">A+</button></div>
           <div class="fs-presets" id="fontSizePresets"></div>
           <div class="fs-foot"><span id="fontSizePx">본문 16px</span><button type="button" class="fs-reset" onclick="setFontSize(100)">기본 100%</button></div>
+          <div class="fs-sub">✎ 메모 글씨 <span>(본문 대비)</span></div>
+          <div class="fs-row"><button type="button" class="fs-step" onclick="stepMemoFontSize(-1)" aria-label="메모 글자 작게">A−</button><input type="range" id="memoFontRange" min="70" max="200" step="1" value="100" aria-label="메모 글자 크기 퍼센트" oninput="setMemoFontSize(this.value)"><button type="button" class="fs-step big" onclick="stepMemoFontSize(1)" aria-label="메모 글자 크게">A+</button></div>
+          <div class="fs-foot"><span id="memoFontPx">메모 100% · 16px</span><button type="button" class="fs-reset" onclick="setMemoFontSize(100)">본문과 같게</button></div>
         </div></span>
       <button id="motionToggle" type="button" aria-pressed="true" aria-label="화면 모션 켜짐" onclick="toggleStudyMotion()">✦</button>
       <span id="syncIndicator" role="status" aria-live="polite"></span>
@@ -5742,9 +5746,9 @@ function selectionMemoElement(id) {
   return id === 'selectionMemoComposer' ? selectionComposerElement : selectionComposerElement.querySelector('#' + id);
 }
 const INLINE_MEMO_STYLE = `
-:host{display:block;clear:both;margin:14px 0 20px;max-width:100%;font:14px/1.8 'Times New Roman','Malgun Gothic',serif;color:#365346;--accent:#397b61;--border:#c4dccd}
+:host{display:block;clear:both;margin:14px 0 20px;max-width:100%;font:calc(16px * var(--fsk,1) * var(--msk,1))/1.8 'Times New Roman','Malgun Gothic',serif;color:#365346;--accent:#397b61;--border:#c4dccd}
 *{box-sizing:border-box} [hidden]{display:none!important}
-.card,section{display:block;background:#edf6ed;border:1px solid #c4dccd;border-left:4px solid #85b39b;border-radius:10px;padding:16px!important;max-height:none!important;overflow:visible!important;box-shadow:0 3px 12px #254a3010}
+.card,section{display:block;background:#f8fbf6;border:1px solid #d6e6db;border-left:4px solid #85b39b;border-radius:10px;padding:16px!important;max-height:none!important;overflow:visible!important;box-shadow:0 3px 12px #254a3010}
 header{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}strong{font-size:13px;color:#436e56}small{color:#6e8475;font-size:11px}
 p{white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;margin:8px 0 14px}blockquote{margin:8px 0;color:#6a8070;font-size:12px;max-height:90px;overflow:auto;white-space:pre-wrap;word-break:keep-all}
 textarea{width:100%;min-height:95px;padding:12px;border:1px solid #bcd1c0;border-radius:7px;background:#fffefb;color:#2b4336;resize:vertical;font:inherit}
@@ -5763,7 +5767,7 @@ button{font:inherit;font-size:12px;cursor:pointer;color:#406950;background:#fffe
 .img-ctl .sz{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.94);border:1px solid #c9d5c4;border-radius:6px;padding:2px 6px 2px 2px}
 .img-ctl .sz button{border:0;background:transparent;padding:6px 8px}.img-ctl input{width:110px;accent-color:#315548;margin:0;cursor:pointer}
 .img-ctl b{font:600 11px/1 system-ui,sans-serif;min-width:34px;text-align:right;color:#315548}.img-ctl .del{color:#a4483c;border-color:#e3c4bd}
-@media(max-width:600px){.card,section{padding:12px!important}:host{font-size:13px}header{flex-wrap:wrap}}
+@media(max-width:600px){.card,section{padding:12px!important}header{flex-wrap:wrap}}
 `;
 function newInlineMemoHost(className) {
   const host = document.createElement('span');
@@ -9865,8 +9869,8 @@ function applyStudyMotion() {
   button.disabled = studyMotionPreference.matches;
   button.title = studyMotionPreference.matches ? '기기의 동작 줄이기 설정이 적용되었습니다' : (enabled ? '화면 모션 켜짐 · 누르면 끔' : '화면 모션 꺼짐 · 누르면 켬');
 }
-// ===== 본문 글자 크기 (80~170%, 5% 단위) =====
-const FS_KEY = 'elite_ortho_font_scale', FS_MIN = 80, FS_MAX = 170, FS_STEP = 5;
+// ===== 본문 글자 크기 (80~170%, 1% 단위) + 메모 글자 크기 =====
+const FS_KEY = 'elite_ortho_font_scale', FS_MIN = 80, FS_MAX = 170, FS_STEP = 1;
 const FS_PRESETS = [85, 95, 100, 105, 110, 115, 120, 130, 145, 160];
 function getFontScale() { try { const v = Number(localStorage.getItem(FS_KEY)); return v >= FS_MIN && v <= FS_MAX ? v : 100; } catch (e) { return 100; } }
 function setFontSize(pct) {
@@ -9878,10 +9882,23 @@ function setFontSize(pct) {
   const body = document.querySelector('.chapter-content') || document.getElementById('chapterContent');
   const px = document.getElementById('fontSizePx');
   if (px) px.textContent = '본문 ' + (body ? Math.round(parseFloat(getComputedStyle(body).fontSize) * 10) / 10 : Math.round(16 * pct) / 100) + 'px';
+  setMemoFontSize(getMemoFontScale(), true);
   document.querySelectorAll('#fontSizePresets button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === pct)));
   if (typeof updateReadingProgress === 'function') requestAnimationFrame(() => { try { updateReadingProgress(); } catch (e) {} });
 }
 function stepFontSize(dir) { setFontSize(getFontScale() + dir * FS_STEP); }
+// 메모 글자 크기 = 본문 크기 × (70~200%, 1% 단위). 기본 100% = 본문과 같음
+const MFS_KEY = 'elite_ortho_memo_font_scale', MFS_MIN = 70, MFS_MAX = 200;
+function getMemoFontScale() { try { const v = Number(localStorage.getItem(MFS_KEY)); return v >= MFS_MIN && v <= MFS_MAX ? v : 100; } catch (e) { return 100; } }
+function setMemoFontSize(pct, noSave) {
+  pct = Math.round(Math.min(MFS_MAX, Math.max(MFS_MIN, Number(pct) || 100)));
+  document.documentElement.style.setProperty('--msk', String(pct / 100));
+  if (!noSave) try { localStorage.setItem(MFS_KEY, String(pct)); } catch (e) {}
+  const range = document.getElementById('memoFontRange'); if (range && Number(range.value) !== pct) range.value = pct;
+  const lab = document.getElementById('memoFontPx');
+  if (lab) lab.textContent = '메모 ' + pct + '% · ' + Math.round(16 * getFontScale() / 100 * pct / 100 * 10) / 10 + 'px';
+}
+function stepMemoFontSize(dir) { setMemoFontSize(getMemoFontScale() + dir); }
 function toggleFontSizePanel(e, force) {
   if (e) e.stopPropagation();
   const panel = document.getElementById('fontSizePanel'), btn = document.getElementById('fontSizeBtn');
