@@ -524,6 +524,14 @@ body{height:100dvh}
 .chapter-content .ko-sum>strong:first-child{color:#3c6b4b;margin-right:4px;font-size:.92em}
 .chapter-content td .ko-sum{margin-top:5px;padding:6px 9px}
 .chapter-content .vf-off{display:none!important}
+#photoReplacePop{position:fixed;inset:0;z-index:9000;background:rgba(20,35,28,.35);display:flex;align-items:center;justify-content:center;padding:16px}
+#photoReplacePop .prp-box{background:#fff;border-radius:12px;padding:18px;width:min(360px,100%);box-shadow:0 10px 30px rgba(0,0,0,.25);font:14px/1.5 system-ui,'Malgun Gothic',sans-serif;color:#2b4336;text-align:center}
+#photoReplacePop .prp-paste{border:2px dashed #85b39b;border-radius:10px;padding:22px 10px;background:#f2f8f3;font-size:15px;outline:none}
+#photoReplacePop .prp-paste:focus{border-color:#315548}
+#photoReplacePop .prp-sub{font-size:12px;color:#6e8475;margin:8px 0 12px}
+#photoReplacePop .prp-btns{display:flex;gap:8px;justify-content:center}
+#photoReplacePop button{font:600 13px/1 system-ui,sans-serif;border:1px solid #c9d5c4;background:#fff;color:#315548;border-radius:8px;padding:9px 14px;cursor:pointer}
+#photoReplacePop .prp-file{background:#315548;color:#fff;border-color:#315548}
 .chapter-content .pdf-fig{margin:10px 0 18px;padding:8px;background:#fff;border:1px solid #dce3d6;border-radius:8px;text-align:center;position:relative}
 .chapter-content .pdf-fig.fig-editing{outline:2px dashed #5f8a68;outline-offset:2px}
 .chapter-content .pdf-fig.fig-dragging{opacity:.45}
@@ -5831,7 +5839,7 @@ function memoImgTools(m, type, wrap) {
     + '<div class="bar"><button type="button" data-act="crop" title="회전/자르기 편집" aria-label="자르기">✂ 자르기</button>'
     + '<button type="button" data-act="rotl" title="왼쪽으로 90° 회전" aria-label="왼쪽으로 회전">⟲ 90°</button>'
     + '<button type="button" data-act="rotr" title="오른쪽으로 90° 회전" aria-label="오른쪽으로 회전">⟳ 90°</button>'
-    + '<button type="button" data-act="replace" title="다른 사진으로 바꾸기 (Ctrl+V로 붙여넣기도 가능)" aria-label="다른 사진으로 바꾸기">🖼️</button>'
+    + '<button type="button" data-act="replace" title="다른 사진으로 바꾸기 (Ctrl+V 붙여넣기 또는 파일)" aria-label="다른 사진으로 바꾸기">🖼️</button>'
     + '<span class="sz"><button type="button" data-act="minus" title="작게 (1%씩, Shift 5%)" aria-label="사진 작게">－</button><input type="range" min="20" max="100" step="1" aria-label="사진 크기" title="끌어서 크기 미세조정"><button type="button" data-act="plus" title="크게 (1%씩, Shift 5%)" aria-label="사진 크게">＋</button><b></b></span>'
     + '<button type="button" data-act="del" class="del" title="이 사진 삭제" aria-label="사진 삭제">🗑 삭제</button>'
     + '<button type="button" data-act="done" title="완료" aria-label="완료">완료</button></div>';
@@ -5860,10 +5868,45 @@ function memoImgTools(m, type, wrap) {
   act('crop', () => editMemoImage(m.id, type));
   act('rotl', () => rotateMemoImage(m.id, type, -1));
   act('rotr', () => rotateMemoImage(m.id, type, 1));
-  act('replace', () => pickMemoImage('memo', m.id, type));
+  act('replace', () => askReplacePhoto(url => attachEditedImage(url, { mode: 'memo', id: m.id, type })));
   act('del', () => { if (confirm('이 메모의 사진을 삭제하시겠습니까?')) { on(false); removeMemoImg(m.id, type); } });
   if (memoImgEditingId === m.id) on(true);
   return ctl;
+}
+// 🖼️ 사진 바꾸기 창: Ctrl+V 붙여넣기 또는 파일에서 고르기 → 회전/자르기 편집 → done(url)
+function askReplacePhoto(done) {
+  document.getElementById('photoReplacePop')?.remove();
+  const pop = document.createElement('div'); pop.id = 'photoReplacePop';
+  pop.innerHTML = '<div class="prp-box" role="dialog" aria-label="사진 바꾸기"><div class="prp-paste" tabindex="0">📋 <b>Ctrl+V</b> 로 사진 붙여넣기</div>'
+    + '<div class="prp-sub">캡처한 사진을 복사한 뒤 이 창에서 Ctrl+V를 누르세요</div>'
+    + '<div class="prp-btns"><button type="button" class="prp-file">📁 파일에서 고르기</button><button type="button" class="prp-no">취소</button></div></div>';
+  document.body.appendChild(pop);
+  const close = () => { pop.remove(); document.removeEventListener('paste', onPaste, true); document.removeEventListener('keydown', onKey, true); };
+  const use = file => {
+    if (!file || !file.type.startsWith('image/')) return;
+    close();
+    const rd = new FileReader();
+    rd.onload = () => openImgEditor(rd.result, done);
+    rd.readAsDataURL(file);
+  };
+  const onPaste = e => {
+    const item = Array.from(e.clipboardData?.items || []).find(it => it.type && it.type.startsWith('image/'));
+    e.preventDefault(); e.stopPropagation();
+    if (item) use(item.getAsFile());
+    else pop.querySelector('.prp-sub').textContent = '클립보드에 사진이 없습니다 — 사진을 복사한 뒤 다시 Ctrl+V';
+  };
+  const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+  document.addEventListener('paste', onPaste, true);
+  document.addEventListener('keydown', onKey, true);
+  pop.addEventListener('click', e => { e.stopPropagation(); if (e.target === pop) close(); });
+  ['mouseup', 'pointerdown', 'touchend'].forEach(n => pop.addEventListener(n, e => e.stopPropagation()));
+  pop.querySelector('.prp-no').onclick = close;
+  pop.querySelector('.prp-file').onclick = () => {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = () => use(inp.files && inp.files[0]);
+    inp.click();
+  };
+  pop.querySelector('.prp-paste').focus();
 }
 // 메모 사진을 90°씩 돌려서 새 사진으로 저장
 function rotateMemoImage(memoId, type, dir) {
@@ -8163,18 +8206,7 @@ function attachFigControls(fig) {
   const turn = d => { const r = (((figMoves[fig.dataset.src] || {}).rot || 0) + d + 4) % 4; setFigProp(fig, 'rot', r || undefined); };
   sh.querySelector('.rotl').onclick = e => { e.stopPropagation(); turn(-1); };
   sh.querySelector('.rotr').onclick = e => { e.stopPropagation(); turn(1); };
-  sh.querySelector('.swap').onclick = e => {
-    e.stopPropagation();
-    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
-    inp.onchange = () => {
-      const f = inp.files && inp.files[0];
-      if (!f || !f.type.startsWith('image/')) return;
-      const rd = new FileReader();
-      rd.onload = () => openImgEditor(rd.result, url => replaceFigImage(fig, url));
-      rd.readAsDataURL(f);
-    };
-    inp.click();
-  };
+  sh.querySelector('.swap').onclick = e => { e.stopPropagation(); askReplacePhoto(url => replaceFigImage(fig, url)); };
   fig.appendChild(host);
 }
 // 교재 그림을 사용자가 고른 사진으로 교체 (사진은 메모 사진과 같은 저장소: IndexedDB + Firestore memoImages)
