@@ -501,6 +501,9 @@ body{height:100dvh}
 .chapter-meta .meta-views{margin-top:12px;border-radius:4px;background:#eef3eb;color:#59745d;font-weight:400;font-size:11px}
 .chapter-meta .meta-minus-btn,.chapter-meta .meta-reset-btn{border-color:#d3dfd0!important;color:#5c795f!important}
 .chapter-content p{text-align:left;word-break:keep-all;overflow-wrap:break-word;margin-bottom:16px}
+.chapter-content p.arrow-cont{margin-top:-8px;padding-left:1.6em}
+.chapter-content li.arrow-cont{list-style:none}
+.chapter-content .arrow-dash{display:none}
 .chapter-content li{word-break:keep-all;overflow-wrap:break-word;line-height:1.9}
 .chapter-content h2,.chapter-content h2.auto-heading{margin:44px 0 18px;padding:0 0 13px;border-left:0;border-bottom:2px solid #315e4b;background:none;border-radius:0;font-size:calc(23px * var(--fsk,1));line-height:1.55;word-break:keep-all;overflow-wrap:anywhere}
 .chapter-content h3,.chapter-content h3.auto-heading{font-size:calc(20px * var(--fsk,1));line-height:1.6;margin:32px 0 16px;border-bottom:1px solid #dbe2d6;word-break:keep-all;overflow-wrap:anywhere}
@@ -8416,10 +8419,26 @@ function wrapContentTables() {
     if (cols >= 4) w.dataset.cols = cols >= 5 ? 'many' : 'four';
   });
 }
+// Show "- → X" as an indented continuation of the line above. The "- " stays in the text
+// (hidden) so highlight/memo offsets, which are counted over textContent, don't move.
+function markArrowContinuation(p) {
+  if (p.classList.contains('arrow-cont')) return;
+  p.classList.add('arrow-cont');
+  const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+  const t = walker.nextNode();
+  const m = t && t.nodeValue.match(/^(\s*-\s*)→/);
+  if (!m) return;
+  const rest = t.splitText(m[1].length);
+  const dash = document.createElement('span');
+  dash.className = 'arrow-dash';
+  t.parentNode.insertBefore(dash, rest);
+  dash.appendChild(t);
+}
 function processHeadings() {
   const content = document.getElementById('chapterContent');
   if (!content) return;
   const ps = Array.from(content.querySelectorAll('p'));
+  content.querySelectorAll('li').forEach(li => { if (/^(?:-\s*)?→/.test(li.textContent.trim())) markArrowContinuation(li); });
   
   // Known heading keywords (case-insensitive match)
   const h2Keywords = [
@@ -8436,12 +8455,28 @@ function processHeadings() {
     if (p.closest('td,th')) return;
     const text = p.textContent.trim();
     const len = text.length;
+    // "- → TAL" / "→ X" continues the line above (that line's consequence/treatment) — never a title
+    if (/^(?:-\s*)?→/.test(text)) { markArrowContinuation(p); return; }
     if (len === 0 || len > 120) return;
 
     // Skip meta lines (author, citation, Dr.)
     if (/^(Dr\.|정리:|Instr Course|Instructional Course|\d{4} ELITE)/.test(text)) return;
     if (/^(CHAPTER \d|Chapter \d+ —)/.test(text)) return;
     if (/MD[,\s]|FAAOS|FRCSC|FAOA/.test(text) && len < 100) return;
+
+    // bullet / option / key-point lines are body text, not section titles
+    if (/^[-–—•·*※⇒▶▷►▸◦○●□☞✓✔★☆①-⑳㉠-㉻㉮-㉻ⓐ-ⓩ]/.test(text)) return;
+    if (/^([IVX]{1,4}|[ivx]{1,4})\)\s/.test(text)) return;   // "III) ..." list item
+    // sentences, formulas, cause→effect and "label: explanation" lines are content
+    // (numbered "3-1. 제목 (… = …)" titles keep their arrows / colons / formulas)
+    const core = text.replace(/\s*\([^()]*\)\s*$/, '');   // without a trailing "(board 빈출)"
+    if (/다[.:]?$|[다음함됨]\.\s*$/.test(core) || /\.\s*$/.test(core) && len > 30) return;
+    const isNumbered = /^(\d{1,2})([.-]\d{1,2})?[.)]\s/.test(text);
+    const bare = text.replace(/\([^()]*\)/g, '');   // ignore parentheticals
+    if (!isNumbered && /→|⇒|\s[=<>≤≥]\s/.test(bare)) return;
+    const colon = bare.match(/:\s*(.*)$/);
+    if (colon && colon[1].trim().length > 18 && (!isNumbered || /[가-힣]/.test(colon[1]))) return;
+    if (/^(또는|그리고|및|즉|단)$/.test(text)) return;
     
     // Pattern 1: ALL CAPS (>= 3 chars, mostly uppercase letters)
     const upperRatio = (text.replace(/[^A-Z]/g, '').length) / Math.max(text.replace(/[^a-zA-Z]/g, '').length, 1);
