@@ -7352,16 +7352,7 @@ function restoreHighlightsForChapter(chNum) {
   // Preserve individual IDs and recolored ranges when reopening a chapter.
   const contentEl = document.getElementById('chapterContent');
   if (!contentEl) return;
-  const chHighlights = highlights[chNum] || [];
-  chHighlights.forEach(h => {
-    // Quiz restructuring can move text. Match the saved quote before using old offsets.
-    if(h.text){
-      const offset=resolveMemoOffset({text:h.text,anchorOffset:h.startOffset},contentEl,'hl');
-      if(contentEl.textContent.slice(offset,offset+h.text.length)!==h.text)return;
-      h.startOffset=offset;h.endOffset=offset+h.text.length;
-    }
-    deserializeAndHighlight(h.startOffset, h.endOffset, h.color, h.id, contentEl);
-  });
+  paintLocatedHighlights(chNum, contentEl);
 }
 
 function removeHighlight(hlId) {
@@ -7421,8 +7412,13 @@ function getConnectedHighlightIds(hlId) {
 // Merge overlapping/adjacent same-color highlights after adding a new one
 function mergeHighlights(chNum) {
   if (!highlights[chNum] || highlights[chNum].length < 2) return;
-  const byColor = {};
+  const content = document.getElementById('chapterContent');
+  const live = content && currentChapter?.num === chNum;
+  const all = live ? content.textContent : '';
+  const byColor = {}, stale = [];
   highlights[chNum].forEach(h => {
+    // 위치가 어긋난 옛 기록은 합치지 않음 (엉뚱한 구간으로 늘어나는 것 방지)
+    if (live) { const r = locateHighlight(h, content, all); if (!r) { stale.push(h); return; } h.startOffset = r[0]; h.endOffset = r[1]; }
     if (!byColor[h.color]) byColor[h.color] = [];
     byColor[h.color].push(h);
   });
@@ -7445,7 +7441,7 @@ function mergeHighlights(chNum) {
     merged.push(current);
   });
 
-  highlights[chNum] = merged;
+  highlights[chNum] = merged.concat(stale);
 }
 
 // Re-render all highlights: remove existing marks, re-apply from data
@@ -7458,11 +7454,43 @@ function reRenderHighlights(chNum, contentEl) {
   });
   // Normalize text nodes
   contentEl.normalize();
-  // Re-apply all highlights from data
-  const chHighlights = highlights[chNum] || [];
-  chHighlights.forEach(h => {
-    deserializeAndHighlight(h.startOffset, h.endOffset, h.color, h.id, contentEl);
+  // Re-apply all highlights from data (글자 확인 후 — 위치가 어긋난 기록을 엉뚱한 곳에 칠하지 않음)
+  paintLocatedHighlights(chNum, contentEl);
+}
+// 저장된 밑줄의 실제 위치 찾기: 저장된 글자(h.text)로 확인·재탐색. 못 찾으면 null (칠하지 않음)
+function locateHighlight(h, contentEl, all) {
+  all = all || contentEl.textContent;
+  const s0 = h.startOffset, e0 = h.endOffset;
+  if (!h.text) return (s0 >= 0 && e0 > s0 && e0 <= all.length) ? [s0, e0] : null; // 아주 옛 기록
+  if (all.slice(s0, s0 + h.text.length) === h.text) return [s0, s0 + h.text.length];
+  // 1) 정확히 같은 글자: 앞뒤 문맥 + 가까운 위치
+  const off = resolveMemoOffset({ anchorText: h.text, anchorOffset: s0, anchorBefore: h.before, anchorAfter: h.after }, contentEl, 'hl');
+  if (off != null && all.slice(off, off + h.text.length) === h.text) return [off, off + h.text.length];
+  // 2) 표·여러 줄 선택: 칸/줄 사이 공백(탭·줄바꿈)이 달라도 같은 글자면 인정
+  const words = h.text.split(/\s+/).filter(Boolean);
+  if (!words.length) return null;
+  const re = new RegExp(words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*'), 'g');
+  let best = null, bestD = Infinity, m;
+  while ((m = re.exec(all))) {
+    const d = Math.abs(m.index - (s0 || 0));
+    if (d < bestD) { bestD = d; best = [m.index, m.index + m[0].length]; }
+    if (!m[0].length) re.lastIndex++;
+  }
+  return best;
+}
+function paintLocatedHighlights(chNum, contentEl) {
+  const all = contentEl.textContent;
+  let fixed = false;
+  (highlights[chNum] || []).forEach(h => {
+    const r = locateHighlight(h, contentEl, all);
+    if (!r) return; // 본문에서 그 글자를 못 찾음 → 칠하지 않음 (기록은 보존)
+    const text = all.slice(r[0], r[1]), before = all.slice(Math.max(0, r[0] - 30), r[0]), after = all.slice(r[1], r[1] + 30);
+    if (h.startOffset !== r[0] || h.endOffset !== r[1] || h.text !== text || h.before !== before || h.after !== after) {
+      Object.assign(h, { startOffset: r[0], endOffset: r[1], text, before, after }); fixed = true;
+    }
+    deserializeAndHighlight(r[0], r[1], h.color, h.id, contentEl);
   });
+  if (fixed) syncToCloud(); // 바로잡은 위치·글자를 저장해 다음부터 정확히
 }
 
 // ===== FLOAT POPUP (형광펜 색상 + 암기노트) =====
@@ -7603,10 +7631,12 @@ function showHighlightPopup() {
       const hlId = 'hl_' + Date.now();
       const chNum = currentChapter.num;
       if (!highlights[chNum]) highlights[chNum] = [];
+      const all = contentEl.textContent, s0 = serialized.startOffset, e0 = serialized.endOffset;
+      // 화면 선택 글자(toString)는 표 칸 사이에 탭이 들어가 본문과 달라짐 → 본문 글자 그대로 저장
       highlights[chNum].push({
-        id: hlId, color, text,
-        startOffset: serialized.startOffset,
-        endOffset: serialized.endOffset
+        id: hlId, color, text: all.slice(s0, e0) || text,
+        before: all.slice(Math.max(0, s0 - 30), s0), after: all.slice(e0, e0 + 30),
+        startOffset: s0, endOffset: e0
       });
       mergeHighlights(chNum);
       saveHighlights();
