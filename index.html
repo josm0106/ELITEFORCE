@@ -533,7 +533,7 @@ body{height:100dvh}
 #photoReplacePop button{font:600 13px/1 system-ui,sans-serif;border:1px solid #c9d5c4;background:#fff;color:#315548;border-radius:8px;padding:9px 14px;cursor:pointer}
 #photoReplacePop .prp-file{background:#315548;color:#fff;border-color:#315548}
 .chapter-content .pdf-fig{margin:10px 0 18px;padding:8px;background:#fff;border:1px solid #dce3d6;border-radius:8px;text-align:center;position:relative}
-.chapter-content .pdf-fig.fig-editing{outline:2px dashed #5f8a68;outline-offset:2px}
+.chapter-content .pdf-fig.fig-editing{outline:2px dashed #5f8a68;outline-offset:2px;min-height:170px} /* 크기를 줄여도 조정 버튼 자리가 그대로 */
 .chapter-content .pdf-fig.fig-dragging{opacity:.45}
 .chapter-content .pdf-fig.fig-hidden{padding:6px 8px;min-height:38px;opacity:.65}
 .chapter-content .pdf-fig.fig-hidden img,.chapter-content .pdf-fig.fig-hidden .fig-frame{display:none}
@@ -5752,7 +5752,7 @@ button{font:inherit;font-size:12px;cursor:pointer;color:#406950;background:#fffe
 .memo-tool{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:0;border-radius:5px;background:transparent;font:20px/1 'Times New Roman',serif;color:#6b8676}
 .memo-tool:hover{background:#dae9df;color:#2d5841}.memo-tool[data-action="delete"]:hover{background:#f4e1dc;color:#a4483c}
 .card p{margin:4px 0 8px}.card img:last-child{margin-bottom:0}
-.img-wrap{position:relative;margin:10px 0}.img-wrap img{margin:0}.img-wrap.editing{outline:2px dashed #5f8a68;outline-offset:2px;border-radius:7px}
+.img-wrap{position:relative;margin:10px 0}.img-wrap img{margin:0}.img-wrap.editing{outline:2px dashed #5f8a68;outline-offset:2px;border-radius:7px;min-height:150px}
 .img-ctl{position:absolute;top:6px;right:6px;z-index:3}
 .img-ctl button{font:600 12px/1 system-ui,sans-serif;border:1px solid #c9d5c4;background:rgba(255,255,255,.94);color:#315548;border-radius:6px;padding:7px 9px;cursor:pointer}
 .img-ctl button:hover{background:#eef4ea}.img-ctl .pen{opacity:.6}.img-ctl .pen:hover{opacity:1}
@@ -5849,7 +5849,7 @@ function memoImgTools(m, type, wrap) {
   ctl.querySelector('.pen').onclick = e => { e.stopPropagation(); on(true); };
   act('done', () => on(false));
   const range = ctl.querySelector('input'), label = ctl.querySelector('b');
-  const show = v => { range.value = v; label.textContent = v + '%'; wrap.style.width = v + '%'; };
+  const show = v => { range.value = v; label.textContent = v + '%'; wrap.querySelector('img').style.width = v + '%'; }; // 틀(버튼 위치)은 그대로, 사진만 크기 변경
   const save = v => {
     v = Math.max(20, Math.min(100, Math.round(v))); show(v);
     const rec = (type === 'free' ? freeMemos : memos).find(x => x.id === m.id);
@@ -5947,7 +5947,7 @@ function renderInlineMemo(m, type, marker) {
     wrap.appendChild(image);
     wrap.appendChild(memoImgTools(m, type, wrap));
     card.appendChild(wrap);
-    loadMemoImage(m.imgId).then(url => { if (url && host.isConnected) { image.onload = () => { wrap.style.maxWidth = Math.max(640, Math.round(image.naturalWidth * 1.3 / Math.min(window.devicePixelRatio || 1, 1.5))) + 'px'; /* 메모 사진은 최소 640px 폭까지 크게 */ updateReadingProgress(); }; image.src = url; } });
+    loadMemoImage(m.imgId).then(url => { if (url && host.isConnected) { image.onload = () => { image.style.maxWidth = Math.max(640, Math.round(image.naturalWidth * 1.3 / Math.min(window.devicePixelRatio || 1, 1.5))) + 'px'; /* 메모 사진은 최소 640px 폭까지 크게 */ updateReadingProgress(); }; image.src = url; } });
   }
   host.shadowRoot.appendChild(card);
   insertAfterMemoBlock(host, marker);
