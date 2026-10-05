@@ -9865,6 +9865,8 @@ const STAMP_CSS = `
 :host{font-size:0}
 .st{all:unset;position:absolute;width:30px;height:30px;cursor:pointer;display:grid;place-items:center;z-index:3;filter:drop-shadow(0 2px 3px rgba(150,95,0,.4));transition:transform .15s}
 .st:hover{transform:var(--rot) scale(1.12)}
+.st{touch-action:none;cursor:grab}
+.st.drag{cursor:grabbing;pointer-events:none;transform:var(--rot) scale(1.2);filter:drop-shadow(0 6px 8px rgba(150,95,0,.45));transition:none}
 .st:focus-visible{outline:2px solid #2f6b52;outline-offset:2px;border-radius:50%}
 .st svg{display:block}
 .st.pop{animation:sPop .42s cubic-bezier(.2,1.5,.4,1)}
@@ -9929,11 +9931,37 @@ function stampMakeAnchor(num, id, s) {
   const a = document.createElement('span');
   a.className = 'stamp-anchor'; a.dataset.stamp = id;
   const sh = a.attachShadow({ mode: 'open' });
-  sh.innerHTML = `<style>${STAMP_CSS}</style><button class="st" title="별 스탬프 · 누르면 지우기 버튼" aria-label="별 스탬프">${STAMP_SVG}</button><button class="x" hidden title="스탬프 지우기" aria-label="스탬프 지우기">✕</button>`;
+  sh.innerHTML = `<style>${STAMP_CSS}</style><button class="st" title="별 스탬프 · 끌어서 옮기기 · 누르면 지우기 버튼" aria-label="별 스탬프">${STAMP_SVG}</button><button class="x" hidden title="스탬프 지우기" aria-label="스탬프 지우기">✕</button>`;
   const st = sh.querySelector('.st'), x = sh.querySelector('.x');
   stampPlace(a, s);
+  // 끌기: 5px 넘게 움직이면 드래그, 아니면 클릭(✕ 보이기)
+  st.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || stampMode) return;
+    e.stopPropagation(); e.preventDefault();
+    const r0 = st.getBoundingClientRect(), gx = e.clientX - (r0.left + r0.width / 2), gy = e.clientY - (r0.top + r0.height / 2);
+    const sx = e.clientX, sy = e.clientY, bx = s.x || 0, by = s.y || 0;
+    let moved = false;
+    const mv = ev => {
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (!moved && Math.hypot(dx, dy) < 5) return;
+      if (!moved) { moved = true; x.hidden = true; st.classList.add('drag'); document.body.classList.add('stamp-dragging'); }
+      ev.preventDefault();
+      st.style.left = (bx + dx) + 'px'; st.style.top = (by + dy) + 'px';
+    };
+    const up = ev => {
+      window.removeEventListener('pointermove', mv, true); window.removeEventListener('pointerup', up, true); window.removeEventListener('pointercancel', up, true);
+      document.body.classList.remove('stamp-dragging');
+      if (!moved) return;
+      st.classList.remove('drag');
+      a.dataset.dragged = '1'; setTimeout(() => { delete a.dataset.dragged; }, 0);
+      if (ev.type === 'pointercancel') { stampPlace(a, s); return; }
+      stampMove(num, id, ev.clientX - gx, ev.clientY - gy);
+    };
+    window.addEventListener('pointermove', mv, true); window.addEventListener('pointerup', up, true); window.addEventListener('pointercancel', up, true);
+  });
   st.addEventListener('click', e => {
     e.stopPropagation(); e.preventDefault();
+    if (a.dataset.dragged) return;
     const show = x.hidden;
     document.querySelectorAll('.stamp-anchor').forEach(o => { const ox = o.shadowRoot.querySelector('.x'); if (ox) ox.hidden = true; });
     x.hidden = !show;
@@ -9948,54 +9976,91 @@ function stampPlace(a, s) {
   st.style.left = (s.x || 0) + 'px'; st.style.top = (s.y || 0) + 'px';
   x.style.left = ((s.x || 0) + 22) + 'px'; x.style.top = ((s.y || 0) - 8) + 'px';
 }
-function stampAdd(clientX, clientY) {
-  const root = document.getElementById('chapterContent');
-  if (!root || !currentChapter || !studyData) return false;
+// 넘침이 잘리는 상자(표 스크롤 등) 안 글자에 붙이면 상자 밖의 별이 가려지므로, 그 상자 밖 클릭이면 다른 글자를 고름
+function stampClipBox(node, root) {
+  for (let el = node.parentElement; el && el !== root; el = el.parentElement) {
+    const cs = getComputedStyle(el);
+    if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') return el;
+  }
+  return null;
+}
+function stampFits(node, root, x, y) {
+  const box = stampClipBox(node, root); if (!box) return true;
+  const r = box.getBoundingClientRect();
+  return x - 15 >= r.left && x + 15 <= r.right && y - 15 >= r.top && y + 15 <= r.bottom;
+}
+// 화면 좌표 → 앵커로 쓸 본문 글자 오프셋 (본문 밖 여백·그림 위는 가장 가까운 글자)
+function stampLocate(root, clientX, clientY) {
   let node = null, off = 0;
   if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(clientX, clientY); if (r) { node = r.startContainer; off = r.startOffset; } }
   else if (document.caretPositionFromPoint) { const p = document.caretPositionFromPoint(clientX, clientY); if (p) { node = p.offsetNode; off = p.offset; } }
-  let o = null;
-  if (node && node.nodeType === 3 && root.contains(node) && !node.parentElement.closest(STAMP_SKIP)) o = stampOffsetOf(root, node, off);
-  if (o == null) {   // 그림·빈 곳: 클릭한 높이에서 가장 가까운 글자
-    const w = stampTextWalker(root); let c = 0, best = null, bd = Infinity;
-    while (w.nextNode()) {
-      const n = w.currentNode, len = n.textContent.length;
-      if (len && n.textContent.trim()) {
-        const rg = document.createRange(); rg.selectNodeContents(n);
-        for (const rc of rg.getClientRects()) {
-          const d = clientY < rc.top ? rc.top - clientY : clientY > rc.bottom ? clientY - rc.bottom : 0;
-          if (d < bd) { bd = d; best = c; }
-        }
-        if (bd === 0) break;
-      }
-      c += len;
-    }
-    o = best;
+  if (node && node.nodeType === 3 && root.contains(node) && !node.parentElement.closest(STAMP_SKIP) && stampFits(node, root, clientX, clientY)) {
+    const o = stampOffsetOf(root, node, off); if (o != null) return o;
   }
+  const w = stampTextWalker(root); let c = 0, best = null, bd = Infinity;
+  while (w.nextNode()) {
+    const n = w.currentNode, len = n.textContent.length;
+    if (len && n.textContent.trim()) {
+      const rg = document.createRange(); rg.selectNodeContents(n);
+      const rects = [...rg.getClientRects()].filter(rc => rc.height);
+      if (rects.length && stampFits(n, root, clientX, clientY)) for (const rc of rects) {
+        const dy = clientY < rc.top ? rc.top - clientY : clientY > rc.bottom ? clientY - rc.bottom : 0;
+        const dx = clientX < rc.left ? rc.left - clientX : clientX > rc.right ? clientX - rc.right : 0;
+        const d = dy * 4 + dx;   // 같은 높이의 줄을 먼저
+        if (d < bd) { bd = d; best = c; }
+      }
+    }
+    c += len;
+  }
+  return best;
+}
+// 앵커를 s.o에 꽂고, 별 중심이 (cx, cy)에 오도록 x·y를 맞춤
+function stampMount(root, num, id, s, cx, cy) {
+  const r = stampRangeAt(root, s.o); if (!r) return null;
+  const a = stampMakeAnchor(num, id, s);
+  r.insertNode(a);
+  const ar = a.getBoundingClientRect();
+  s.x = Math.round(cx - ar.left - 15); s.y = Math.round(cy - ar.top - 15);
+  stampPlace(a, s);
+  return a;
+}
+function stampPersist() {
+  try { localStorage.setItem(ukey(STUDY_KEY), JSON.stringify(studyData)); } catch (e) {}
+  studySave();
+}
+function stampAdd(clientX, clientY) {
+  const root = document.getElementById('chapterContent');
+  if (!root || !currentChapter || !studyData) return false;
+  const o = stampLocate(root, clientX, clientY);
   if (o == null) return false;
   const num = currentChapter.num;
   const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   const s = { o, s: stampTextAt(root, o, 12), x: 0, y: 0, r: Math.round(Math.random() * 30 - 15), t: Date.now() };
-  const r = stampRangeAt(root, o); if (!r) return false;
-  const a = stampMakeAnchor(num, id, s);
-  r.insertNode(a);
-  const ar = a.getBoundingClientRect();
-  s.x = Math.round(clientX - ar.left - 15); s.y = Math.round(clientY - ar.top - 15);
-  stampPlace(a, s);
-  const st = a.shadowRoot.querySelector('.st'); st.classList.add('pop');
-  const ch = studyData.stamps[num] || (studyData.stamps[num] = {});
-  ch[id] = s;
-  try { localStorage.setItem(ukey(STUDY_KEY), JSON.stringify(studyData)); } catch (e) {}
-  studySave();
+  const a = stampMount(root, num, id, s, clientX, clientY); if (!a) return false;
+  a.shadowRoot.querySelector('.st').classList.add('pop');
+  (studyData.stamps[num] || (studyData.stamps[num] = {}))[id] = s;
+  stampPersist();
   return true;
+}
+// 끌어다 놓기: 놓은 자리의 글자로 앵커를 옮김 (같은 id·기울기 유지)
+function stampMove(num, id, cx, cy) {
+  const root = document.getElementById('chapterContent');
+  const s = studyData && (studyData.stamps[num] || {})[id];
+  if (!root || !s || s.d) return;
+  const old = root.querySelector(`.stamp-anchor[data-stamp="${id}"]`);
+  if (old) { const p = old.parentNode; old.remove(); p && p.normalize && p.normalize(); }
+  const o = stampLocate(root, cx, cy);
+  if (o != null) { s.o = o; s.s = stampTextAt(root, o, 12); }
+  s.t = Date.now();
+  stampMount(root, num, id, s, cx, cy);
+  stampPersist();
 }
 function stampDelete(num, id) {
   const ch = studyData && studyData.stamps[num]; if (!ch) return;
   ch[id] = { d: 1, t: Date.now() };
   const a = document.querySelector(`#chapterContent .stamp-anchor[data-stamp="${id}"]`);
   if (a) { const p = a.parentNode; a.remove(); p && p.normalize && p.normalize(); }
-  try { localStorage.setItem(ukey(STUDY_KEY), JSON.stringify(studyData)); } catch (e) {}
-  studySave();
+  stampPersist();
 }
 function stampSetMode(on) {
   stampMode = !!on && !!currentChapter;
@@ -10015,11 +10080,16 @@ function stampFlashHint(msg) {
   clearTimeout(stampFlashHint.tm);
   stampFlashHint.tm = setTimeout(() => { hint.hidden = !stampMode; hint.textContent = '★ 붙일 곳을 클릭하세요 · Esc 취소'; }, 1800);
 }
+// 본문 영역 전체(양옆 여백 포함, 본문 밖 버튼 제외)에 붙일 수 있음
+function stampTargetOk(e) {
+  const area = document.getElementById('contentArea'), root = document.getElementById('chapterContent');
+  if (!area || !root || !area.contains(e.target)) return false;
+  return root.contains(e.target) || !e.target.closest('button,a,input,select,textarea,label,.search-hit-bar');
+}
 // 스탬프 모드에서는 클릭이 보기 선택·밑줄 등으로 가지 않도록 캡처 단계에서 가로챔
 ['pointerdown', 'mousedown', 'mouseup'].forEach(t => document.addEventListener(t, e => {
   if (!stampMode || e.target.closest?.('#stampFab')) return;
-  const root = document.getElementById('chapterContent');
-  if (root && root.contains(e.target)) { e.preventDefault(); e.stopPropagation(); }
+  if (stampTargetOk(e)) { e.preventDefault(); e.stopPropagation(); }
 }, { capture: true, passive: false }));
 document.addEventListener('click', e => {
   if (!stampMode) {
@@ -10028,8 +10098,7 @@ document.addEventListener('click', e => {
     return;
   }
   if (e.target.closest?.('#stampFab')) return;
-  const root = document.getElementById('chapterContent');
-  if (root && root.contains(e.target)) {
+  if (stampTargetOk(e)) {
     e.preventDefault(); e.stopPropagation();
     stampAdd(e.clientX, e.clientY);
   }
@@ -10046,8 +10115,9 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 @keyframes stampPulse{50%{box-shadow:0 0 0 9px rgba(242,201,76,.12),0 8px 22px rgba(120,85,10,.35)}}
 #stampHint{position:fixed;right:78px;bottom:31px;z-index:140;padding:6px 12px;border-radius:999px;background:rgba(20,40,38,.92);color:#f3dfa6;font:600 12.5px/1.3 'Times New Roman','Malgun Gothic',serif;box-shadow:0 6px 18px rgba(8,22,18,.25);pointer-events:none;white-space:nowrap}
 #stampHint[hidden]{display:none}
-body.stamp-mode #chapterContent,body.stamp-mode #chapterContent *{cursor:crosshair!important}
-body.stamp-mode #chapterContent{user-select:none}
+body.stamp-mode #contentArea,body.stamp-mode #contentArea *{cursor:crosshair!important}
+body.stamp-mode #contentArea{user-select:none}
+body.stamp-dragging,body.stamp-dragging *{cursor:grabbing!important;user-select:none!important}
 .stamp-anchor{position:relative;display:inline}
 @media(max-width:768px){#stampFab{bottom:86px;right:23px}#stampHint{bottom:95px;right:80px}}
 @media(prefers-reduced-motion:reduce){#stampFab.on{animation:none}}
