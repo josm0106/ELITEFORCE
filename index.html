@@ -1535,6 +1535,7 @@ document.addEventListener('visibilitychange', async () => {
         studyData = studyMerge(studyData, JSON.parse(sj));
         try { localStorage.setItem(ukey('elite_ortho_study'), JSON.stringify(studyData)); } catch (e) {}
         if (currentChapter) restoreQuizPicks(currentChapter.num);
+        if (currentChapter && typeof stampRender === 'function') stampRender(currentChapter.num);
         if (typeof studyPaintDock === 'function') studyPaintDock();
       }
     } catch (e) {}
@@ -4973,6 +4974,7 @@ function loadChapter(num) {
   studyOnChapterLoad(num);
   injectQuizStudy(num);
   restoreQuizPicks(num);
+  stampRender(num);
   mountSelectionMemoComposer(false);
   applyViewFilter();
   document.getElementById('readingProgress').hidden = false;
@@ -8652,7 +8654,7 @@ function studyDayKey(d = new Date()) {
 }
 function studyNormalize(s) {
   s = (s && typeof s === 'object' && !Array.isArray(s)) ? s : {};
-  for (const k of ['reads', 'pass', 'quiz', 'marks', 'qtext', 'qn', 'badges', 'days', 'stats', 'pick', 'gread', 'goalLog'])
+  for (const k of ['reads', 'pass', 'quiz', 'marks', 'qtext', 'qn', 'badges', 'days', 'stats', 'pick', 'gread', 'goalLog', 'stamps'])
     if (!s[k] || typeof s[k] !== 'object' || Array.isArray(s[k])) s[k] = {};
   if (!s.start) s.start = studyDayKey();
   s.v = 1;
@@ -8891,6 +8893,11 @@ function studyMerge(a, b) {
   const gl = obj(out, 'goalLog'); Object.entries(b.goalLog || {}).forEach(([k, v]) => {
     const x = gl[k]; if (!x || v[1] > x[1]) gl[k] = v.slice(); if (x && (x[2] || v[2])) gl[k][2] = 1;
   });
+  // 별 스탬프: 합집합, 지운 기록(d)이 이김
+  const st = obj(out, 'stamps'); Object.entries(b.stamps || {}).forEach(([ch, ss]) => Object.entries(ss || {}).forEach(([id, s]) => {
+    const c = st[ch] || (st[ch] = {});
+    if (!c[id] || (s && s.d)) c[id] = s;
+  }));
   return out;
 }
 function restoreQuizPicks(num) {
@@ -9847,6 +9854,203 @@ document.head.insertAdjacentHTML('beforeend', `<style id="studyCss">
 .study-toast .st-ico{display:grid;place-items:center;min-width:44px;font-size:30px}
 .study-toast b{display:block;font-size:15px;color:#f3dfa6}.study-toast small{display:block;font-size:12px;opacity:.85;margin-top:3px}
 @media(max-width:640px){.g-stats{grid-template-columns:repeat(2,1fr)}.tr-hero{flex-direction:column;text-align:center}.tr-info h3{font-size:24px}.rv-item{grid-template-columns:auto 1fr}.rv-meta{grid-column:2}}
+</style>`);
+
+// ===== 별 스탬프: 오른쪽 아래 ★ 버튼 → 본문 아무 곳이나 클릭하면 그 자리에 붙음 =====
+// stamps[ch][id] = {o: 본문 글자 오프셋, s: 그 자리 글자 일부, x, y: 앵커 기준 px, r: 기울기, t} / 지우면 {d:1, t}
+// 앵커는 글자가 없는 빈 span(별은 shadow root 안)이라 밑줄·메모 오프셋을 바꾸지 않음
+const STAMP_SKIP = '.chapter-meta,.inline-memo-card,.memo-anchor-marker,.stamp-anchor';
+const STAMP_SVG = `<svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><defs><radialGradient id="sg" cx="38%" cy="30%" r="75%"><stop offset="0" stop-color="#fff3b0"/><stop offset=".45" stop-color="#f5c331"/><stop offset="1" stop-color="#c98a06"/></radialGradient></defs><path d="M16 2.2l4.1 8.6 9.4 1.2-6.9 6.5 1.8 9.3L16 23.3l-8.4 4.5 1.8-9.3-6.9-6.5 9.4-1.2z" fill="url(#sg)" stroke="#a86d00" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 7.2l2.5 5.3 5.8.7-4.3 4 1.1 5.7L16 20.1l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1"/></svg>`;
+const STAMP_CSS = `
+:host{font-size:0}
+.st{all:unset;position:absolute;width:30px;height:30px;cursor:pointer;display:grid;place-items:center;z-index:3;filter:drop-shadow(0 2px 3px rgba(150,95,0,.4));transition:transform .15s}
+.st:hover{transform:var(--rot) scale(1.12)}
+.st:focus-visible{outline:2px solid #2f6b52;outline-offset:2px;border-radius:50%}
+.st svg{display:block}
+.st.pop{animation:sPop .42s cubic-bezier(.2,1.5,.4,1)}
+@keyframes sPop{0%{transform:var(--rot) scale(2.1);opacity:0}60%{transform:var(--rot) scale(.88);opacity:1}100%{transform:var(--rot) scale(1)}}
+.x{all:unset;position:absolute;width:18px;height:18px;border-radius:50%;background:#b3261e;color:#fff;font:700 12px/18px system-ui,sans-serif;text-align:center;cursor:pointer;z-index:4;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.x[hidden]{display:none}
+@media(prefers-reduced-motion:reduce){.st.pop{animation:none}}
+`;
+let stampMode = false;
+function stampTextWalker(root) {
+  return document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => n.parentElement && n.parentElement.closest(STAMP_SKIP) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+  });
+}
+// (node, offset) → 본문 글자 오프셋 (메모 카드·단원 정보 글자는 세지 않음)
+function stampOffsetOf(root, node, off) {
+  const w = stampTextWalker(root); let c = 0;
+  while (w.nextNode()) { if (w.currentNode === node) return c + off; c += w.currentNode.textContent.length; }
+  return null;
+}
+function stampTextAt(root, o, len) {
+  const w = stampTextWalker(root); let c = 0, s = '';
+  while (w.nextNode()) {
+    const t = w.currentNode.textContent;
+    if (c + t.length > o) { s += t.slice(Math.max(0, o - c)); if (s.length >= len) break; }
+    c += t.length;
+  }
+  return s.slice(0, len);
+}
+function stampRangeAt(root, o) {
+  const w = stampTextWalker(root); let c = 0, last = null;
+  while (w.nextNode()) {
+    const n = w.currentNode, len = n.textContent.length;
+    if (c + len > o) { const r = document.createRange(); r.setStart(n, Math.max(0, o - c)); r.collapse(true); return r; }
+    c += len; last = n;
+  }
+  if (last) { const r = document.createRange(); r.setStart(last, last.textContent.length); r.collapse(true); return r; }
+  return null;
+}
+// 저장된 글자 조각이 어긋나면(본문이 바뀐 경우) 가장 가까운 같은 조각을 찾아 옮김
+function stampResolve(root, s) {
+  if (!s.s || stampTextAt(root, s.o, s.s.length) === s.s) return s.o;
+  const w = stampTextWalker(root); let all = '';
+  while (w.nextNode()) all += w.currentNode.textContent;
+  let best = null, i = all.indexOf(s.s);
+  while (i >= 0) { if (best == null || Math.abs(i - s.o) < Math.abs(best - s.o)) best = i; i = all.indexOf(s.s, i + 1); }
+  return best != null ? best : s.o;
+}
+function stampList(num) { return (studyData && studyData.stamps && studyData.stamps[num]) || {}; }
+function stampRender(num) {
+  const root = document.getElementById('chapterContent');
+  if (!root || !studyData) return;
+  root.querySelectorAll('.stamp-anchor').forEach(a => { const p = a.parentNode; a.remove(); p && p.normalize && p.normalize(); });
+  const items = Object.entries(stampList(num)).filter(([, s]) => s && !s.d)
+    .map(([id, s]) => ({ id, s, o: stampResolve(root, s) })).sort((a, b) => b.o - a.o);
+  items.forEach(({ id, s, o }) => {
+    const r = stampRangeAt(root, o); if (!r) return;
+    try { r.insertNode(stampMakeAnchor(num, id, s)); } catch (e) { console.warn('스탬프 표시 실패', e); }
+  });
+}
+function stampMakeAnchor(num, id, s) {
+  const a = document.createElement('span');
+  a.className = 'stamp-anchor'; a.dataset.stamp = id;
+  const sh = a.attachShadow({ mode: 'open' });
+  sh.innerHTML = `<style>${STAMP_CSS}</style><button class="st" title="별 스탬프 · 누르면 지우기 버튼" aria-label="별 스탬프">${STAMP_SVG}</button><button class="x" hidden title="스탬프 지우기" aria-label="스탬프 지우기">✕</button>`;
+  const st = sh.querySelector('.st'), x = sh.querySelector('.x');
+  stampPlace(a, s);
+  st.addEventListener('click', e => {
+    e.stopPropagation(); e.preventDefault();
+    const show = x.hidden;
+    document.querySelectorAll('.stamp-anchor').forEach(o => { const ox = o.shadowRoot.querySelector('.x'); if (ox) ox.hidden = true; });
+    x.hidden = !show;
+  });
+  x.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); stampDelete(num, id); });
+  return a;
+}
+function stampPlace(a, s) {
+  const sh = a.shadowRoot, st = sh.querySelector('.st'), x = sh.querySelector('.x');
+  const rot = `rotate(${s.r || 0}deg)`;
+  st.style.setProperty('--rot', rot); st.style.transform = rot;
+  st.style.left = (s.x || 0) + 'px'; st.style.top = (s.y || 0) + 'px';
+  x.style.left = ((s.x || 0) + 22) + 'px'; x.style.top = ((s.y || 0) - 8) + 'px';
+}
+function stampAdd(clientX, clientY) {
+  const root = document.getElementById('chapterContent');
+  if (!root || !currentChapter || !studyData) return false;
+  let node = null, off = 0;
+  if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(clientX, clientY); if (r) { node = r.startContainer; off = r.startOffset; } }
+  else if (document.caretPositionFromPoint) { const p = document.caretPositionFromPoint(clientX, clientY); if (p) { node = p.offsetNode; off = p.offset; } }
+  let o = null;
+  if (node && node.nodeType === 3 && root.contains(node) && !node.parentElement.closest(STAMP_SKIP)) o = stampOffsetOf(root, node, off);
+  if (o == null) {   // 그림·빈 곳: 클릭한 높이에서 가장 가까운 글자
+    const w = stampTextWalker(root); let c = 0, best = null, bd = Infinity;
+    while (w.nextNode()) {
+      const n = w.currentNode, len = n.textContent.length;
+      if (len && n.textContent.trim()) {
+        const rg = document.createRange(); rg.selectNodeContents(n);
+        for (const rc of rg.getClientRects()) {
+          const d = clientY < rc.top ? rc.top - clientY : clientY > rc.bottom ? clientY - rc.bottom : 0;
+          if (d < bd) { bd = d; best = c; }
+        }
+        if (bd === 0) break;
+      }
+      c += len;
+    }
+    o = best;
+  }
+  if (o == null) return false;
+  const num = currentChapter.num;
+  const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  const s = { o, s: stampTextAt(root, o, 12), x: 0, y: 0, r: Math.round(Math.random() * 30 - 15), t: Date.now() };
+  const r = stampRangeAt(root, o); if (!r) return false;
+  const a = stampMakeAnchor(num, id, s);
+  r.insertNode(a);
+  const ar = a.getBoundingClientRect();
+  s.x = Math.round(clientX - ar.left - 15); s.y = Math.round(clientY - ar.top - 15);
+  stampPlace(a, s);
+  const st = a.shadowRoot.querySelector('.st'); st.classList.add('pop');
+  const ch = studyData.stamps[num] || (studyData.stamps[num] = {});
+  ch[id] = s;
+  try { localStorage.setItem(ukey(STUDY_KEY), JSON.stringify(studyData)); } catch (e) {}
+  studySave();
+  return true;
+}
+function stampDelete(num, id) {
+  const ch = studyData && studyData.stamps[num]; if (!ch) return;
+  ch[id] = { d: 1, t: Date.now() };
+  const a = document.querySelector(`#chapterContent .stamp-anchor[data-stamp="${id}"]`);
+  if (a) { const p = a.parentNode; a.remove(); p && p.normalize && p.normalize(); }
+  try { localStorage.setItem(ukey(STUDY_KEY), JSON.stringify(studyData)); } catch (e) {}
+  studySave();
+}
+function stampSetMode(on) {
+  stampMode = !!on && !!currentChapter;
+  document.body.classList.toggle('stamp-mode', stampMode);
+  const b = document.getElementById('stampFab');
+  if (b) { b.classList.toggle('on', stampMode); b.setAttribute('aria-pressed', stampMode); }
+  const hint = document.getElementById('stampHint'); if (hint) hint.hidden = !stampMode;
+}
+function stampFabClick(e) {
+  e.stopPropagation();
+  if (!currentChapter) { stampFlashHint('단원을 먼저 열어 주세요'); return; }
+  stampSetMode(!stampMode);
+}
+function stampFlashHint(msg) {
+  const hint = document.getElementById('stampHint'); if (!hint) return;
+  hint.textContent = msg; hint.hidden = false;
+  clearTimeout(stampFlashHint.tm);
+  stampFlashHint.tm = setTimeout(() => { hint.hidden = !stampMode; hint.textContent = '★ 붙일 곳을 클릭하세요 · Esc 취소'; }, 1800);
+}
+// 스탬프 모드에서는 클릭이 보기 선택·밑줄 등으로 가지 않도록 캡처 단계에서 가로챔
+['pointerdown', 'mousedown', 'mouseup'].forEach(t => document.addEventListener(t, e => {
+  if (!stampMode || e.target.closest?.('#stampFab')) return;
+  const root = document.getElementById('chapterContent');
+  if (root && root.contains(e.target)) { e.preventDefault(); e.stopPropagation(); }
+}, { capture: true, passive: false }));
+document.addEventListener('click', e => {
+  if (!stampMode) {
+    if (!e.composedPath().some(n => n.classList && n.classList.contains('stamp-anchor')))
+      document.querySelectorAll('#chapterContent .stamp-anchor').forEach(a => { const x = a.shadowRoot.querySelector('.x'); if (x) x.hidden = true; });
+    return;
+  }
+  if (e.target.closest?.('#stampFab')) return;
+  const root = document.getElementById('chapterContent');
+  if (root && root.contains(e.target)) {
+    e.preventDefault(); e.stopPropagation();
+    stampAdd(e.clientX, e.clientY);
+  }
+  stampSetMode(false);
+}, true);
+document.addEventListener('keydown', e => { if (stampMode && e.key === 'Escape') stampSetMode(false); });
+document.body.insertAdjacentHTML('beforeend', `<button id="stampFab" type="button" title="별 스탬프 붙이기 · 누른 뒤 본문의 원하는 곳을 클릭" aria-label="별 스탬프 붙이기" aria-pressed="false" onclick="stampFabClick(event)">${STAMP_SVG.replace('id="sg"', 'id="sgFab"').replace('url(#sg)', 'url(#sgFab)')}</button><div id="stampHint" role="status" hidden>★ 붙일 곳을 클릭하세요 · Esc 취소</div>`);
+document.head.insertAdjacentHTML('beforeend', `<style>
+#stampFab{position:fixed;right:22px;bottom:22px;z-index:140;width:46px;height:46px;border-radius:50%;border:1px solid #e3cf8f;background:radial-gradient(circle at 35% 30%,#fffdf3,#fbefc6);display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 18px rgba(120,85,10,.28);transition:transform .15s,box-shadow .15s}
+#stampFab:hover{transform:translateY(-2px) scale(1.05);box-shadow:0 10px 24px rgba(120,85,10,.34)}
+#stampFab:focus-visible{outline:3px solid #2f6b52;outline-offset:3px}
+#stampFab svg{width:28px;height:28px;filter:drop-shadow(0 1px 2px rgba(150,95,0,.35))}
+#stampFab.on{background:radial-gradient(circle at 35% 30%,#fff6cf,#f2c94c);border-color:#c98a06;box-shadow:0 0 0 4px rgba(242,201,76,.35),0 8px 22px rgba(120,85,10,.35);animation:stampPulse 1.4s ease-in-out infinite}
+@keyframes stampPulse{50%{box-shadow:0 0 0 9px rgba(242,201,76,.12),0 8px 22px rgba(120,85,10,.35)}}
+#stampHint{position:fixed;right:78px;bottom:31px;z-index:140;padding:6px 12px;border-radius:999px;background:rgba(20,40,38,.92);color:#f3dfa6;font:600 12.5px/1.3 'Times New Roman','Malgun Gothic',serif;box-shadow:0 6px 18px rgba(8,22,18,.25);pointer-events:none;white-space:nowrap}
+#stampHint[hidden]{display:none}
+body.stamp-mode #chapterContent,body.stamp-mode #chapterContent *{cursor:crosshair!important}
+body.stamp-mode #chapterContent{user-select:none}
+.stamp-anchor{position:relative;display:inline}
+@media(max-width:768px){#stampFab{bottom:86px;right:23px}#stampHint{bottom:95px;right:80px}}
+@media(prefers-reduced-motion:reduce){#stampFab.on{animation:none}}
 </style>`);
 
 // ===== INIT =====
