@@ -1536,6 +1536,7 @@ document.addEventListener('visibilitychange', async () => {
         try { localStorage.setItem(ukey('elite_ortho_study'), JSON.stringify(studyData)); } catch (e) {}
         if (currentChapter) restoreQuizPicks(currentChapter.num);
         if (currentChapter && typeof stampRender === 'function') stampRender(currentChapter.num);
+        if (typeof studyPaintAllChapters === 'function') studyPaintAllChapters();
         if (typeof studyPaintDock === 'function') studyPaintDock();
       }
     } catch (e) {}
@@ -8799,6 +8800,7 @@ function studyChapterCounts(num) {
     wrong: Object.values(quiz).filter(e => e[2] === 0).length,
     everWrong: Object.values(quiz).filter(e => e[0] > 0).length,
     r: m.filter(x => x.r).length, u: m.filter(x => x.u).length,
+    star: Object.values(studyData?.stamps?.[num] || {}).filter(s => s && !s.d).length,
     reads: studyData?.reads[num] || 0
   };
 }
@@ -9047,6 +9049,7 @@ function studyPaintChapterItem(num) {
   if (c.wrong) parts.push(`<span class="cs-wrong" title="오답 ${c.wrong}문제">✗${c.wrong}</span>`);
   if (c.r) parts.push(`<span class="cs-r" title="R 반복 ${c.r}문제">R${c.r}</span>`);
   if (c.u) parts.push(`<span class="cs-u" title="? 모름 ${c.u}문제">?${c.u}</span>`);
+  if (c.star) parts.push(`<span class="cs-star" title="별 스탬프 ${c.star}개">★${c.star}</span>`);
   if (!parts.length) { el?.remove(); return; }
   if (!el) { el = document.createElement('div'); el.className = 'ch-study'; item.querySelector('.ch-title-row')?.after(el); }
   el.innerHTML = parts.join('');
@@ -9741,7 +9744,7 @@ document.head.insertAdjacentHTML('beforeend', `<style id="studyCss">
 .nav-list{padding-bottom:84px}
 .ch-study{display:flex;flex-wrap:wrap;gap:4px;padding-left:33px;margin-top:5px}
 .ch-study span{font:700 10px/1 system-ui,sans-serif;padding:3px 6px;border-radius:8px;background:rgba(255,255,255,.08);color:#cfe0d3}
-.ch-study .cs-wrong{background:#8f2a23;color:#fff}.ch-study .cs-r{background:#d9443a;color:#fff}.ch-study .cs-u{background:#5b47c4;color:#fff}.ch-study .cs-read{background:#6d5a26;color:#fbeab8}
+.ch-study .cs-wrong{background:#8f2a23;color:#fff}.ch-study .cs-r{background:#d9443a;color:#fff}.ch-study .cs-u{background:#5b47c4;color:#fff}.ch-study .cs-star{background:#e0a91e;color:#3d2a00}.ch-study .cs-read{background:#6d5a26;color:#fbeab8}
 .qm-stem.qm-flag{box-shadow:inset 3px 0 0 #e0342a;padding-left:10px;border-radius:2px}
 .qm-flash{animation:qmFlash 2.4s ease}
 @keyframes qmFlash{0%,40%{background:rgba(255,214,102,.55)}100%{background:transparent}}
@@ -10039,6 +10042,7 @@ function stampMount(root, num, id, s, cx, cy) {
   return a;
 }
 function stampPersist() {
+  if (currentChapter) studyPaintChapterItem(currentChapter.num);
   try { localStorage.setItem(ukey(STUDY_KEY), JSON.stringify(studyData)); } catch (e) {}
   studySave();
 }
