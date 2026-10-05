@@ -5761,6 +5761,10 @@ button{font:inherit;font-size:12px;cursor:pointer;color:#406950;background:#fffe
 .memo-tool{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:0;border-radius:5px;background:transparent;font:20px/1 'Times New Roman',serif;color:#6b8676}
 .memo-tool:hover{background:#dae9df;color:#2d5841}.memo-tool[data-action="delete"]:hover{background:#f4e1dc;color:#a4483c}
 .card p{margin:4px 0 8px}.card img:last-child{margin-bottom:0}
+.card p,textarea{font-size:calc(1em * var(--mfk,1))}
+.mfs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0 2px;font:600 12px/1 system-ui,sans-serif;color:#4f6e5b}
+.mfs button{padding:5px 9px;font:700 12px/1 'Times New Roman',serif}.mfs input{flex:1;min-width:110px;max-width:240px;accent-color:#397b61;margin:0;cursor:pointer}
+.mfs output{min-width:40px;text-align:right;font-variant-numeric:tabular-nums}.mfs .mfs-reset{font:600 11px/1 system-ui,sans-serif;padding:5px 8px}
 .img-wrap{position:relative;margin:10px 0}.img-wrap img{margin:0}.img-wrap.editing{outline:2px dashed #5f8a68;outline-offset:2px;border-radius:7px;min-height:150px}
 .img-ctl{position:absolute;top:6px;right:6px;z-index:3}
 .img-ctl button{font:600 12px/1 system-ui,sans-serif;border:1px solid #c9d5c4;background:rgba(255,255,255,.94);color:#315548;border-radius:6px;padding:7px 9px;cursor:pointer}
@@ -5938,6 +5942,7 @@ function renderInlineMemo(m, type, marker) {
   const host = newInlineMemoHost('inline-memo-card');
   host.dataset.memoId = m.id;
   host.dataset.memoType = type;
+  if (m.fs) host.style.setProperty('--mfk', String(m.fs / 100));
   const card = document.createElement('div'); card.className = 'card';
   card.innerHTML = `<div class="memo-toolbar"><small>${timeAgo(m.id)}</small><button type="button" class="memo-tool" data-action="add" aria-label="같은 위치에 메모 추가" title="메모 추가">+</button><button type="button" class="memo-tool" data-action="edit" aria-label="이 메모 수정" title="메모 수정">✎</button><button type="button" class="memo-tool" data-action="delete" aria-label="이 메모 삭제" title="메모 삭제">×</button></div>${memoShownText(m, type) ? `<p>${memoFmt(memoShownText(m, type))}</p>` : ''}`;
   card.querySelector('[data-action="add"]').onclick = () => {
@@ -5969,10 +5974,17 @@ function editInlineMemo(m, type, host) {
   const display=[...card.children].filter(el=>!el.classList.contains('img-wrap'));
   display.forEach(el=>el.hidden=true);
   const form=document.createElement('form');
-  form.innerHTML='<textarea aria-label="메모 내용 수정"></textarea><div class="actions"><button type="button" data-action="bold" title="굵게 (Ctrl+B)"><b>B</b></button><button type="submit" class="free-memo-add">저장</button><button type="button" data-action="cancel">취소</button></div>';
+  form.innerHTML='<textarea aria-label="메모 내용 수정"></textarea><div class="mfs"><span>글씨 크기</span><button type="button" data-fs="-5" aria-label="이 메모 글씨 작게" title="작게 (5%)">A−</button><input type="range" min="70" max="200" step="1" aria-label="이 메모 글씨 크기 퍼센트"><button type="button" data-fs="5" aria-label="이 메모 글씨 크게" title="크게 (5%)">A+</button><output></output><button type="button" class="mfs-reset" title="다른 메모와 같은 크기로">기본</button></div><div class="actions"><button type="button" data-action="bold" title="굵게 (Ctrl+B)"><b>B</b></button><button type="submit" class="free-memo-add">저장</button><button type="button" data-action="cancel">취소</button></div>';
   const input=form.querySelector('textarea');
   input.value=type==='free' ? (m.text || '') : (m.note || (m.anchorText ? '' : (m.text || '')));
-  const cancel=()=>{form.remove();display.forEach(el=>el.hidden=false);card.querySelector('[data-action="edit"]').focus();};
+  // 이 메모만의 글씨 크기 (기본 100% = 가가 창의 메모 크기). 움직이면 바로 미리 보이고, 저장해야 남음
+  const fs0=m.fs||100, range=form.querySelector('.mfs input'), out=form.querySelector('.mfs output');
+  const setFs=v=>{v=Math.round(Math.min(200,Math.max(70,Number(v)||100)));range.value=v;out.textContent=v+'%';host.style.setProperty('--mfk',String(v/100));};
+  setFs(fs0);
+  range.oninput=()=>setFs(range.value);
+  form.querySelectorAll('[data-fs]').forEach(b=>{b.onmousedown=e=>e.preventDefault();b.onclick=()=>setFs(Number(range.value)+Number(b.dataset.fs));});
+  form.querySelector('.mfs-reset').onclick=()=>setFs(100);
+  const cancel=()=>{setFs(fs0);if(!m.fs)host.style.removeProperty('--mfk');form.remove();display.forEach(el=>el.hidden=false);card.querySelector('[data-action="edit"]').focus();};
   form.querySelector('[data-action="cancel"]').onclick=cancel;
   form.querySelector('[data-action="bold"]').onmousedown=e=>e.preventDefault();
   form.querySelector('[data-action="bold"]').onclick=()=>toggleMemoBold(input);
@@ -5987,6 +5999,8 @@ function editInlineMemo(m, type, host) {
     // Edit only the memo text; retain its identity, order, source anchor and photo.
     if(type==='free')record.text=input.value.trim();
     else record.note=input.value.trim();
+    const fs=Number(range.value);
+    if(fs===100)delete record.fs;else record.fs=fs;
     if(type==='free'){saveFreeMemos();renderFreeMemos();}
     else {saveMemos();renderMemos();}
     renderMemoAnchors(currentChapter.num);
